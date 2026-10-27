@@ -1,0 +1,23 @@
+# Dépendances : se réinstallent avec npm install
+node_modules/
+
+# Builds et rapports générés : se recréent à chaque build ou test
+dist/
+build/
+coverage/
+
+# Environnement : contient des mots de passe, ne JAMAIS commiter
+.env
+.env.*
+!.env.example
+
+# Éditeurs et système
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
