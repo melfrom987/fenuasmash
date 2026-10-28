@@ -1,0 +1,194 @@
+# Livraison continue.
+#
+# - push sur main      -> images api/web publiées sur GHCR (tags latest + sha-xxxx),
+#                         puis déploiement sur le serveur si configuré.
+# - tag vX.Y.Z         -> images versionnées (X.Y.Z, X.Y) + release GitHub avec l'APK.
+#
+# Configuration du déploiement (Settings > Environments > production) :
+#   variables : DEPLOY_HOST, DEPLOY_USER, DEPLOY_PATH, PUBLIC_URL (optionnelle)
+#   secrets   : DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS
+# Sans DEPLOY_HOST, le déploiement est simplement ignoré.
+#
+# Application mobile (variable de dépôt) : MOBILE_API_URL, URL publique de l'API.
+
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  images:
+    name: Publication de l'image ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - app: api
+            marker: apps/api/pom.xml
+          - app: web
+            marker: apps/web/package.json
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Application initialisée ?
+        id: exists
+        env:
+          MARKER: ${{ matrix.marker }}
+        run: |
+          if [ -f "$MARKER" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::apps/${{ matrix.app }} n'est pas encore initialisée : publication ignorée."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.exists.outputs.ok == 'true'
+
+      - uses: docker/login-action@v3
+        if: steps.exists.outputs.ok == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        if: steps.exists.outputs.ok == 'true'
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.app }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,prefix=sha-,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - uses: docker/build-push-action@v6
+        if: steps.exists.outputs.ok == 'true'
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+          provenance: true
+
+  deploy:
+    name: Déploiement (production)
+    needs: images
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_HOST != ''
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.PUBLIC_URL }}
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configurer SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Envoyer la configuration compose
+        run: |
+          scp -i ~/.ssh/id_deploy docker-compose.prod.yml \
+            "$DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_PATH/docker-compose.prod.yml"
+
+      - name: Mettre à jour les conteneurs
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Le .env du serveur (mots de passe) reste sur le serveur ; on impose
+          # seulement la version d'image à déployer. Les variables passent par
+          # l'entrée standard pour ne pas apparaître dans la ligne de commande.
+          {
+            printf 'export DEPLOY_PATH=%q IMAGE_TAG=%q GHCR_USER=%q GHCR_TOKEN=%q\n' \
+              "$DEPLOY_PATH" "sha-${GITHUB_SHA::7}" "$GHCR_USER" "$GHCR_TOKEN"
+            cat <<'EOF'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
+          echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+          docker compose -f docker-compose.prod.yml --env-file .env pull
+          docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans --wait
+          docker logout ghcr.io
+          docker image prune -f
+          EOF
+          } | ssh -i ~/.ssh/id_deploy "$DEPLOY_USER@$DEPLOY_HOST" 'bash -s'
+
+  mobile-release:
+    name: Release (APK Android)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Application mobile initialisée ?
+        id: exists
+        run: |
+          if [ -f apps/mobile/pubspec.yaml ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-java@v5
+        if: steps.exists.outputs.ok == 'true'
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        if: steps.exists.outputs.ok == 'true'
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build APK
+        if: steps.exists.outputs.ok == 'true'
+        working-directory: apps/mobile
+        env:
+          API_URL: ${{ vars.MOBILE_API_URL }}
+        run: |
+          flutter pub get
+          flutter build apk --release --dart-define=API_URL="$API_URL"
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "$GITHUB_WORKSPACE/fenuasmash-${GITHUB_REF_NAME}.apk"
+
+      - name: Créer la release GitHub
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob
+          gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag fenuasmash-*.apk
