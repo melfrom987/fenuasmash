@@ -6,13 +6,17 @@ import { DashboardPage } from '@/pages/admin/DashboardPage';
 import { LivePage } from '@/pages/live/LivePage';
 import { DisplayPage } from '@/pages/display/DisplayPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { CreateTournamentPage } from '@/pages/admin/CreateTournamentPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/admin" replace /> },
   {
     path: '/admin',
     element: <AdminLayout />,
-    children: [{ index: true, element: <DashboardPage /> }],
+    children: [
+      { index: true, element: <DashboardPage /> },
+      { path: 'tournaments/new', element: <CreateTournamentPage /> },
+    ],
   },
   {
     path: '/live/:tournamentId',

@@ -3,7 +3,11 @@ import type { Court, Organization, Tournament } from '@/api/models';
 const now = '2026-10-28T00:00:00.000Z';
 
 const organizations: Organization[] = [
-  { id: '00000000-0000-4000-8000-000000000001', name: 'Ligue de Badminton de Polynésie', createdAt: now },
+  {
+    id: '00000000-0000-4000-8000-000000000001',
+    name: 'Ligue de Badminton de Polynésie',
+    createdAt: now,
+  },
 ];
 
 const tournaments: Tournament[] = [

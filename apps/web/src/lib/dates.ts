@@ -15,3 +15,4 @@ const timeFormatter = new Intl.DateTimeFormat('fr-FR', {
 
 export const formatDate = (iso: string) => dateFormatter.format(new Date(iso));
 export const formatTime = (iso: string) => timeFormatter.format(new Date(iso));
+export const tahitiInputToIso = (value: string) => new Date(`${value}:00-10:00`).toISOString();
