@@ -26,7 +26,7 @@ make stack    # ou : stack complète (base + API + web) en conteneurs
 
 Chaque application a ensuite son propre README pour la lancer.
 
-**Docker, CI/CD et commandes : lire [docs/devops.md](docs/devops.md).** Installation d'un serveur : [docs/installation.md](docs/installation.md).
+**Pour lancer le projet et comprendre la CI/CD :** [DevOps](docs/devops.md) · [Docker](docs/docker.md) · [CI/CD](docs/ci-cd.md) · [Serveur](docs/installation.md)
 
 ## CI/CD
 
