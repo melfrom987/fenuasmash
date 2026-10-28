@@ -1,17 +1,19 @@
 import { delay, http, HttpResponse } from 'msw';
-
-const tournaments = [
-  {
-    id: '6f1c2a3e-0001-4a7b-9c1d-000000000001',
-    name: 'Open de Papeete',
-    startsAt: '2026-11-14T18:00:00Z',
-    endsAt: '2026-11-16T04:00:00Z',
-  },
-];
+import { db } from '../data';
 
 export const tournamentHandlers = [
   http.get('/api/tournaments', async () => {
     await delay();
-    return HttpResponse.json(tournaments);
+    const sorted = [...db.tournaments].sort((a, b) => b.startsAt.localeCompare(a.startsAt));
+    return HttpResponse.json(sorted);
+  }),
+
+  http.get('/api/tournaments/:tournamentId', async ({ params }) => {
+    await delay();
+    const tournament = db.tournaments.find((t) => t.id === params.tournamentId);
+    if (!tournament) {
+      return HttpResponse.json({ message: 'Tournament not found' }, { status: 404 });
+    }
+    return HttpResponse.json(tournament);
   }),
 ];
