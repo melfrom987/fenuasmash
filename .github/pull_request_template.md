@@ -1,21 +1,21 @@
-## Quoi
+## What
 
-<!-- Ce que change cette PR, en une ou deux phrases. -->
+<!-- What this pull request changes, in one or two sentences. -->
 
 Closes #
 
-## Pourquoi
+## Why
 
-<!-- Le besoin ou le problème résolu. -->
+<!-- The need or the problem being solved. -->
 
-## Comment tester
+## How to Test
 
-<!-- Étapes pour vérifier le comportement en local. -->
+<!-- Steps to verify the behavior locally. -->
 
-## Vérifications
+## Checklist
 
-- [ ] Le titre suit le format Conventional Commits (`feat(web): ...`)
-- [ ] La CI est verte
-- [ ] Tests ajoutés ou mis à jour
-- [ ] Documentation mise à jour si nécessaire
-- [ ] Si l'API change : `contracts/openapi.yaml` modifié et relu par web **et** mobile
+- [ ] The title follows Conventional Commits (`feat(web): ...`)
+- [ ] CI is green
+- [ ] Tests added or updated
+- [ ] Documentation updated if needed
+- [ ] If the API changes: `contracts/openapi.yaml` updated and reviewed by web **and** mobile

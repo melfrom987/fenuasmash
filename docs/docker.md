@@ -18,7 +18,7 @@ make env      # create .env from .env.example (first time only)
 make stack    # build and start db, api and web
 ```
 
-The application is available at http://localhost:8080. The first build takes one to two minutes.
+The application is available at http://localhost:8090. The first build takes one to two minutes.
 
 ```bash
 make down     # stop all containers
@@ -31,7 +31,7 @@ make down     # stop all containers
 | `db` | PostgreSQL 17 | `localhost:5432` |
 | `api` | Spring Boot API | http://localhost:8081 |
 | `api` health | Actuator health endpoint | http://localhost:8081/actuator/health |
-| `web` | React application served by nginx | http://localhost:8080 |
+| `web` | React application served by nginx | http://localhost:8090 |
 
 ## Commands
 
@@ -94,7 +94,7 @@ Local settings are stored in `.env`, which is never committed.
 | `POSTGRES_DB` | `fenuasmash` | Database name |
 | `POSTGRES_PORT` | `5432` | Host port for the database |
 | `API_PORT` | `8081` | Host port for the API |
-| `WEB_PORT` | `8080` | Host port for the web application |
+| `WEB_PORT` | `8090` | Host port for the web application |
 | `IMAGE_PREFIX`, `IMAGE_TAG`, `HTTP_PORT` | — | Production only |
 
 ## Files
