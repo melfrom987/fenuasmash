@@ -1,0 +1,324 @@
+# Intégration continue : vérifie chaque pull request et chaque push sur dev/main.
+#
+# Seules les parties modifiées sont vérifiées (filtre par dossier, cf. ADR 0001),
+# et une application pas encore initialisée (sans pom.xml / package.json / pubspec.yaml)
+# est ignorée. Le job final « CI » sert de check obligatoire sur les branches.
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  # À garder identique à JAVA_VERSION dans apps/api/Dockerfile
+  JAVA_VERSION: "25"
+
+jobs:
+  changes:
+    name: Détection des changements
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      api: ${{ steps.result.outputs.api }}
+      web: ${{ steps.result.outputs.web }}
+      mobile: ${{ steps.result.outputs.mobile }}
+      contracts: ${{ steps.result.outputs.contracts }}
+      infra: ${{ steps.filter.outputs.infra }}
+      stack: ${{ steps.result.outputs.stack }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            shared: &shared
+              - contracts/**
+              - .github/workflows/ci.yml
+            api:
+              - *shared
+              - apps/api/**
+            web:
+              - *shared
+              - .nvmrc
+              - apps/web/**
+            mobile:
+              - contracts/**
+              - .github/workflows/ci.yml
+              - apps/mobile/**
+            contracts:
+              - contracts/**
+            infra:
+              - .github/**
+              - docker-compose*.yml
+              - .dockerignore
+              - apps/*/Dockerfile
+              - apps/web/nginx/**
+
+      - name: Croiser avec les applications existantes
+        id: result
+        env:
+          FORCE: ${{ github.event_name == 'workflow_dispatch' }}
+          API: ${{ steps.filter.outputs.api }}
+          WEB: ${{ steps.filter.outputs.web }}
+          MOBILE: ${{ steps.filter.outputs.mobile }}
+          CONTRACTS: ${{ steps.filter.outputs.contracts }}
+        run: |
+          decide() { # decide <nom> <changé> <fichier témoin>
+            if [ -f "$3" ] && { [ "$FORCE" = true ] || [ "$2" = true ]; }; then
+              echo "$1=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$1=false" >> "$GITHUB_OUTPUT"
+            fi
+          }
+          decide api       "$API"       apps/api/pom.xml
+          decide web       "$WEB"       apps/web/package.json
+          decide mobile    "$MOBILE"    apps/mobile/pubspec.yaml
+          decide contracts "$CONTRACTS" contracts/openapi.yaml
+          # Le test de fumée n'a de sens que si l'API et le web existent tous les deux
+          if [ -f apps/api/pom.xml ] && [ -f apps/web/package.json ]; then
+            echo "stack=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stack=false" >> "$GITHUB_OUTPUT"
+          fi
+          cat "$GITHUB_OUTPUT"
+
+  infra:
+    name: Infra (workflows, Dockerfiles, compose)
+    needs: changes
+    if: needs.changes.outputs.infra == 'true' || github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Lint des workflows (actionlint)
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo rhysd/actionlint:1.7.7 -color
+
+      - name: Lint des Dockerfiles (hadolint)
+        run: |
+          for f in apps/*/Dockerfile; do
+            echo "::group::$f"
+            docker run --rm -i hadolint/hadolint:v2.12.0 hadolint --failure-threshold warning - < "$f"
+            echo "::endgroup::"
+          done
+
+      - name: Validation des fichiers compose
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.yml --profile stack config --quiet
+          docker compose -f docker-compose.prod.yml config --quiet
+
+  contracts:
+    name: Contrat OpenAPI
+    needs: changes
+    if: needs.changes.outputs.contracts == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - run: npx --yes @redocly/cli@1 lint contracts/openapi.yaml
+
+  api:
+    name: API (compilation, tests, package)
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: fenuasmash
+          POSTGRES_PASSWORD: fenuasmash
+          POSTGRES_DB: fenuasmash_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fenuasmash -d fenuasmash_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TZ: UTC
+      SPRING_PROFILES_ACTIVE: test
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/fenuasmash_test
+      SPRING_DATASOURCE_USERNAME: fenuasmash
+      SPRING_DATASOURCE_PASSWORD: fenuasmash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+          cache-dependency-path: apps/api/pom.xml
+      - run: chmod +x mvnw
+      # verify = compilation, tests unitaires et d'intégration, package,
+      # plus les plugins de qualité branchés sur cette phase (Checkstyle, JaCoCo...)
+      - run: ./mvnw -B verify
+      - name: Rapports de tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-reports
+          path: |
+            apps/api/target/surefire-reports
+            apps/api/target/failsafe-reports
+          retention-days: 7
+      - name: Rapport de couverture
+        if: always() && hashFiles('apps/api/target/site/jacoco/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-coverage
+          path: apps/api/target/site/jacoco
+          retention-days: 7
+
+  web:
+    name: Web (lint, types, tests, build)
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      TZ: UTC
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm run format:check --if-present
+      - run: npm run typecheck --if-present
+      - run: npm test --if-present
+      - run: npm run build
+      - name: Rapport de couverture
+        if: always() && hashFiles('apps/web/coverage/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-coverage
+          path: apps/web/coverage
+          retention-days: 7
+
+  mobile:
+    name: Mobile (analyse, tests, build APK)
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed .
+      - run: flutter analyze
+      - name: Tests
+        run: |
+          if [ -d test ]; then flutter test --coverage; else echo "Pas encore de dossier test/"; fi
+      - run: flutter build apk --debug
+
+  docker:
+    name: Image Docker ${{ matrix.app }}
+    needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: api
+            marker: apps/api/pom.xml
+          - app: web
+            marker: apps/web/package.json
+    # Une image se reconstruit si son app ou l'infra change (et si l'app existe)
+    if: >-
+      needs.changes.outputs.api == 'true' || needs.changes.outputs.web == 'true' ||
+      needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Application initialisée ?
+        id: exists
+        env:
+          MARKER: ${{ matrix.marker }}
+        run: |
+          if [ -f "$MARKER" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "apps/${{ matrix.app }} n'est pas encore initialisée : build ignoré."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: docker/setup-buildx-action@v3
+        if: steps.exists.outputs.ok == 'true'
+      - uses: docker/build-push-action@v6
+        if: steps.exists.outputs.ok == 'true'
+        with:
+          context: .
+          file: apps/${{ matrix.app }}/Dockerfile
+          push: false
+          tags: fenuasmash-${{ matrix.app }}:ci
+          cache-from: type=gha,scope=${{ matrix.app }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
+
+  smoke:
+    name: Test de fumée (stack docker compose)
+    needs: [changes, docker]
+    if: needs.changes.outputs.stack == 'true' && needs.docker.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Démarrer la stack complète
+        run: |
+          cp .env.example .env
+          docker compose --profile stack up -d --build --wait --wait-timeout 300
+      - name: Vérifier les points d'entrée
+        run: |
+          curl --fail --silent --show-error http://localhost:8080/healthz
+          curl --fail --silent --show-error http://localhost:8081/actuator/health
+          curl --fail --silent --show-error -o /dev/null http://localhost:8080/
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose --profile stack logs --no-color
+      - name: Arrêter la stack
+        if: always()
+        run: docker compose --profile stack down -v
+
+  ci:
+    name: CI
+    needs: [changes, infra, contracts, api, web, mobile, docker, smoke]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Résultat global
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Résultats : $RESULTS"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) echo "Au moins un job a échoué."; exit 1 ;;
+          esac

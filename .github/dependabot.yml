@@ -1,0 +1,54 @@
+# Mises à jour automatiques des dépendances, regroupées chaque semaine.
+# Les PR ciblent dev et passent par la CI comme n'importe quelle PR.
+# Note : tant qu'une app n'est pas initialisée, Dependabot signale
+# simplement qu'il ne trouve pas de manifeste pour ce dossier.
+
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, timezone: Pacific/Tahiti }
+    commit-message: { prefix: "chore(deps)" }
+    groups:
+      actions: { patterns: ["*"] }
+
+  - package-ecosystem: maven
+    directory: /apps/api
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, timezone: Pacific/Tahiti }
+    commit-message: { prefix: "chore(deps)" }
+    groups:
+      api-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /apps/web
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, timezone: Pacific/Tahiti }
+    commit-message: { prefix: "chore(deps)" }
+    groups:
+      web-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pub
+    directory: /apps/mobile
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, timezone: Pacific/Tahiti }
+    commit-message: { prefix: "chore(deps)" }
+    groups:
+      mobile-minor-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: docker
+    directories: [/apps/api, /apps/web]
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, timezone: Pacific/Tahiti }
+    commit-message: { prefix: "chore(deps)" }
+
+  - package-ecosystem: docker-compose
+    directory: /
+    target-branch: dev
+    schedule: { interval: weekly, day: monday, timezone: Pacific/Tahiti }
+    commit-message: { prefix: "chore(deps)" }

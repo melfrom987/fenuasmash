@@ -1,0 +1,17 @@
+# Le contexte de build est la racine du dépôt (pour accéder à contracts/).
+# On n'envoie au démon Docker que ce dont les images ont besoin.
+**/node_modules
+**/dist
+**/build
+**/target
+**/coverage
+**/.dart_tool
+**/*.log
+**/.env
+**/.env.*
+
+.git
+.github
+docs
+apps/mobile
+*.pdf

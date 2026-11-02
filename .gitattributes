@@ -1,0 +1,5 @@
+# Scripts exécutés sous Linux (conteneurs, CI) : toujours en fins de ligne LF,
+# même si le dépôt est cloné sous Windows.
+*.sh  text eol=lf
+mvnw  text eol=lf
+*.cmd text eol=crlf
