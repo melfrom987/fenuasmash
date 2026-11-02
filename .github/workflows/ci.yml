@@ -298,9 +298,9 @@ jobs:
           docker compose --profile stack up -d --build --wait --wait-timeout 300
       - name: Vérifier les points d'entrée
         run: |
-          curl --fail --silent --show-error http://localhost:8080/healthz
+          curl --fail --silent --show-error http://localhost:8090/healthz
           curl --fail --silent --show-error http://localhost:8081/actuator/health
-          curl --fail --silent --show-error -o /dev/null http://localhost:8080/
+          curl --fail --silent --show-error -o /dev/null http://localhost:8090/
       - name: Journaux en cas d'échec
         if: failure()
         run: docker compose --profile stack logs --no-color
