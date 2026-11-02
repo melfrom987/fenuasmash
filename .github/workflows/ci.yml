@@ -38,9 +38,9 @@ jobs:
       infra: ${{ steps.filter.outputs.infra }}
       stack: ${{ steps.result.outputs.stack }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -101,7 +101,7 @@ jobs:
     if: needs.changes.outputs.infra == 'true' || github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Lint des workflows (actionlint)
         run: |
@@ -127,8 +127,8 @@ jobs:
     if: needs.changes.outputs.contracts == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - run: npx --yes @redocly/cli@1 lint contracts/openapi.yaml
@@ -159,8 +159,8 @@ jobs:
       SPRING_DATASOURCE_USERNAME: fenuasmash
       SPRING_DATASOURCE_PASSWORD: fenuasmash
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
@@ -172,7 +172,7 @@ jobs:
       - run: ./mvnw -B verify
       - name: Rapports de tests
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-test-reports
           path: |
@@ -181,7 +181,7 @@ jobs:
           retention-days: 7
       - name: Rapport de couverture
         if: always() && hashFiles('apps/api/target/site/jacoco/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: api-coverage
           path: apps/api/target/site/jacoco
@@ -198,8 +198,8 @@ jobs:
     env:
       TZ: UTC
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -212,7 +212,7 @@ jobs:
       - run: npm run build
       - name: Rapport de couverture
         if: always() && hashFiles('apps/web/coverage/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: web-coverage
           path: apps/web/coverage
@@ -227,8 +227,8 @@ jobs:
       run:
         working-directory: apps/mobile
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
@@ -261,7 +261,7 @@ jobs:
       needs.changes.outputs.infra == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Application initialisée ?
         id: exists
         env:
@@ -273,9 +273,9 @@ jobs:
             echo "apps/${{ matrix.app }} n'est pas encore initialisée : build ignoré."
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
         if: steps.exists.outputs.ok == 'true'
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         if: steps.exists.outputs.ok == 'true'
         with:
           context: .
@@ -291,7 +291,7 @@ jobs:
     if: needs.changes.outputs.stack == 'true' && needs.docker.result == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Démarrer la stack complète
         run: |
           cp .env.example .env
