@@ -20,7 +20,7 @@ COPY apps/web/ ./
 RUN npm run build
 
 # --- Serveur nginx (utilisateur non root, port 8080) --------------------------
-FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31-alpine AS runtime
 
 # Adresse de l'API vue depuis le conteneur web, et résolveur DNS de Docker.
 # Le template est rendu par envsubst au démarrage du conteneur.
