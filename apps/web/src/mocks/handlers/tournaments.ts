@@ -20,9 +20,11 @@ export const tournamentHandlers = [
 
   http.post('/api/tournaments', async ({ request }) => {
     await delay();
-    const body = (await request.json()) as Omit<Tournament, 'id' | 'createdAt' | 'updatedAt'>;
+    const { courtCount, ...body } = (await request.json()) as Omit<
+      Tournament,
+      'id' | 'createdAt' | 'updatedAt'
+    > & { courtCount: number };
 
-    // Même réponse que le back si l'organisation n'existe pas (erreur Prisma P2003)
     if (!db.organizations.some((o) => o.id === body.organizationId)) {
       return HttpResponse.json({ message: 'Invalid reference' }, { status: 400 });
     }
@@ -35,6 +37,17 @@ export const tournamentHandlers = [
       updatedAt: now,
     };
     db.tournaments.push(tournament);
+
+    // Terrains numérotés de 1 à N, créés avec le tournoi
+    for (let number = 1; number <= courtCount; number++) {
+      db.courts.push({
+        id: crypto.randomUUID(),
+        tournamentId: tournament.id,
+        number,
+        active: true,
+      });
+    }
+
     return HttpResponse.json(tournament, { status: 201 });
   }),
 ];

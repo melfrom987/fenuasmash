@@ -1,0 +1,83 @@
+import type { Translation } from './fr';
+
+export const en: Translation = {
+  common: {
+    loading: 'Loading…',
+    language: 'Language',
+  },
+  nav: {
+    tournaments: 'Tournaments',
+  },
+  live: {
+    header: 'Live',
+    placeholder: 'Live scores will appear here.',
+  },
+  display: {
+    placeholder: 'Courts will appear here.',
+  },
+  notFound: {
+    title: 'Page not found',
+    backToAdmin: 'Back to administration',
+  },
+  tournaments: {
+    title: 'Tournaments',
+    new: 'New tournament',
+    manage: 'Manage',
+    backToList: '← Back to tournaments',
+    empty: 'No tournaments yet.',
+    loadError: 'Unable to load tournaments: {{message}}',
+    dateRange: 'From {{start}} to {{end}}',
+    liveLink: 'Live page',
+    displayLink: 'TV display',
+    create: {
+      title: 'New tournament',
+      timezoneHint: 'Times are in Tahiti time.',
+      organizationsError: 'Organizations: {{message}}',
+    },
+    form: {
+      organization: 'Organization',
+      name: 'Tournament name',
+      namePlaceholder: 'Papeete Open',
+      startsAt: 'Start',
+      endsAt: 'End',
+      minimumRest: 'Minimum rest between two matches (minutes)',
+      submit: 'Create tournament',
+      submitting: 'Creating…',
+      courtCount: 'Number of courts',
+      errors: {
+        organizationRequired: 'Choose an organization',
+        nameRequired: 'Name is required',
+        startsAtRequired: 'Start date is required',
+        endsAtRequired: 'End date is required',
+        numberExpected: 'Enter a number',
+        integerExpected: 'Whole number expected',
+        positive: 'Must be positive',
+        endsBeforeStart: 'End must be after start',
+        courtCountRange: 'Between 1 and 50 courts',
+      },
+    },
+  },
+  tournamentDetail: {
+    tabs: {
+      settings: 'Settings',
+    },
+  },
+  courts: {
+    title: 'Courts',
+    hint: 'Courts are numbered automatically. A disabled court (breakdown, lighting…) no longer receives matches.',
+    label: 'Court {{number}}',
+    total: 'Number of courts: {{total}}',
+    add: 'Add a court',
+    removeLast: 'Remove court {{number}}',
+    active: 'Active',
+    inactive: 'Disabled',
+    activate: 'Enable',
+    deactivate: 'Disable',
+  },
+  apiErrors: {
+    TOURNAMENT_NOT_FOUND: 'Tournament not found',
+    COURT_NOT_FOUND: 'Court not found',
+    COURT_NOT_LAST: 'Only the last court can be removed.',
+    COURT_IN_USE: 'This court has already hosted matches: disable it instead.',
+  },
+};

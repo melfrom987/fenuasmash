@@ -9,6 +9,7 @@ export type CreateTournamentInput = {
   startsAt: string; // ISO, UTC
   endsAt: string;
   minimumRestMinutes: number;
+  courtCount: number;
 };
 
 export function useTournaments() {

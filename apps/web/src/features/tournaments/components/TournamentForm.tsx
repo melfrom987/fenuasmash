@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import type { Organization } from '@/api/models';
 import { Button } from '@/components/ui/Button';
 import { tournamentFormSchema, type TournamentFormValues } from '../schema';
+import { t } from 'i18next';
 
 const inputClass = 'mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm';
 
@@ -65,6 +66,16 @@ export function TournamentForm({
           min={0}
           className={inputClass}
           {...register('minimumRestMinutes', { valueAsNumber: true })}
+        />
+      </Field>
+
+      <Field label={t('tournaments.form.courtCount')} error={errors.courtCount?.message}>
+        <input
+          type="number"
+          min={1}
+          max={50}
+          className={inputClass}
+          {...register('courtCount', { valueAsNumber: true })}
         />
       </Field>
 

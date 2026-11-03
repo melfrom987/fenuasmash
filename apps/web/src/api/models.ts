@@ -58,7 +58,7 @@ export type EntryWithPlayers = Entry & {
 export type Court = {
   id: string;
   tournamentId: string;
-  label: string;
+  number: number;
   active: boolean;
 };
 

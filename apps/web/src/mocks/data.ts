@@ -33,10 +33,10 @@ const tournaments: Tournament[] = [
   },
 ];
 
-const courts: Court[] = [1, 2, 3].map((n) => ({
+const courts: Court[] = [1, 2, 3, 4].map((n) => ({
   id: `20000000-0000-4000-8000-00000000000${n}`,
   tournamentId: tournaments[0].id,
-  label: `Terrain ${n}`,
+  number: n,
   active: true,
 }));
 
