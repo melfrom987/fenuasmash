@@ -1,3 +1,4 @@
+import { key } from '@/i18n';
 import { z } from 'zod';
 
 export const tournamentFormSchema = z
@@ -10,6 +11,11 @@ export const tournamentFormSchema = z
       .number('Indiquez un nombre')
       .int('Nombre entier attendu')
       .min(0, 'Doit être positif'),
+    courtCount: z
+      .number(key('tournaments.form.errors.numberExpected'))
+      .int(key('tournaments.form.errors.integerExpected'))
+      .min(1, key('tournaments.form.errors.courtCountRange'))
+      .max(50, key('tournaments.form.errors.courtCountRange')),
   })
   .refine((data) => data.endsAt > data.startsAt, {
     message: 'La fin doit être après le début',

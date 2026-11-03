@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import type { Tournament } from '@/api/models';
 import { formatDate } from '@/lib/dates';
+import { t } from 'i18next';
 
 export function TournamentCard({ tournament }: { tournament: Tournament }) {
   return (
@@ -10,6 +11,12 @@ export function TournamentCard({ tournament }: { tournament: Tournament }) {
         Du {formatDate(tournament.startsAt)} au {formatDate(tournament.endsAt)}
       </p>
       <div className="mt-3 flex gap-3 text-sm">
+        <Link
+          to={`/admin/tournaments/${tournament.id}`}
+          className="font-medium text-blue-600 hover:underline"
+        >
+          {t('tournaments.manage')}
+        </Link>
         <Link to={`/live/${tournament.id}`} className="text-blue-600 hover:underline">
           Page live
         </Link>
