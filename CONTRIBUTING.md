@@ -1,65 +1,94 @@
-# Contribuer à FenuaSmash
+# Contributing to FenuaSmash
 
-## Règle d'or
+## Golden Rules
 
-On ne pousse jamais directement sur `main`. Tout passe par une issue, une branche et une pull request relue par au moins une autre personne.
+1. **Everything is written in English**: branch names, commit messages, pull request titles and descriptions, issues, review comments, code comments and documentation.
+2. **Nobody pushes directly to `dev` or `main`.** Every change goes through an issue, a branch and a pull request approved by at least one other team member.
 
-## 1. Une issue d'abord
+## 1. Start With an Issue
 
-Chaque tâche a une issue dans GitHub Projects, avec un label de périmètre (`web`, `api`, `mobile`, `infra`, `docs`) et un label de type (`feature`, `bug`, `chore`).
+Every task has an issue in GitHub Projects, with:
 
-## 2. Nommer sa branche
+- a **scope** label: `web`, `api`, `mobile`, `infra`, `docs`;
+- a **type** label: `feature`, `bug`, `chore`.
 
+## 2. Create a Branch
+
+Branches are created from `dev` and named:
+
+```text
+type/issue-number-short-description
 ```
-<type>/<numéro-issue>-<description-courte>
-```
 
-| Type | Usage |
+| Type | Use for |
 |---|---|
-| `feat` | Nouvelle fonctionnalité |
-| `fix` | Correction de bug |
-| `chore` | Configuration, dépendances, outillage |
-| `docs` | Documentation |
-| `refactor` | Réorganisation sans changement de comportement |
-| `test` | Ajout ou correction de tests |
+| `feat` | A new feature |
+| `fix` | A bug fix |
+| `chore` | Configuration, dependencies, tooling |
+| `docs` | Documentation only |
+| `refactor` | Code restructuring without behavior change |
+| `test` | Adding or fixing tests |
+| `ci` | CI/CD pipelines |
 
-Exemples : `feat/12-court-board`, `fix/27-score-sync`, `chore/3-web-init`.
+Examples: `feat/12-court-board`, `fix/27-score-sync`, `chore/3-web-init`.
 
 ```bash
-git switch main
+git switch dev
 git pull
 git switch -c feat/12-court-board
 ```
 
-## 3. Messages de commit
+## 3. Write Commit Messages
 
-Format [Conventional Commits](https://www.conventionalcommits.org/fr/), avec le périmètre entre parenthèses :
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/):
 
+```text
+type(scope): description
+
+Optional body explaining what changed and why.
+
+Refs: #12
 ```
+
+| Rule | Example |
+|---|---|
+| Written in English | `add court board page` |
+| Imperative mood | `add`, not `added` or `adds` |
+| Lowercase after the colon, no trailing period | `fix(api): reject revoked devices` |
+| Subject line of 72 characters or fewer | |
+| Blank line between subject and body | |
+
+**Types:** `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `ci`, `perf`.
+**Scopes (optional):** `web`, `api`, `mobile`, `infra`, `contracts`, `docs`, `deps`.
+
+Examples:
+
+```text
 feat(web): add court board page
-fix(api): reject events from revoked devices
+fix(api): reject score events from revoked devices
 chore(mobile): upgrade flutter dependencies
 docs: add installation guide
 ```
 
-## 4. Pull request
+## 4. Open a Pull Request
 
-- Titre au même format qu'un commit.
-- `Closes #12` dans la description pour fermer l'issue automatiquement.
-- Remplir le modèle de PR.
-- Au moins une relecture approuvée avant de merger.
-- Merge en **squash** : un commit propre par PR sur `main`.
+- Target branch: **`dev`**.
+- The title follows the commit format. It is checked automatically by CI.
+- Fill in the pull request template, in English.
+- Add `Closes #12` to the description to close the issue on merge.
+- At least one approval is required, and the **`CI`** check must be green.
+- Pull requests are **squash-merged**: the title becomes the single commit on `dev`.
 
-## 5. Garder sa branche à jour
+`dev` is merged into `main` for releases. Every merge into `main` is deployed.
+
+## 5. Keep Your Branch Up to Date
 
 ```bash
-git switch main
-git pull
-git switch feat/12-court-board
-git rebase main
+git fetch
+git rebase origin/dev
 git push --force-with-lease
 ```
 
-## Contrat d'API
+## API Contract
 
-Toute modification de l'API passe d'abord par `contracts/openapi.yaml`, dans une PR relue par le web **et** le mobile. Voir [contracts/README.md](contracts/README.md).
+Any API change starts with `contracts/openapi.yaml`, in a pull request reviewed by both the web and mobile developers. See [contracts/README.md](contracts/README.md).

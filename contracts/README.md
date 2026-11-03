@@ -1,14 +1,14 @@
-# Contrat d'API
+# API Contract
 
-`openapi.yaml` (à venir) décrit toutes les routes de l'API : entrées, sorties, erreurs. C'est la **source de vérité unique** entre le backend, le web et le mobile.
+`openapi.yaml` (to be written) describes every API endpoint: requests, responses and errors. It is the **single source of truth** shared by the backend, the web application and the mobile application.
 
-- Le **web** génère ses types TypeScript depuis ce fichier.
-- Le **mobile** génère son client Dart depuis ce fichier.
-- Le **backend** implémente exactement ce qui est décrit.
+- The **web** application generates its TypeScript types from this file.
+- The **mobile** application generates its Dart client from this file.
+- The **backend** implements exactly what is described.
 
-## Règles
+## Rules
 
-1. On modifie le contrat **avant** le code.
-2. Toute PR qui touche `contracts/` est relue par les trois membres.
-3. Les dates sont toujours en UTC, au format ISO 8601. L'affichage se fait en heure de Tahiti (`Pacific/Tahiti`).
-4. Les identifiants sont des UUID.
+1. The contract is updated **before** the code.
+2. Every pull request touching `contracts/` is reviewed by all three team members.
+3. Dates are always UTC, in ISO 8601 format. They are displayed in Tahiti time (`Pacific/Tahiti`).
+4. Identifiers are UUIDs.

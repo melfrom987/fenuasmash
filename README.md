@@ -1,51 +1,47 @@
 # FenuaSmash
 
-Gestion et suivi de compétitions de badminton : administration des tournois, arbitrage sur tablette et diffusion des scores en temps réel. Projet Epitech 2026–2027, conçu pour la Polynésie française.
+Badminton competition management: tournament administration, tablet-based umpiring and real-time score broadcasting. Epitech project 2026–2027, designed for French Polynesia.
 
-## Structure du dépôt
+## Repository Structure
 
-| Dossier | Contenu | Techno |
+| Directory | Content | Technology |
 |---|---|---|
-| `apps/web` | Administration et affichage public | React / TypeScript |
-| `apps/api` | API, modèle de données, temps réel | Spring Boot 4 / Java 25 (Maven) |
-| `apps/mobile` | Application d'arbitrage | Flutter |
-| `contracts` | Contrat d'API partagé (OpenAPI) | — |
-| `docs` | Documentation technique, installation, utilisateur | — |
+| `apps/web` | Administration and public display | React, TypeScript |
+| `apps/api` | API, data model, real time | Spring Boot 4, Java 25, Maven |
+| `apps/mobile` | Umpire application | Flutter |
+| `contracts` | Shared API contract (OpenAPI) | — |
+| `docs` | Technical, installation and user documentation | — |
 
-## Démarrage rapide
+## Quick Start
 
-Prérequis : Git, Docker, JDK 25 (optionnel avec Docker), Node.js (LTS), Flutter.
+Requires Docker Desktop (running) and `make`.
 
 ```bash
-git clone git@github.com:fenuasmash/fenuasmash.git
-cd fenuasmash
-make env      # crée .env depuis .env.example
-make db       # base de données PostgreSQL
-make stack    # ou : stack complète (base + API + web) en conteneurs
+git clone git@github.com:melfrom987/fenuasmash.git && cd fenuasmash
+make env      # create .env (first time only)
+make stack    # start database, API and web application
 ```
 
-Chaque application a ensuite son propre README pour la lancer.
+Open http://localhost:8090. Stop everything with `make down`.
 
-**Pour lancer le projet et comprendre la CI/CD :** [DevOps](docs/devops.md) · [Docker](docs/docker.md) · [CI/CD](docs/ci-cd.md) · [Serveur](docs/installation.md)
+## Documentation
 
-## CI/CD
-
-| Workflow | Déclencheur | Rôle |
-|---|---|---|
-| `CI` | PR, push sur `dev`/`main` | Lint, types, tests, build par app, images Docker, test de fumée |
-| `CD` | push sur `main`, tag `v*` | Images sur GHCR, déploiement, release APK |
-| `Titre de PR` | PR | Format Conventional Commits |
-
-Choix justifiés dans [docs/adr/0002-docker-ci-cd.md](docs/adr/0002-docker-ci-cd.md).
-
-## Contribuer
-
-Lire [CONTRIBUTING.md](CONTRIBUTING.md) avant la première branche.
-
-## Équipe
-
-| Membre | Rôle |
+| Document | Content |
 |---|---|
-| Mélissa Mi You | Interface web et administration |
-| Raphael Vaz | À compléter |
-| Emeric Somnard | À compléter |
+| [DevOps Overview](docs/devops.md) | Architecture, delivery workflow, conventions |
+| [Docker](docs/docker.md) | Running the stack, commands, troubleshooting |
+| [CI/CD](docs/ci-cd.md) | Pull request checks, releases, deployment |
+| [Installation](docs/installation.md) | Production server setup |
+| [Architecture Decisions](docs/adr/) | Rationale behind technical choices |
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before creating your first branch. Everything pushed to GitHub (branches, commits, pull requests, issues) is written in English.
+
+## Team
+
+| Member | Role |
+|---|---|
+| Mélissa Mi You | Web interface and administration |
+| Raphael Vaz | TBD |
+| Emeric Somnard | TBD |

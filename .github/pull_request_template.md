@@ -1,3 +1,5 @@
+<!-- Write everything in English. -->
+
 ## What
 
 <!-- What this pull request changes, in one or two sentences. -->
