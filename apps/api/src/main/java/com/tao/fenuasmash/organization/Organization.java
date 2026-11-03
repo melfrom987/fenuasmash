@@ -1,6 +1,7 @@
 package com.tao.fenuasmash.organization;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -31,7 +32,8 @@ public class Organization {
 	public Organization(String name) {
 		this.id = UUID.randomUUID();
 		this.name = name;
-		this.createdAt = Instant.now();
+		// PostgreSQL stores microseconds: truncate so the value never changes once persisted
+		this.createdAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
 	}
 
 	public UUID getId() {
