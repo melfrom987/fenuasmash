@@ -1,3 +1,36 @@
 spring:
   application:
     name: fenuasmash
+
+  # Local defaults, matching the database started by `make db`.
+  # In Docker and CI they are overridden by the SPRING_DATASOURCE_* variables.
+  datasource:
+    url: jdbc:postgresql://localhost:5432/fenuasmash
+    username: fenuasmash
+    password: change-me
+
+  jpa:
+    # No lazy loading in controllers: queries stay inside the service layer
+    open-in-view: false
+    hibernate:
+      # The schema is managed by Flyway only; Hibernate just checks it matches the entities
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+
+  mvc:
+    problemdetails:
+      enabled: true
+
+server:
+  # Finish in-flight requests before stopping (deployments, restarts)
+  shutdown: graceful
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
