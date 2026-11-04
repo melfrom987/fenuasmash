@@ -1,1 +1,83 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/outfit';
+
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Outfit Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Lagon : couleur principale */
+  --color-lagon-50: #ecfbfa;
+  --color-lagon-100: #cff4f1;
+  --color-lagon-200: #a0e8e3;
+  --color-lagon-300: #64d5d0;
+  --color-lagon-400: #2bbcba;
+  --color-lagon-500: #0fa3a3;
+  --color-lagon-600: #0b8287;
+  --color-lagon-700: #0e676d;
+  --color-lagon-800: #115358;
+  --color-lagon-900: #12454a;
+  --color-lagon-950: #052a2f;
+
+  /* Océan : fonds sombres */
+  --color-ocean-50: #eef4fb;
+  --color-ocean-100: #d9e6f5;
+  --color-ocean-200: #b6cdeb;
+  --color-ocean-300: #86abdc;
+  --color-ocean-400: #5684c8;
+  --color-ocean-500: #3767b3;
+  --color-ocean-600: #2a5197;
+  --color-ocean-700: #23417a;
+  --color-ocean-800: #1e3461;
+  --color-ocean-900: #142746;
+  --color-ocean-950: #0b1a30;
+
+  /* Coucher de soleil : en cours, scores */
+  --color-sunset-50: #fff4ed;
+  --color-sunset-100: #ffe5d3;
+  --color-sunset-200: #ffc7a6;
+  --color-sunset-300: #ffa06e;
+  --color-sunset-400: #fb7a3f;
+  --color-sunset-500: #f25c1f;
+  --color-sunset-600: #de4314;
+  --color-sunset-700: #b83213;
+  --color-sunset-800: #922a17;
+  --color-sunset-900: #762516;
+  --color-sunset-950: #401009;
+
+  /* Hibiscus : direct, mise en avant */
+  --color-hibiscus-50: #fdf2f6;
+  --color-hibiscus-100: #fce7ef;
+  --color-hibiscus-200: #fbcfe0;
+  --color-hibiscus-300: #f8a8c5;
+  --color-hibiscus-400: #f2729f;
+  --color-hibiscus-500: #e8467c;
+  --color-hibiscus-600: #d6285c;
+  --color-hibiscus-700: #b91b48;
+  --color-hibiscus-800: #991a3e;
+  --color-hibiscus-900: #811a38;
+  --color-hibiscus-950: #4f081c;
+
+  /* Sable : neutres chauds */
+  --color-sable-50: #faf8f5;
+  --color-sable-100: #f3efe8;
+  --color-sable-200: #e7e0d4;
+  --color-sable-300: #d3c8b6;
+  --color-sable-400: #b3a58e;
+  --color-sable-500: #958670;
+  --color-sable-600: #786b58;
+  --color-sable-700: #615648;
+  --color-sable-800: #4a4238;
+  --color-sable-900: #2f2a24;
+  --color-sable-950: #1a1714;
+}
+
+body {
+  @apply bg-sable-50 text-sable-900 font-sans antialiased;
+}
+
+h1,
+h2,
+h3 {
+  @apply font-display;
+}

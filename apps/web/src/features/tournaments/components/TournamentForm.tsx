@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { tournamentFormSchema, type TournamentFormValues } from '../schema';
 import { t } from 'i18next';
 
-const inputClass = 'mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm';
+const inputClass = 'mt-1 w-full rounded-md border border-sable-300 bg-white px-3 py-2 text-sm';
 
 export function TournamentForm({
   organizations,
@@ -89,7 +89,7 @@ export function TournamentForm({
 function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <span className="text-sable-800 text-sm font-medium">{label}</span>
       {children}
       {error && <span className="mt-1 block text-sm text-red-700">{error}</span>}
     </label>

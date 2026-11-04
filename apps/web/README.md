@@ -71,3 +71,7 @@ export default defineConfig([
   },
 ]);
 ```
+
+## Crédits
+
+Icônes : [Hugeicons](https://hugeicons.com) (version gratuite, style Stroke Rounded).

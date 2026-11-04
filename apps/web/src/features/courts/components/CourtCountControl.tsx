@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import { Add01Icon, Remove01Icon } from '@hugeicons/core-free-icons';
 import type { Court } from '@/api/models';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { Icon } from '@/components/ui/Icon';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { useAddCourt, useRemoveCourt } from '../api';
 
@@ -31,12 +33,14 @@ export function CourtCountControl({
               type="button"
               disabled={busy}
               onClick={() => removeCourt.mutate(last.id)}
-              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-50"
+              className="border-sable-300 text-sable-900 hover:bg-sable-50 inline-flex items-center gap-2 rounded-md border bg-white px-4 py-2 text-sm disabled:opacity-50"
             >
+              <Icon icon={Remove01Icon} size={16} />
               {t('courts.removeLast', { number: last.number })}
             </button>
           )}
           <Button type="button" disabled={busy} onClick={() => addCourt.mutate()}>
+            <Icon icon={Add01Icon} size={16} />
             {t('courts.add')}
           </Button>
         </div>

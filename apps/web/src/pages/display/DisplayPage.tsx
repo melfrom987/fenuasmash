@@ -4,8 +4,8 @@ export function DisplayPage() {
   const { tournamentId } = useParams();
   return (
     <div>
-      <h1 className="text-5xl font-bold">Terrains</h1>
-      <p className="mt-4 text-2xl text-slate-400">Tournoi : {tournamentId}</p>
+      <h1 className="font-display text-5xl font-bold">Terrains</h1>
+      <p className="text-ocean-200 mt-4 text-2xl">Tournoi : {tournamentId}</p>
     </div>
   );
 }
