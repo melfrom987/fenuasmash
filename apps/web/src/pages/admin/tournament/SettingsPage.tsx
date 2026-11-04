@@ -16,11 +16,11 @@ export function SettingsPage() {
     <div className="max-w-2xl space-y-8">
       <section className="space-y-4">
         <div>
-          <h2 className="text-lg font-semibold">{t('courts.title')}</h2>
-          <p className="text-sm text-slate-500">{t('courts.hint')}</p>
+          <h2 className="font-display text-lg font-semibold">{t('courts.title')}</h2>
+          <p className="text-sable-600 text-sm">{t('courts.hint')}</p>
         </div>
 
-        {courts.isPending && <p className="text-slate-500">{t('common.loading')}</p>}
+        {courts.isPending && <p className="text-sable-600">{t('common.loading')}</p>}
         {courts.isError && <ErrorMessage>{errorMessage(courts.error)}</ErrorMessage>}
         {courts.data && (
           <>

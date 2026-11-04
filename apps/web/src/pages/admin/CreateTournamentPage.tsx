@@ -24,15 +24,15 @@ export function CreateTournamentPage() {
 
   return (
     <div className="max-w-xl">
-      <Link to="/admin" className="text-sm text-blue-600 hover:underline">
+      <Link to="/admin" className="text-lagon-700 text-sm hover:underline">
         ← Retour aux tournois
       </Link>
-      <h1 className="mt-2 text-2xl font-semibold">Nouveau tournoi</h1>
-      <p className="mt-1 text-sm text-slate-500">Les horaires sont en heure de Tahiti.</p>
+      <h1 className="font-display mt-2 text-2xl font-semibold">Nouveau tournoi</h1>
+      <p className="text-sable-600 mt-1 text-sm">Les horaires sont en heure de Tahiti.</p>
 
       <div className="mt-6 space-y-4 rounded-lg bg-white p-6 shadow-sm">
         {createTournament.isError && <ErrorMessage>{createTournament.error.message}</ErrorMessage>}
-        {organizations.isPending && <p className="text-slate-500">Chargement…</p>}
+        {organizations.isPending && <p className="text-sable-600">Chargement…</p>}
         {organizations.isError && (
           <ErrorMessage>Organisations : {organizations.error.message}</ErrorMessage>
         )}
