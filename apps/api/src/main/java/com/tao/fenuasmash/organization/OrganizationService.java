@@ -29,6 +29,10 @@ public class OrganizationService {
 			.orElseThrow(() -> new NotFoundException("Organization", id));
 	}
 
+	public boolean exists(UUID id) {
+		return repository.existsById(id);
+	}
+
 	@Transactional
 	public OrganizationResponse create(CreateOrganizationRequest request) {
 		Organization organization = repository.save(new Organization(request.name().strip()));
