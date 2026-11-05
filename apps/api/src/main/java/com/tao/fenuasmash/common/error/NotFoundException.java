@@ -1,12 +1,14 @@
 package com.tao.fenuasmash.common.error;
 
-/**
- * Thrown when a requested resource does not exist. Mapped to HTTP 404.
- */
-public class NotFoundException extends RuntimeException {
+import java.util.Locale;
+
+import org.springframework.http.HttpStatus;
+
+public class NotFoundException extends ApiException {
 
 	public NotFoundException(String resource, Object id) {
-		super(resource + " " + id + " not found");
+		super(HttpStatus.NOT_FOUND, resource.toUpperCase(Locale.ROOT) + "_NOT_FOUND",
+				resource + " " + id + " not found");
 	}
 
 }
