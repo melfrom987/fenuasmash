@@ -52,6 +52,18 @@ public class Tournament {
 		this.updatedAt = now;
 	}
 
+	void update(String name, Instant startsAt, Instant endsAt, int minimumRestMinutes) {
+		this.name = name;
+		this.startsAt = startsAt.truncatedTo(ChronoUnit.MICROS);
+		this.endsAt = endsAt.truncatedTo(ChronoUnit.MICROS);
+		this.minimumRestMinutes = minimumRestMinutes;
+		this.updatedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
+	}
+
+	boolean hasStarted(Instant now) {
+		return !startsAt.isAfter(now);
+	}
+
 	public UUID getId() {
 		return id;
 	}

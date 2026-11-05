@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -13,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
@@ -177,6 +180,106 @@ class TournamentControllerTests {
 			.andExpect(status().isNotFound())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
 			.andExpect(jsonPath("$.code").value("TOURNAMENT_NOT_FOUND"));
+	}
+
+	@Test
+	void updateChangesOnlyProvidedFields() throws Exception {
+		UUID tournamentId = createAndGetId(body("Open de Papeete", "2026-11-14T18:00:00Z", "2026-11-16T04:00:00Z", 20, 2));
+
+		update(tournamentId, "{\"name\": \"  Open international de Papeete  \", \"minimumRestMinutes\": 30}")
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.name").value("Open international de Papeete"))
+			.andExpect(jsonPath("$.minimumRestMinutes").value(30))
+			.andExpect(jsonPath("$.startsAt").value("2026-11-14T18:00:00Z"))
+			.andExpect(jsonPath("$.endsAt").value("2026-11-16T04:00:00Z"))
+			.andExpect(jsonPath("$.organizationId").value(organizationId.toString()));
+
+		mvc.perform(get(URL + "/" + tournamentId))
+			.andExpect(jsonPath("$.name").value("Open international de Papeete"))
+			.andExpect(jsonPath("$.minimumRestMinutes").value(30));
+	}
+
+	@Test
+	void updateRefreshesUpdatedAt() throws Exception {
+		String created = create(body("Open de Papeete", "2026-11-14T18:00:00Z", "2026-11-16T04:00:00Z", 20, 2))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		UUID tournamentId = UUID.fromString(JsonPath.read(created, "$.id"));
+		Instant createdAt = Instant.parse(JsonPath.read(created, "$.createdAt"));
+
+		String updated = update(tournamentId, "{\"minimumRestMinutes\": 30}").andReturn()
+			.getResponse()
+			.getContentAsString();
+
+		assertThat(Instant.parse(JsonPath.<String>read(updated, "$.createdAt"))).isEqualTo(createdAt);
+		assertThat(Instant.parse(JsonPath.<String>read(updated, "$.updatedAt"))).isAfter(createdAt);
+	}
+
+	@Test
+	void updateChecksDateRangeAgainstExistingValues() throws Exception {
+		UUID tournamentId = createAndGetId(body("Open de Papeete", "2026-11-14T18:00:00Z", "2026-11-16T04:00:00Z", 20, 2));
+
+		assertBadRequest(update(tournamentId, "{\"endsAt\": \"2026-11-13T18:00:00Z\"}"), "INVALID_DATE_RANGE");
+		mvc.perform(get(URL + "/" + tournamentId)).andExpect(jsonPath("$.endsAt").value("2026-11-16T04:00:00Z"));
+	}
+
+	@Test
+	void updateRejectsBlankName() throws Exception {
+		UUID tournamentId = createAndGetId(body("Open de Papeete", "2026-11-14T18:00:00Z", "2026-11-16T04:00:00Z", 20, 2));
+
+		assertValidationError(update(tournamentId, "{\"name\": \"   \"}"), "name");
+	}
+
+	@Test
+	void updateRejectsNegativeMinimumRest() throws Exception {
+		UUID tournamentId = createAndGetId(body("Open de Papeete", "2026-11-14T18:00:00Z", "2026-11-16T04:00:00Z", 20, 2));
+
+		assertValidationError(update(tournamentId, "{\"minimumRestMinutes\": -5}"), "minimumRestMinutes");
+	}
+
+	@Test
+	void updateReturnsNotFoundForUnknownId() throws Exception {
+		update(UUID.randomUUID(), "{\"name\": \"Open\"}").andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("TOURNAMENT_NOT_FOUND"));
+	}
+
+	@Test
+	void deleteRemovesTournamentAndItsCourts() throws Exception {
+		UUID tournamentId = createAndGetId(body("Open de Papeete", inDays(30), inDays(32), 20, 3));
+
+		mvc.perform(delete(URL + "/" + tournamentId)).andExpect(status().isNoContent());
+
+		mvc.perform(get(URL + "/" + tournamentId)).andExpect(status().isNotFound());
+		Integer courts = jdbc.queryForObject("SELECT count(*) FROM court WHERE tournament_id = ?", Integer.class,
+				tournamentId);
+		assertThat(courts).isZero();
+	}
+
+	@Test
+	void deleteRejectsStartedTournament() throws Exception {
+		UUID tournamentId = createAndGetId(body("Open de Papeete", inDays(-1), inDays(1), 20, 2));
+
+		mvc.perform(delete(URL + "/" + tournamentId))
+			.andExpect(status().isConflict())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.code").value("TOURNAMENT_ALREADY_STARTED"));
+		mvc.perform(get(URL + "/" + tournamentId)).andExpect(status().isOk());
+	}
+
+	@Test
+	void deleteReturnsNotFoundForUnknownId() throws Exception {
+		mvc.perform(delete(URL + "/" + UUID.randomUUID()))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("TOURNAMENT_NOT_FOUND"));
+	}
+
+	private static String inDays(int days) {
+		return Instant.now().plus(days, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS).toString();
+	}
+
+	private ResultActions update(UUID tournamentId, String json) throws Exception {
+		return mvc.perform(patch(URL + "/" + tournamentId).contentType(MediaType.APPLICATION_JSON).content(json));
 	}
 
 	private String body(String name, String startsAt, String endsAt, int minimumRestMinutes, int courtCount) {
