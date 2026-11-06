@@ -43,6 +43,10 @@ public class TournamentService {
 		return TournamentResponse.from(getTournament(id));
 	}
 
+	public boolean exists(UUID id) {
+		return repository.existsById(id);
+	}
+
 	@Transactional
 	public TournamentResponse create(CreateTournamentRequest request) {
 		checkDateRange(request.startsAt(), request.endsAt());
