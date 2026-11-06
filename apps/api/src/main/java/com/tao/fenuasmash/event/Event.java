@@ -3,6 +3,7 @@ package com.tao.fenuasmash.event;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -26,19 +27,35 @@ public class Event {
 	@Column(nullable = false, length = 2)
 	private EventType type;
 
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 30)
+	private EventFormat format;
+
+	@Column(name = "pool_size")
+	private Integer poolSize;
+
+	@Column(name = "qualifiers_per_pool")
+	private Integer qualifiersPerPool;
+
+	@Embedded
+	private ScoringRules scoring;
+
 	protected Event() {
 	}
 
-	Event(UUID tournamentId, String name, EventType type) {
+	Event(UUID tournamentId, String name, EventType type, EventSettings settings) {
 		this.id = UUID.randomUUID();
 		this.tournamentId = tournamentId;
-		this.name = name;
-		this.type = type;
+		update(name, type, settings);
 	}
 
-	void update(String name, EventType type) {
+	void update(String name, EventType type, EventSettings settings) {
 		this.name = name;
 		this.type = type;
+		this.format = settings.format();
+		this.poolSize = settings.poolSize();
+		this.qualifiersPerPool = settings.qualifiersPerPool();
+		this.scoring = settings.scoring();
 	}
 
 	public UUID getId() {
@@ -55,6 +72,22 @@ public class Event {
 
 	public EventType getType() {
 		return type;
+	}
+
+	public EventFormat getFormat() {
+		return format;
+	}
+
+	public Integer getPoolSize() {
+		return poolSize;
+	}
+
+	public Integer getQualifiersPerPool() {
+		return qualifiersPerPool;
+	}
+
+	public ScoringRules getScoring() {
+		return scoring;
 	}
 
 }

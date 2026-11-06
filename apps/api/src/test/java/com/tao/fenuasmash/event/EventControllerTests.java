@@ -220,6 +220,154 @@ class EventControllerTests {
 		assertThat(events).isZero();
 	}
 
+	@Test
+	void createUsesSingleEliminationAndStandardScoringByDefault() throws Exception {
+		create(tournamentId, "Simple Homme", "MS").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
+			.andExpect(jsonPath("$.poolSize").doesNotExist())
+			.andExpect(jsonPath("$.qualifiersPerPool").doesNotExist())
+			.andExpect(jsonPath("$.scoring.gamesToWin").value(2))
+			.andExpect(jsonPath("$.scoring.pointsToWin").value(21))
+			.andExpect(jsonPath("$.scoring.pointCap").value(30));
+	}
+
+	@Test
+	void createWithPoolsFormat() throws Exception {
+		postJson(tournamentId, """
+				{"name": "Simple Dame", "type": "WS", "format": "POOLS_THEN_ELIMINATION",
+				 "poolSize": 4, "qualifiersPerPool": 2}
+				""").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.format").value("POOLS_THEN_ELIMINATION"))
+			.andExpect(jsonPath("$.poolSize").value(4))
+			.andExpect(jsonPath("$.qualifiersPerPool").value(2));
+	}
+
+	@Test
+	void createWithRoundRobinAndCustomScoring() throws Exception {
+		postJson(tournamentId, """
+				{"name": "Simple Jeunes", "type": "MS", "format": "ROUND_ROBIN",
+				 "scoring": {"gamesToWin": 1, "pointsToWin": 15, "pointCap": 15}}
+				""").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.format").value("ROUND_ROBIN"))
+			.andExpect(jsonPath("$.scoring.gamesToWin").value(1))
+			.andExpect(jsonPath("$.scoring.pointsToWin").value(15))
+			.andExpect(jsonPath("$.scoring.pointCap").value(15));
+	}
+
+	@Test
+	void createRejectsPoolsFormatWithoutPoolSettings() throws Exception {
+		assertBadRequest(postJson(tournamentId, """
+				{"name": "Simple Dame", "type": "WS", "format": "POOLS_THEN_ELIMINATION"}
+				"""), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void createRejectsQualifiersNotLessThanPoolSize() throws Exception {
+		assertBadRequest(postJson(tournamentId, """
+				{"name": "Simple Dame", "type": "WS", "format": "POOLS_THEN_ELIMINATION",
+				 "poolSize": 4, "qualifiersPerPool": 4}
+				"""), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void createRejectsPoolSettingsForOtherFormats() throws Exception {
+		assertBadRequest(postJson(tournamentId, """
+				{"name": "Simple Dame", "type": "WS", "format": "ROUND_ROBIN", "poolSize": 4}
+				"""), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void createRejectsPoolSizeOutOfRange() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple Dame", "type": "WS", "format": "POOLS_THEN_ELIMINATION",
+				 "poolSize": 9, "qualifiersPerPool": 2}
+				"""), "poolSize");
+	}
+
+	@Test
+	void createRejectsPointCapBelowPointsToWin() throws Exception {
+		assertBadRequest(postJson(tournamentId, """
+				{"name": "Simple Homme", "type": "MS", "scoring": {"pointsToWin": 21, "pointCap": 20}}
+				"""), "INVALID_SCORING_RULES");
+	}
+
+	@Test
+	void createRejectsGamesToWinOutOfRange() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple Homme", "type": "MS", "scoring": {"gamesToWin": 4}}
+				"""), "scoring.gamesToWin");
+	}
+
+	@Test
+	void createRejectsUnknownFormat() throws Exception {
+		postJson(tournamentId, """
+				{"name": "Simple Homme", "type": "MS", "format": "SWISS"}
+				""").andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void updateToPoolsRequiresPoolSettings() throws Exception {
+		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
+
+		assertBadRequest(update(eventId, "{\"format\": \"POOLS_THEN_ELIMINATION\"}"), "INVALID_FORMAT_SETTINGS");
+
+		update(eventId, """
+				{"format": "POOLS_THEN_ELIMINATION", "poolSize": 3, "qualifiersPerPool": 1}
+				""").andExpect(status().isOk())
+			.andExpect(jsonPath("$.format").value("POOLS_THEN_ELIMINATION"))
+			.andExpect(jsonPath("$.poolSize").value(3))
+			.andExpect(jsonPath("$.qualifiersPerPool").value(1));
+	}
+
+	@Test
+	void updateKeepsPoolSettingsWhenChangingOnlyOneOfThem() throws Exception {
+		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
+		update(eventId, """
+				{"format": "POOLS_THEN_ELIMINATION", "poolSize": 4, "qualifiersPerPool": 2}
+				""");
+
+		update(eventId, "{\"poolSize\": 5}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.poolSize").value(5))
+			.andExpect(jsonPath("$.qualifiersPerPool").value(2));
+	}
+
+	@Test
+	void updateToAnotherFormatClearsPoolSettings() throws Exception {
+		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
+		update(eventId, """
+				{"format": "POOLS_THEN_ELIMINATION", "poolSize": 4, "qualifiersPerPool": 2}
+				""");
+
+		update(eventId, "{\"format\": \"SINGLE_ELIMINATION\"}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
+			.andExpect(jsonPath("$.poolSize").doesNotExist())
+			.andExpect(jsonPath("$.qualifiersPerPool").doesNotExist());
+	}
+
+	@Test
+	void updateChangesOnlyProvidedScoringFields() throws Exception {
+		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
+
+		update(eventId, "{\"scoring\": {\"pointsToWin\": 15, \"pointCap\": 21}}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.scoring.gamesToWin").value(2))
+			.andExpect(jsonPath("$.scoring.pointsToWin").value(15))
+			.andExpect(jsonPath("$.scoring.pointCap").value(21));
+	}
+
+	@Test
+	void updateRejectsPointCapBelowExistingPointsToWin() throws Exception {
+		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
+
+		assertBadRequest(update(eventId, "{\"scoring\": {\"pointCap\": 15}}"), "INVALID_SCORING_RULES");
+		mvc.perform(get("/api/events/" + eventId)).andExpect(jsonPath("$.scoring.pointCap").value(30));
+	}
+
+	private static void assertBadRequest(ResultActions result, String code) throws Exception {
+		result.andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+			.andExpect(jsonPath("$.code").value(code));
+	}
+
 	private UUID insertTournament(String name) {
 		UUID id = UUID.randomUUID();
 		Instant now = Instant.now();
