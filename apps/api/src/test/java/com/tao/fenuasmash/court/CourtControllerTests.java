@@ -1,7 +1,11 @@
 package com.tao.fenuasmash.court;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -95,6 +99,90 @@ class CourtControllerTests {
 		mvc.perform(get("/api/tournaments/{id}/courts", UUID.randomUUID()))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("TOURNAMENT_NOT_FOUND"));
+	}
+
+	@Test
+	void addCreatesActiveCourtWithNextNumberAndLocation() throws Exception {
+		insertCourt(tournamentId, 1, true);
+		insertCourt(tournamentId, 2, true);
+
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+			.andExpect(status().isCreated())
+			.andExpect(header().string("Location", startsWith("/api/courts/")))
+			.andExpect(jsonPath("$.id").isNotEmpty())
+			.andExpect(jsonPath("$.tournamentId").value(tournamentId.toString()))
+			.andExpect(jsonPath("$.number").value(3))
+			.andExpect(jsonPath("$.active").value(true));
+
+		assertThat(countCourts(tournamentId)).isEqualTo(3);
+	}
+
+	@Test
+	void addStartsAtOneWhenTournamentHasNoCourts() throws Exception {
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.number").value(1));
+	}
+
+	@Test
+	void addFollowsHighestNumberWhenNumbersHaveGaps() throws Exception {
+		insertCourt(tournamentId, 1, true);
+		insertCourt(tournamentId, 3, true);
+
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.number").value(4));
+	}
+
+	@Test
+	void addIgnoresCourtsOfOtherTournaments() throws Exception {
+		insertCourt(insertTournament("Open de Moorea"), 1, true);
+
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.number").value(1));
+	}
+
+	@Test
+	void addRejectsMoreThanFiftyCourts() throws Exception {
+		for (int number = 1; number <= 50; number++) {
+			insertCourt(tournamentId, number, true);
+		}
+
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("COURT_LIMIT_REACHED"));
+
+		assertThat(countCourts(tournamentId)).isEqualTo(50);
+	}
+
+	@Test
+	void addReturnsNotFoundForUnknownTournament() throws Exception {
+		mvc.perform(post("/api/tournaments/{id}/courts", UUID.randomUUID()))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("TOURNAMENT_NOT_FOUND"));
+	}
+
+	@Test
+	void findByIdReturnsCourt() throws Exception {
+		UUID id = insertCourt(tournamentId, 4, false);
+
+		mvc.perform(get("/api/courts/{id}", id))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(id.toString()))
+			.andExpect(jsonPath("$.number").value(4))
+			.andExpect(jsonPath("$.active").value(false));
+	}
+
+	@Test
+	void findByIdReturnsNotFoundForUnknownCourt() throws Exception {
+		mvc.perform(get("/api/courts/{id}", UUID.randomUUID()))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("COURT_NOT_FOUND"));
+	}
+
+	private int countCourts(UUID tournament) {
+		return jdbc.queryForObject("SELECT count(*) FROM court WHERE tournament_id = ?", Integer.class, tournament);
 	}
 
 	private UUID insertTournament(String name) {
