@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.tao.fenuasmash.common.error.ConflictException;
 import com.tao.fenuasmash.common.error.InvalidRequestException;
 import com.tao.fenuasmash.common.error.NotFoundException;
-import com.tao.fenuasmash.court.CourtService;
+import com.tao.fenuasmash.court.CourtInitializer;
 import com.tao.fenuasmash.organization.OrganizationService;
 
 @Service
@@ -23,13 +23,13 @@ public class TournamentService {
 
 	private final OrganizationService organizationService;
 
-	private final CourtService courtService;
+	private final CourtInitializer courtInitializer;
 
 	TournamentService(TournamentRepository repository, OrganizationService organizationService,
-			CourtService courtService) {
+			CourtInitializer courtInitializer) {
 		this.repository = repository;
 		this.organizationService = organizationService;
-		this.courtService = courtService;
+		this.courtInitializer = courtInitializer;
 	}
 
 	public List<TournamentResponse> findAll() {
@@ -56,7 +56,7 @@ public class TournamentService {
 		}
 		Tournament tournament = repository.save(new Tournament(request.organizationId(), request.name().strip(),
 				request.startsAt(), request.endsAt(), request.minimumRestMinutes()));
-		courtService.createInitialCourts(tournament.getId(), request.courtCount());
+		courtInitializer.createInitialCourts(tournament.getId(), request.courtCount());
 		return TournamentResponse.from(tournament);
 	}
 
