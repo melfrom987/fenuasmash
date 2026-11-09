@@ -1,6 +1,8 @@
 package com.tao.fenuasmash.court;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
@@ -30,6 +32,8 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.tao.fenuasmash.DatabaseCleaner;
 import com.tao.fenuasmash.TestcontainersConfiguration;
+import com.tao.fenuasmash.common.error.ConflictException;
+import com.tao.fenuasmash.common.error.NotFoundException;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -41,6 +45,9 @@ class CourtControllerTests {
 
 	@Autowired
 	private JdbcTemplate jdbc;
+
+	@Autowired
+	private CourtService courtService;
 
 	private UUID organizationId;
 
@@ -276,6 +283,26 @@ class CourtControllerTests {
 		mvc.perform(delete("/api/courts/{id}", UUID.randomUUID()))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("COURT_NOT_FOUND"));
+	}
+
+	@Test
+	void ensureActiveAcceptsActiveCourt() {
+		UUID id = insertCourt(tournamentId, 1, true);
+
+		assertThatCode(() -> courtService.ensureActive(id)).doesNotThrowAnyException();
+	}
+
+	@Test
+	void ensureActiveRejectsInactiveCourt() {
+		UUID id = insertCourt(tournamentId, 1, false);
+
+		assertThatThrownBy(() -> courtService.ensureActive(id)).isInstanceOfSatisfying(ConflictException.class,
+				ex -> assertThat(ex.getCode()).isEqualTo("COURT_INACTIVE"));
+	}
+
+	@Test
+	void ensureActiveRejectsUnknownCourt() {
+		assertThatThrownBy(() -> courtService.ensureActive(UUID.randomUUID())).isInstanceOf(NotFoundException.class);
 	}
 
 	private ResultActions patchJson(UUID id, String body) throws Exception {

@@ -37,6 +37,15 @@ public class CourtService {
 		return CourtResponse.from(getCourt(id));
 	}
 
+	/**
+	 * Rejects a court that cannot receive a new match because it has been deactivated.
+	 */
+	public void ensureActive(UUID id) {
+		if (!getCourt(id).isActive()) {
+			throw new ConflictException("COURT_INACTIVE", "Court " + id + " is inactive and cannot receive a new match");
+		}
+	}
+
 	@Transactional
 	public CourtResponse update(UUID id, UpdateCourtRequest request) {
 		Court court = getCourt(id);
