@@ -1,4 +1,4 @@
-import type { Court, Organization, Tournament } from '@/api/models';
+import type { Court, Organization, Tournament, Event } from '@/api/models';
 
 const now = '2026-10-28T00:00:00.000Z';
 
@@ -40,4 +40,27 @@ const courts: Court[] = [1, 2, 3, 4].map((n) => ({
   active: true,
 }));
 
-export const db = { organizations, tournaments, courts };
+const events: Event[] = [
+  {
+    id: '30000000-0000-4000-8000-000000000001',
+    tournamentId: tournaments[0].id,
+    name: 'Simple Homme',
+    type: 'MS',
+    format: 'POOLS_THEN_ELIMINATION',
+    poolSize: 4,
+    qualifiersPerPool: 2,
+    scoring: { gamesToWin: 2, pointsToWin: 21, pointCap: 30 },
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000002',
+    tournamentId: tournaments[0].id,
+    name: 'Double Mixte',
+    type: 'XD',
+    format: 'SINGLE_ELIMINATION',
+    poolSize: null,
+    qualifiersPerPool: null,
+    scoring: { gamesToWin: 2, pointsToWin: 21, pointCap: 30 },
+  },
+];
+
+export const db = { organizations, tournaments, courts, events };

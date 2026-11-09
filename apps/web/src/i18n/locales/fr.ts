@@ -3,6 +3,7 @@ export const fr = {
     loading: 'Chargement…',
     language: 'Langue',
     invalidField: 'Valeur invalide',
+    cancel: 'Annuler',
   },
   nav: {
     tournaments: 'Tournois',
@@ -63,6 +64,7 @@ export const fr = {
   tournamentDetail: {
     tabs: {
       settings: 'Paramètres',
+      events: 'Tableaux',
     },
   },
   courts: {
@@ -76,6 +78,75 @@ export const fr = {
     inactive: 'Désactivé',
     activate: 'Réactiver',
     deactivate: 'Désactiver',
+  },
+  events: {
+    title: 'Tableaux',
+    hint: 'Les épreuves du tournoi : simple homme, double mixte… avec leur format et leurs règles de jeu.',
+    new: 'Nouveau tableau',
+    empty: 'Aucun tableau. Créez le premier pour pouvoir inscrire des joueurs.',
+    backToList: '← Retour aux tableaux',
+    edit: 'Modifier',
+    createTitle: 'Nouveau tableau',
+    editTitle: 'Modifier le tableau',
+    poolsSummary: 'Poules de {{size}}, {{qualifiers}} qualifié(s) par poule',
+    scoringSummary: '{{games}} set(s) gagnant(s) · {{points}} points · plafond {{cap}}',
+    types: {
+      MS: 'Simple Homme',
+      WS: 'Simple Dame',
+      MD: 'Double Homme',
+      WD: 'Double Dame',
+      XD: 'Double Mixte',
+    },
+    formats: {
+      SINGLE_ELIMINATION: 'Élimination directe',
+      POOLS_THEN_ELIMINATION: 'Poules puis élimination',
+      ROUND_ROBIN: 'Ronde italienne',
+      TEAM_TIE: 'Rencontres par équipes',
+    },
+    formatHints: {
+      SINGLE_ELIMINATION: 'Le perdant de chaque match est éliminé.',
+      POOLS_THEN_ELIMINATION:
+        'Des poules, puis les meilleurs de chaque poule passent en élimination directe.',
+      ROUND_ROBIN: 'Chaque participant rencontre tous les autres.',
+      TEAM_TIE: "Des équipes s'affrontent sur plusieurs matchs. La composition se fera en phase 2.",
+    },
+    form: {
+      type: 'Type',
+      name: 'Nom du tableau',
+      nameHint:
+        'Pré-rempli avec le type. Ajoutez une précision si besoin (ex. : Simple Homme P10).',
+      format: 'Format',
+      poolSize: 'Joueurs par poule',
+      qualifiersPerPool: 'Qualifiés par poule',
+      scoring: 'Règles de score',
+      scoringHint:
+        'Par défaut, les règles officielles : 2 sets gagnants de 21 points, plafond à 30.',
+      gamesToWin: 'Sets gagnants',
+      pointsToWin: 'Points par set',
+      pointCap: 'Plafond',
+      create: 'Créer le tableau',
+      save: 'Enregistrer',
+      saving: 'Enregistrement…',
+      errors: {
+        nameRequired: 'Le nom est obligatoire',
+        nameTooLong: '100 caractères maximum',
+        nameTaken: 'Un tableau porte déjà ce nom dans ce tournoi',
+        typeRequired: 'Choisissez un type',
+        numberExpected: 'Indiquez un nombre',
+        integerExpected: 'Nombre entier attendu',
+        poolSizeRange: 'Entre 3 et 8 joueurs',
+        qualifiersRange: 'Au moins 1, et moins que le nombre de joueurs par poule',
+        gamesToWinRange: 'Entre 1 et 3',
+        pointsRange: 'Entre 1 et 50',
+        pointCapBelowPoints: 'Le plafond doit être au moins égal aux points par set',
+      },
+    },
+    delete: {
+      title: 'Supprimer le tableau',
+      hint: 'Cette action est définitive.',
+      button: 'Supprimer…',
+      confirm: 'Confirmer la suppression',
+    },
   },
   apiErrors: {
     VALIDATION_FAILED: 'Certains champs sont invalides.',

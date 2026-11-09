@@ -1,16 +1,16 @@
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslation } from 'react-i18next';
 import type { Organization } from '@/api/models';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
-import { key, type TranslationKey } from '@/i18n';
+import { key } from '@/i18n';
 import { applyApiFieldErrors } from '@/lib/form-errors';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { tournamentFormSchema, type TournamentFormValues } from '../schema';
-
-const inputClass = 'mt-1 w-full rounded-md border border-sable-300 bg-white px-3 py-2 text-sm';
+import { Field } from '@/components/ui/Field';
+import { inputClass } from '@/components/ui/styles';
 
 export function TournamentForm({
   organizations,
@@ -113,19 +113,5 @@ export function TournamentForm({
         {isSubmitting ? t('tournaments.form.submitting') : t('tournaments.form.submit')}
       </Button>
     </form>
-  );
-}
-
-function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
-  const { t } = useTranslation();
-
-  return (
-    <label className="block">
-      <span className="text-sable-800 text-sm font-medium">{label}</span>
-      {children}
-      {error && (
-        <span className="mt-1 block text-sm text-red-700">{t(error as TranslationKey)}</span>
-      )}
-    </label>
   );
 }

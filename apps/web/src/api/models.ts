@@ -38,11 +38,24 @@ export type Player = {
   createdAt: IsoDate;
 };
 
+export type EventFormat =
+  'SINGLE_ELIMINATION' | 'POOLS_THEN_ELIMINATION' | 'ROUND_ROBIN' | 'TEAM_TIE';
+
+export type ScoringRules = {
+  gamesToWin: number;
+  pointsToWin: number;
+  pointCap: number;
+};
+
 export type Event = {
   id: string;
   tournamentId: string;
   name: string;
   type: EventType;
+  format: EventFormat;
+  poolSize: number | null; // seulement pour POOLS_THEN_ELIMINATION
+  qualifiersPerPool: number | null; // seulement pour POOLS_THEN_ELIMINATION
+  scoring: ScoringRules;
 };
 
 export type Entry = {
