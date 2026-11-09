@@ -1,16 +1,21 @@
-import { key } from '@/i18n';
 import { z } from 'zod';
+import { key } from '@/i18n';
 
 export const tournamentFormSchema = z
   .object({
-    organizationId: z.uuid('Choisissez une organisation'),
-    name: z.string().trim().min(1, 'Le nom est obligatoire'),
-    startsAt: z.string().min(1, 'La date de début est obligatoire'),
-    endsAt: z.string().min(1, 'La date de fin est obligatoire'),
+    organizationId: z.uuid(key('tournaments.form.errors.organizationRequired')),
+    name: z
+      .string()
+      .trim()
+      .min(1, key('tournaments.form.errors.nameRequired'))
+      .max(200, key('tournaments.form.errors.nameTooLong')),
+    startsAt: z.string().min(1, key('tournaments.form.errors.startsAtRequired')),
+    endsAt: z.string().min(1, key('tournaments.form.errors.endsAtRequired')),
     minimumRestMinutes: z
-      .number('Indiquez un nombre')
-      .int('Nombre entier attendu')
-      .min(0, 'Doit être positif'),
+      .number(key('tournaments.form.errors.numberExpected'))
+      .int(key('tournaments.form.errors.integerExpected'))
+      .min(0, key('tournaments.form.errors.restRange'))
+      .max(1440, key('tournaments.form.errors.restRange')),
     courtCount: z
       .number(key('tournaments.form.errors.numberExpected'))
       .int(key('tournaments.form.errors.integerExpected'))
@@ -18,7 +23,7 @@ export const tournamentFormSchema = z
       .max(50, key('tournaments.form.errors.courtCountRange')),
   })
   .refine((data) => data.endsAt > data.startsAt, {
-    message: 'La fin doit être après le début',
+    message: key('tournaments.form.errors.endsBeforeStart'),
     path: ['endsAt'],
   });
 

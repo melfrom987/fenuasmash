@@ -2,6 +2,7 @@ export const fr = {
   common: {
     loading: 'Chargement…',
     language: 'Langue',
+    invalidField: 'Valeur invalide',
   },
   nav: {
     tournaments: 'Tournois',
@@ -31,6 +32,8 @@ export const fr = {
       title: 'Nouveau tournoi',
       timezoneHint: 'Les horaires sont en heure de Tahiti.',
       organizationsError: 'Organisations : {{message}}',
+      noOrganization:
+        "Aucune organisation n'existe encore. Créez-en une avant de créer un tournoi.",
     },
     form: {
       organization: 'Organisation',
@@ -52,6 +55,8 @@ export const fr = {
         integerExpected: 'Nombre entier attendu',
         positive: 'Doit être positif',
         endsBeforeStart: 'La fin doit être après le début',
+        nameTooLong: '200 caractères maximum',
+        restRange: 'Entre 0 et 1440 minutes (24 h)',
       },
     },
   },
@@ -73,10 +78,20 @@ export const fr = {
     deactivate: 'Désactiver',
   },
   apiErrors: {
+    VALIDATION_FAILED: 'Certains champs sont invalides.',
+    INVALID_DATE_RANGE: 'La fin doit être après le début.',
+    INVALID_ORGANIZATION: "Cette organisation n'existe pas.",
+    ORGANIZATION_NOT_FOUND: 'Organisation introuvable',
     TOURNAMENT_NOT_FOUND: 'Tournoi introuvable',
+    TOURNAMENT_ALREADY_STARTED: 'Ce tournoi a déjà commencé : il ne peut plus être supprimé.',
+    EVENT_NOT_FOUND: 'Tableau introuvable',
+    EVENT_NAME_ALREADY_EXISTS: 'Un tableau porte déjà ce nom dans ce tournoi.',
+    INVALID_FORMAT_SETTINGS: 'Les paramètres du format sont incohérents.',
+    INVALID_SCORING_RULES: 'Les règles de score sont incohérentes.',
     COURT_NOT_FOUND: 'Terrain introuvable',
     COURT_NOT_LAST: 'Seul le dernier terrain peut être retiré.',
     COURT_IN_USE: 'Ce terrain a déjà reçu des matchs : désactivez-le plutôt.',
+    INTERNAL_ERROR: "Erreur du serveur. Réessayez, ou prévenez l'équipe technique.",
   },
 };
 
