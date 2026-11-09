@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -220,6 +221,60 @@ class CourtControllerTests {
 	@Test
 	void updateReturnsNotFoundForUnknownCourt() throws Exception {
 		patchJson(UUID.randomUUID(), "{\"active\": false}").andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("COURT_NOT_FOUND"));
+	}
+
+	@Test
+	void deleteRemovesLastCourt() throws Exception {
+		insertCourt(tournamentId, 1, true);
+		UUID last = insertCourt(tournamentId, 2, true);
+
+		mvc.perform(delete("/api/courts/{id}", last)).andExpect(status().isNoContent());
+
+		mvc.perform(get("/api/courts/{id}", last)).andExpect(status().isNotFound());
+		assertThat(countCourts(tournamentId)).isEqualTo(1);
+	}
+
+	@Test
+	void deleteAllowsNumberToBeReused() throws Exception {
+		insertCourt(tournamentId, 1, true);
+		UUID last = insertCourt(tournamentId, 2, true);
+
+		mvc.perform(delete("/api/courts/{id}", last)).andExpect(status().isNoContent());
+
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.number").value(2));
+	}
+
+	@Test
+	void deleteRejectsCourtThatIsNotLast() throws Exception {
+		UUID first = insertCourt(tournamentId, 1, true);
+		insertCourt(tournamentId, 2, true);
+
+		mvc.perform(delete("/api/courts/{id}", first))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.code").value("COURT_NOT_LAST"));
+
+		assertThat(countCourts(tournamentId)).isEqualTo(2);
+	}
+
+	@Test
+	void deleteOnlyComparesCourtsOfSameTournament() throws Exception {
+		UUID last = insertCourt(tournamentId, 1, true);
+		UUID other = insertTournament("Open de Moorea");
+		insertCourt(other, 1, true);
+		insertCourt(other, 2, true);
+
+		mvc.perform(delete("/api/courts/{id}", last)).andExpect(status().isNoContent());
+
+		assertThat(countCourts(other)).isEqualTo(2);
+	}
+
+	@Test
+	void deleteReturnsNotFoundForUnknownCourt() throws Exception {
+		mvc.perform(delete("/api/courts/{id}", UUID.randomUUID()))
+			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("COURT_NOT_FOUND"));
 	}
 

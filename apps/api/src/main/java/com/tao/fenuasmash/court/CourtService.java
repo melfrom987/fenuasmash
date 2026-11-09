@@ -56,6 +56,16 @@ public class CourtService {
 		return CourtResponse.from(repository.save(new Court(tournamentId, number)));
 	}
 
+	@Transactional
+	public void delete(UUID id) {
+		Court court = getCourt(id);
+		Court last = repository.findAllByTournamentIdOrderByNumber(court.getTournamentId()).getLast();
+		if (last.getNumber() != court.getNumber()) {
+			throw new ConflictException("COURT_NOT_LAST", "Only the last court of a tournament can be removed");
+		}
+		repository.delete(court);
+	}
+
 	private Court getCourt(UUID id) {
 		return repository.findById(id).orElseThrow(() -> new NotFoundException("Court", id));
 	}

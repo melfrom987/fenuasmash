@@ -7,6 +7,7 @@ import java.util.UUID;
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,6 +45,12 @@ class CourtController {
 	@PatchMapping("/courts/{id}")
 	CourtResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateCourtRequest request) {
 		return service.update(id, request);
+	}
+
+	@DeleteMapping("/courts/{id}")
+	ResponseEntity<Void> delete(@PathVariable UUID id) {
+		service.delete(id);
+		return ResponseEntity.noContent().build();
 	}
 
 }
