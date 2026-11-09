@@ -1,9 +1,11 @@
 package com.tao.fenuasmash.court;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -20,8 +22,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 
 import com.tao.fenuasmash.DatabaseCleaner;
 import com.tao.fenuasmash.TestcontainersConfiguration;
@@ -179,6 +183,52 @@ class CourtControllerTests {
 		mvc.perform(get("/api/courts/{id}", UUID.randomUUID()))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("COURT_NOT_FOUND"));
+	}
+
+	@Test
+	void updateDeactivatesCourt() throws Exception {
+		UUID id = insertCourt(tournamentId, 2, true);
+
+		patchJson(id, "{\"active\": false}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.id").value(id.toString()))
+			.andExpect(jsonPath("$.number").value(2))
+			.andExpect(jsonPath("$.active").value(false));
+
+		assertThat(isActive(id)).isFalse();
+	}
+
+	@Test
+	void updateReactivatesCourt() throws Exception {
+		UUID id = insertCourt(tournamentId, 1, false);
+
+		patchJson(id, "{\"active\": true}").andExpect(status().isOk()).andExpect(jsonPath("$.active").value(true));
+
+		assertThat(isActive(id)).isTrue();
+	}
+
+	@Test
+	void updateRejectsMissingActive() throws Exception {
+		UUID id = insertCourt(tournamentId, 1, true);
+
+		patchJson(id, "{}").andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+			.andExpect(jsonPath("$.errors[*].field", hasItem("active")));
+
+		assertThat(isActive(id)).isTrue();
+	}
+
+	@Test
+	void updateReturnsNotFoundForUnknownCourt() throws Exception {
+		patchJson(UUID.randomUUID(), "{\"active\": false}").andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("COURT_NOT_FOUND"));
+	}
+
+	private ResultActions patchJson(UUID id, String body) throws Exception {
+		return mvc.perform(patch("/api/courts/{id}", id).contentType(MediaType.APPLICATION_JSON).content(body));
+	}
+
+	private boolean isActive(UUID id) {
+		return jdbc.queryForObject("SELECT active FROM court WHERE id = ?", Boolean.class, id);
 	}
 
 	private int countCourts(UUID tournament) {

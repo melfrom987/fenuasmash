@@ -33,6 +33,10 @@ public class Court {
 		this.active = true;
 	}
 
+	void update(boolean active) {
+		this.active = active;
+	}
+
 	public UUID getId() {
 		return id;
 	}

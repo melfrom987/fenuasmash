@@ -34,7 +34,13 @@ public class CourtService {
 	}
 
 	public CourtResponse findById(UUID id) {
-		Court court = repository.findById(id).orElseThrow(() -> new NotFoundException("Court", id));
+		return CourtResponse.from(getCourt(id));
+	}
+
+	@Transactional
+	public CourtResponse update(UUID id, UpdateCourtRequest request) {
+		Court court = getCourt(id);
+		court.update(request.active());
 		return CourtResponse.from(court);
 	}
 
@@ -48,6 +54,10 @@ public class CourtService {
 		}
 		int number = courts.isEmpty() ? 1 : courts.getLast().getNumber() + 1;
 		return CourtResponse.from(repository.save(new Court(tournamentId, number)));
+	}
+
+	private Court getCourt(UUID id) {
+		return repository.findById(id).orElseThrow(() -> new NotFoundException("Court", id));
 	}
 
 	private void checkTournamentExists(UUID tournamentId) {
