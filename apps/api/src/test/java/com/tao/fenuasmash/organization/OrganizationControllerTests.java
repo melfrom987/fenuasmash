@@ -19,9 +19,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 
+import com.tao.fenuasmash.DatabaseCleaner;
 import com.tao.fenuasmash.TestcontainersConfiguration;
 
 /**
@@ -41,9 +43,12 @@ class OrganizationControllerTests {
 	@Autowired
 	private OrganizationRepository repository;
 
+	@Autowired
+	private JdbcTemplate jdbc;
+
 	@BeforeEach
 	void cleanDatabase() {
-		repository.deleteAll();
+		DatabaseCleaner.clean(jdbc);
 	}
 
 	@Test
@@ -117,7 +122,7 @@ class OrganizationControllerTests {
 		mvc.perform(get(URL + "/" + unknownId))
 			.andExpect(status().isNotFound())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
-			.andExpect(jsonPath("$.title").value("Resource not found"))
+			.andExpect(jsonPath("$.code").value("ORGANIZATION_NOT_FOUND"))
 			.andExpect(jsonPath("$.detail").value(endsWith(unknownId + " not found")));
 	}
 
