@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { ApiError } from './api-client';
 import type { Translation } from '@/i18n/locales/fr';
+import { ApiError } from './api-client';
 
-type ApiErrorCode = keyof Translation['apiErrors'];
+type ApiErrorCode = Extract<keyof Translation['apiErrors'], string>;
 
 export function useErrorMessage() {
   const { t, i18n } = useTranslation();

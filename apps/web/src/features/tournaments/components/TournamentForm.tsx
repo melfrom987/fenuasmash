@@ -1,26 +1,32 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import type { Organization } from '@/api/models';
 import { Button } from '@/components/ui/Button';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { key, type TranslationKey } from '@/i18n';
+import { applyApiFieldErrors } from '@/lib/form-errors';
+import { useErrorMessage } from '@/lib/use-error-message';
 import { tournamentFormSchema, type TournamentFormValues } from '../schema';
-import { t } from 'i18next';
 
 const inputClass = 'mt-1 w-full rounded-md border border-sable-300 bg-white px-3 py-2 text-sm';
 
 export function TournamentForm({
   organizations,
   onSubmit,
-  submitting,
 }: {
   organizations: Organization[];
-  onSubmit: (values: TournamentFormValues) => void;
-  submitting: boolean;
+  onSubmit: (values: TournamentFormValues) => Promise<unknown>;
 }) {
+  const { t } = useTranslation();
+  const errorMessage = useErrorMessage();
+  const [formError, setFormError] = useState<Error | null>(null);
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    setError,
+    formState: { errors, isSubmitting },
   } = useForm<TournamentFormValues>({
     resolver: zodResolver(tournamentFormSchema),
     defaultValues: {
@@ -29,12 +35,34 @@ export function TournamentForm({
       startsAt: '',
       endsAt: '',
       minimumRestMinutes: 20,
+      courtCount: 4,
     },
   });
 
+  const submit = async (values: TournamentFormValues) => {
+    setFormError(null);
+    try {
+      await onSubmit(values);
+    } catch (error) {
+      const shownOnField = applyApiFieldErrors(error, setError, {
+        INVALID_DATE_RANGE: {
+          field: 'endsAt',
+          message: key('tournaments.form.errors.endsBeforeStart'),
+        },
+        INVALID_ORGANIZATION: {
+          field: 'organizationId',
+          message: key('tournaments.form.errors.organizationRequired'),
+        },
+      });
+      if (!shownOnField) setFormError(error instanceof Error ? error : new Error(String(error)));
+    }
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-      <Field label="Organisation" error={errors.organizationId?.message}>
+    <form onSubmit={handleSubmit(submit)} noValidate className="space-y-4">
+      {formError && <ErrorMessage>{errorMessage(formError)}</ErrorMessage>}
+
+      <Field label={t('tournaments.form.organization')} error={errors.organizationId?.message}>
         <select className={inputClass} {...register('organizationId')}>
           {organizations.map((o) => (
             <option key={o.id} value={o.id}>
@@ -44,26 +72,28 @@ export function TournamentForm({
         </select>
       </Field>
 
-      <Field label="Nom du tournoi" error={errors.name?.message}>
-        <input className={inputClass} placeholder="Open de Papeete" {...register('name')} />
+      <Field label={t('tournaments.form.name')} error={errors.name?.message}>
+        <input
+          className={inputClass}
+          placeholder={t('tournaments.form.namePlaceholder')}
+          {...register('name')}
+        />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Début" error={errors.startsAt?.message}>
+        <Field label={t('tournaments.form.startsAt')} error={errors.startsAt?.message}>
           <input type="datetime-local" className={inputClass} {...register('startsAt')} />
         </Field>
-        <Field label="Fin" error={errors.endsAt?.message}>
+        <Field label={t('tournaments.form.endsAt')} error={errors.endsAt?.message}>
           <input type="datetime-local" className={inputClass} {...register('endsAt')} />
         </Field>
       </div>
 
-      <Field
-        label="Repos minimum entre deux matchs (minutes)"
-        error={errors.minimumRestMinutes?.message}
-      >
+      <Field label={t('tournaments.form.minimumRest')} error={errors.minimumRestMinutes?.message}>
         <input
           type="number"
           min={0}
+          max={1440}
           className={inputClass}
           {...register('minimumRestMinutes', { valueAsNumber: true })}
         />
@@ -79,19 +109,23 @@ export function TournamentForm({
         />
       </Field>
 
-      <Button type="submit" disabled={submitting}>
-        {submitting ? 'Création…' : 'Créer le tournoi'}
+      <Button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? t('tournaments.form.submitting') : t('tournaments.form.submit')}
       </Button>
     </form>
   );
 }
 
 function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
+  const { t } = useTranslation();
+
   return (
     <label className="block">
       <span className="text-sable-800 text-sm font-medium">{label}</span>
       {children}
-      {error && <span className="mt-1 block text-sm text-red-700">{error}</span>}
+      {error && (
+        <span className="mt-1 block text-sm text-red-700">{t(error as TranslationKey)}</span>
+      )}
     </label>
   );
 }

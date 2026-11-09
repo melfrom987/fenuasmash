@@ -17,7 +17,7 @@ export const courtHandlers = [
     const tournamentId = String(params.tournamentId);
     if (!db.tournaments.some((t) => t.id === tournamentId)) {
       return HttpResponse.json(
-        { code: 'TOURNAMENT_NOT_FOUND', message: 'Tournament not found' },
+        { code: 'TOURNAMENT_NOT_FOUND', detail: 'Tournament not found' },
         { status: 404 },
       );
     }
@@ -34,7 +34,7 @@ export const courtHandlers = [
     const court = db.courts.find((c) => c.id === params.courtId);
     if (!court) {
       return HttpResponse.json(
-        { code: 'COURT_NOT_FOUND', message: 'Court not found' },
+        { code: 'COURT_NOT_FOUND', mdetailessage: 'Court not found' },
         { status: 404 },
       );
     }
@@ -49,13 +49,13 @@ export const courtHandlers = [
     const court = db.courts.find((c) => c.id === params.courtId);
     if (!court) {
       return HttpResponse.json(
-        { code: 'COURT_NOT_FOUND', message: 'Court not found' },
+        { code: 'COURT_NOT_FOUND', detail: 'Court not found' },
         { status: 404 },
       );
     }
     if (court.number !== courtsOf(court.tournamentId).length) {
       return HttpResponse.json(
-        { code: 'COURT_NOT_LAST', message: 'Only the last court can be removed' },
+        { code: 'COURT_NOT_LAST', detail: 'Only the last court can be removed' },
         { status: 409 },
       );
     }

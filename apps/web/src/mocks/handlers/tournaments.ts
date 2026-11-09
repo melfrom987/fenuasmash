@@ -13,7 +13,10 @@ export const tournamentHandlers = [
     await delay();
     const tournament = db.tournaments.find((t) => t.id === params.tournamentId);
     if (!tournament) {
-      return HttpResponse.json({ message: 'Tournament not found' }, { status: 404 });
+      return HttpResponse.json(
+        { code: 'TOURNAMENT_NOT_FOUND', detail: 'Tournament not found' },
+        { status: 404 },
+      );
     }
     return HttpResponse.json(tournament);
   }),
@@ -26,7 +29,10 @@ export const tournamentHandlers = [
     > & { courtCount: number };
 
     if (!db.organizations.some((o) => o.id === body.organizationId)) {
-      return HttpResponse.json({ message: 'Invalid reference' }, { status: 400 });
+      return HttpResponse.json(
+        { code: 'INVALID_ORGANIZATION', detail: 'Organization not found' },
+        { status: 400 },
+      );
     }
 
     const now = new Date().toISOString();

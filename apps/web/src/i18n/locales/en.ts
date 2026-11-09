@@ -4,6 +4,7 @@ export const en: Translation = {
   common: {
     loading: 'Loading…',
     language: 'Language',
+    invalidField: 'Invalid value',
   },
   nav: {
     tournaments: 'Tournaments',
@@ -33,6 +34,7 @@ export const en: Translation = {
       title: 'New tournament',
       timezoneHint: 'Times are in Tahiti time.',
       organizationsError: 'Organizations: {{message}}',
+      noOrganization: 'No organization exists yet. Create one before creating a tournament.',
     },
     form: {
       organization: 'Organization',
@@ -54,6 +56,8 @@ export const en: Translation = {
         positive: 'Must be positive',
         endsBeforeStart: 'End must be after start',
         courtCountRange: 'Between 1 and 50 courts',
+        nameTooLong: '200 characters maximum',
+        restRange: 'Between 0 and 1440 minutes (24 h)',
       },
     },
   },
@@ -75,9 +79,19 @@ export const en: Translation = {
     deactivate: 'Disable',
   },
   apiErrors: {
+    VALIDATION_FAILED: 'Some fields are invalid.',
+    INVALID_DATE_RANGE: 'End must be after start.',
+    INVALID_ORGANIZATION: "This organization doesn't exist.",
+    ORGANIZATION_NOT_FOUND: 'Organization not found',
     TOURNAMENT_NOT_FOUND: 'Tournament not found',
+    TOURNAMENT_ALREADY_STARTED: 'This tournament has already started: it can no longer be deleted.',
+    EVENT_NOT_FOUND: 'Event not found',
+    EVENT_NAME_ALREADY_EXISTS: 'An event with this name already exists in this tournament.',
+    INVALID_FORMAT_SETTINGS: 'The format settings are inconsistent.',
+    INVALID_SCORING_RULES: 'The scoring rules are inconsistent.',
     COURT_NOT_FOUND: 'Court not found',
     COURT_NOT_LAST: 'Only the last court can be removed.',
     COURT_IN_USE: 'This court has already hosted matches: disable it instead.',
+    INTERNAL_ERROR: 'Server error. Try again, or let the tech team know.',
   },
 };
