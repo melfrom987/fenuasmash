@@ -58,7 +58,8 @@ public class TournamentService {
 		TournamentRules rules = checkRules(new TournamentRules(request.competitionType(), request.drawFormat(),
 				request.playMode(),
 				new ScoringRules(scoring.gamesToWin(), scoring.pointsToWin(), scoring.twoPointLead(), scoring.pointCap()),
-				request.relayStep(), request.disciplines()));
+				request.relayStep(), request.disciplines(),
+				Objects.requireNonNullElse(request.forbiddenCombinations(), List.of())));
 		Tournament tournament = repository.save(new Tournament(request.organizationId(), request.name().strip(),
 				request.startsAt(), request.endsAt(), request.minimumRestMinutes(), rules));
 		courtInitializer.createInitialCourts(tournament.getId(), request.courtCount());
@@ -106,7 +107,8 @@ public class TournamentService {
 		return new TournamentRules(Objects.requireNonNullElse(request.competitionType(), current.competitionType()),
 				Objects.requireNonNullElse(request.drawFormat(), current.drawFormat()), playMode,
 				mergeScoring(current.scoring(), request.scoring()), relayStep,
-				Objects.requireNonNullElse(request.disciplines(), current.disciplines()));
+				Objects.requireNonNullElse(request.disciplines(), current.disciplines()),
+				Objects.requireNonNullElse(request.forbiddenCombinations(), current.forbiddenCombinations()));
 	}
 
 	private static ScoringRules mergeScoring(ScoringRules current, UpdateScoringRulesRequest requested) {
@@ -123,7 +125,25 @@ public class TournamentService {
 	private static TournamentRules checkRules(TournamentRules rules) {
 		checkScoring(rules.scoring());
 		checkRelay(rules);
+		checkForbiddenCombinations(rules);
 		return rules;
+	}
+
+	private static void checkForbiddenCombinations(TournamentRules rules) {
+		for (List<Discipline> pair : rules.forbiddenCombinations()) {
+			if (pair == null || pair.size() != 2 || pair.get(0) == null || pair.get(1) == null) {
+				throw new InvalidRequestException("INVALID_FORBIDDEN_COMBINATION",
+						"A forbidden combination must contain exactly two disciplines");
+			}
+			if (pair.get(0) == pair.get(1)) {
+				throw new InvalidRequestException("INVALID_FORBIDDEN_COMBINATION",
+						"A forbidden combination must contain two different disciplines");
+			}
+			if (!rules.disciplines().containsAll(pair)) {
+				throw new InvalidRequestException("INVALID_FORBIDDEN_COMBINATION",
+						"A forbidden combination must only contain disciplines offered by the tournament");
+			}
+		}
 	}
 
 	private static void checkScoring(ScoringRules scoring) {

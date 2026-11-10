@@ -8,5 +8,6 @@ record TournamentRules(
 		PlayMode playMode,
 		ScoringRules scoring,
 		Integer relayStep,
-		List<Discipline> disciplines) {
+		List<Discipline> disciplines,
+		List<List<Discipline>> forbiddenCombinations) {
 }
