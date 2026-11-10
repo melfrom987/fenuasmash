@@ -1,19 +1,25 @@
 import { delay, http, HttpResponse } from 'msw';
-import type { Event, EventFormat, EventType, ScoringRules } from '@/api/models';
-import { DEFAULT_SCORING, EVENT_TYPES } from '@/features/events/constants';
+import type { Event } from '@/api/models';
+import { DISCIPLINES } from '@/features/events/constants';
 import { db } from '../data';
 
-type EventBody = Partial<Omit<Event, 'id' | 'tournamentId' | 'scoring'>> & {
-  scoring?: Partial<ScoringRules>;
-};
+type EventBody = Partial<
+  Pick<
+    Event,
+    'name' | 'discipline' | 'categoryType' | 'categoryLabel' | 'plannedDate' | 'maxEntries'
+  >
+>;
 
 const byDisplayOrder = (a: Event, b: Event) =>
-  EVENT_TYPES.indexOf(a.type as (typeof EVENT_TYPES)[number]) -
-    EVENT_TYPES.indexOf(b.type as (typeof EVENT_TYPES)[number]) ||
+  DISCIPLINES.indexOf(a.discipline) - DISCIPLINES.indexOf(b.discipline) ||
   a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
 
-const error = (status: number, code: string, detail: string) =>
-  HttpResponse.json({ code, detail, status }, { status });
+const error = (
+  status: number,
+  code: string,
+  detail: string,
+  errors?: { field: string; message: string }[],
+) => HttpResponse.json({ code, detail, status, errors }, { status });
 
 const nameTaken = (tournamentId: string, name: string, exceptId?: string) =>
   db.events.some(
@@ -23,31 +29,8 @@ const nameTaken = (tournamentId: string, name: string, exceptId?: string) =>
       e.name.toLowerCase() === name.toLowerCase(),
   );
 
-function resolveSettings(
-  current: Pick<Event, 'format' | 'poolSize' | 'qualifiersPerPool' | 'scoring'>,
-  body: EventBody,
-) {
-  const format: EventFormat = body.format ?? current.format;
-  let poolSize: number | null = null;
-  let qualifiersPerPool: number | null = null;
-
-  if (format === 'POOLS_THEN_ELIMINATION') {
-    const keep = current.format === 'POOLS_THEN_ELIMINATION';
-    poolSize = body.poolSize ?? (keep ? current.poolSize : null);
-    qualifiersPerPool = body.qualifiersPerPool ?? (keep ? current.qualifiersPerPool : null);
-    if (poolSize == null || qualifiersPerPool == null || qualifiersPerPool >= poolSize) {
-      return error(400, 'INVALID_FORMAT_SETTINGS', 'Invalid pool settings');
-    }
-  } else if (body.poolSize != null || body.qualifiersPerPool != null) {
-    return error(400, 'INVALID_FORMAT_SETTINGS', 'Pool settings are only allowed for pools');
-  }
-
-  const scoring = { ...current.scoring, ...body.scoring };
-  if (scoring.pointCap < scoring.pointsToWin) {
-    return error(400, 'INVALID_SCORING_RULES', 'pointCap must be >= pointsToWin');
-  }
-  return { format, poolSize, qualifiersPerPool, scoring };
-}
+const missingCategoryLabel = (body: EventBody) =>
+  body.categoryType !== undefined && body.categoryType !== 'OPEN' && !body.categoryLabel?.trim();
 
 export const eventHandlers = [
   http.get('/api/tournaments/:tournamentId/events', async ({ params }) => {
@@ -69,26 +52,27 @@ export const eventHandlers = [
     }
     const body = (await request.json()) as EventBody;
     const name = (body.name ?? '').trim();
+    if (missingCategoryLabel(body)) {
+      return error(400, 'VALIDATION_FAILED', 'Invalid request', [
+        { field: 'categoryLabel', message: 'must not be blank' },
+      ]);
+    }
     if (nameTaken(tournamentId, name)) {
       return error(409, 'EVENT_NAME_ALREADY_EXISTS', 'Event name already exists');
     }
-    const settings = resolveSettings(
-      {
-        format: 'SINGLE_ELIMINATION',
-        poolSize: null,
-        qualifiersPerPool: null,
-        scoring: DEFAULT_SCORING,
-      },
-      body,
-    );
-    if (settings instanceof Response) return settings;
 
     const event: Event = {
       id: crypto.randomUUID(),
       tournamentId,
       name,
-      type: body.type as EventType,
-      ...settings,
+      discipline: body.discipline ?? 'MS',
+      categoryType: body.categoryType ?? 'OPEN',
+      categoryLabel: body.categoryType === 'OPEN' ? null : (body.categoryLabel ?? null),
+      plannedDate: body.plannedDate ?? null,
+      maxEntries: body.maxEntries ?? null,
+      poolCount: null,
+      poolSize: null,
+      qualifiersPerPool: null,
     };
     db.events.push(event);
     return HttpResponse.json(event, { status: 201 });
@@ -107,13 +91,18 @@ export const eventHandlers = [
 
     const body = (await request.json()) as EventBody;
     const name = body.name?.trim() ?? event.name;
+    if (missingCategoryLabel(body)) {
+      return error(400, 'VALIDATION_FAILED', 'Invalid request', [
+        { field: 'categoryLabel', message: 'must not be blank' },
+      ]);
+    }
     if (nameTaken(event.tournamentId, name, event.id)) {
       return error(409, 'EVENT_NAME_ALREADY_EXISTS', 'Event name already exists');
     }
-    const settings = resolveSettings(event, body);
-    if (settings instanceof Response) return settings;
 
-    Object.assign(event, { name, type: body.type ?? event.type, ...settings });
+    // Un champ envoyé à null est effacé ; un champ absent est conservé
+    Object.assign(event, body, { name });
+    if (event.categoryType === 'OPEN') event.categoryLabel = null;
     return HttpResponse.json(event);
   }),
 

@@ -1,14 +1,24 @@
-import type { EventFormat, EventType, ScoringRules } from '@/api/models';
+import type { CategoryType, Discipline } from '@/api/models';
 
-/** Ordre officiel d'affichage, identique au back */
-export const EVENT_TYPES = ['MS', 'WS', 'MD', 'WD', 'XD'] as const satisfies readonly EventType[];
+/** Ordre officiel d'affichage */
+export const DISCIPLINES = [
+  'MS',
+  'WS',
+  'MD',
+  'WD',
+  'XD',
+  'OD',
+] as const satisfies readonly Discipline[];
 
-export const EVENT_FORMATS = [
-  'SINGLE_ELIMINATION',
-  'POOLS_THEN_ELIMINATION',
-  'ROUND_ROBIN',
-  'TEAM_TIE',
-] as const satisfies readonly EventFormat[];
+export const CATEGORY_TYPES = ['OPEN', 'AGE', 'LEVEL'] as const satisfies readonly CategoryType[];
 
-/** Règles officielles : 2 sets gagnants de 21 points, plafond à 30 */
-export const DEFAULT_SCORING: ScoringRules = { gamesToWin: 2, pointsToWin: 21, pointCap: 30 };
+export const AGE_CATEGORY_SUGGESTIONS = [
+  'Poussin',
+  'Benjamin',
+  'Minime',
+  'Cadet',
+  'Junior',
+  'Sénior',
+  'Vétéran',
+];
+export const LEVEL_CATEGORY_SUGGESTIONS = ['Série 4', 'Série 3', 'Série 2', 'Série 1'];

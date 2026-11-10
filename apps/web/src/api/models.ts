@@ -1,6 +1,7 @@
 export type IsoDate = string;
 
-export type EventType = 'MS' | 'WS' | 'MD' | 'WD' | 'XD';
+export type Discipline = 'MS' | 'WS' | 'MD' | 'WD' | 'XD' | 'OD';
+export type CategoryType = 'OPEN' | 'AGE' | 'LEVEL';
 export type MatchStatus =
   | 'PENDING'
   | 'READY'
@@ -51,13 +52,15 @@ export type Event = {
   id: string;
   tournamentId: string;
   name: string;
-  type: EventType;
-  format: EventFormat;
-  poolSize: number | null; // seulement pour POOLS_THEN_ELIMINATION
-  qualifiersPerPool: number | null; // seulement pour POOLS_THEN_ELIMINATION
-  scoring: ScoringRules;
+  discipline: Discipline;
+  categoryType: CategoryType;
+  categoryLabel: string | null;
+  plannedDate: IsoDate | null;
+  maxEntries: number | null;
+  poolCount: number | null;
+  poolSize: number | null;
+  qualifiersPerPool: number | null;
 };
-
 export type Entry = {
   id: string;
   eventId: string;

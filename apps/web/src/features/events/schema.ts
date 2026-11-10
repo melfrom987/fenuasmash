@@ -1,18 +1,8 @@
 import { z } from 'zod';
-import type { Event, ScoringRules } from '@/api/models';
-import { key, type TranslationKey } from '@/i18n';
-import { EVENT_FORMATS, EVENT_TYPES } from './constants';
-
-const intBetween = (min: number, max: number, rangeKey: TranslationKey) =>
-  z
-    .number(key('events.form.errors.numberExpected'))
-    .int(key('events.form.errors.integerExpected'))
-    .min(min, rangeKey)
-    .max(max, rangeKey);
-
-// Les champs de poule restent dans le formulaire même masqués :
-// on accepte NaN et on ne les vérifie que pour le format "poules".
-const optionalNumber = z.union([z.number(), z.nan()]);
+import type { Event } from '@/api/models';
+import { key } from '@/i18n';
+import { isoToTahitiInput, tahitiInputToIso } from '@/lib/dates';
+import { CATEGORY_TYPES, DISCIPLINES } from './constants';
 
 export const eventFormSchema = z
   .object({
@@ -21,73 +11,60 @@ export const eventFormSchema = z
       .trim()
       .min(1, key('events.form.errors.nameRequired'))
       .max(100, key('events.form.errors.nameTooLong')),
-    type: z.enum(EVENT_TYPES, key('events.form.errors.typeRequired')),
-    format: z.enum(EVENT_FORMATS),
-    poolSize: optionalNumber,
-    qualifiersPerPool: optionalNumber,
-    scoring: z.object({
-      gamesToWin: intBetween(1, 3, key('events.form.errors.gamesToWinRange')),
-      pointsToWin: intBetween(1, 50, key('events.form.errors.pointsRange')),
-      pointCap: intBetween(1, 50, key('events.form.errors.pointsRange')),
-    }),
+    discipline: z.enum(DISCIPLINES, key('events.form.errors.disciplineRequired')),
+    categoryType: z.enum(CATEGORY_TYPES),
+    categoryLabel: z.string().trim().max(50, key('events.form.errors.categoryLabelTooLong')),
+    plannedDate: z.string(), // '' = pas de date prévue
+    maxEntries: z.union([z.number(), z.nan()]), // NaN (champ vide) = non limité
   })
   .superRefine((data, ctx) => {
-    if (data.scoring.pointCap < data.scoring.pointsToWin) {
+    if (data.categoryType !== 'OPEN' && data.categoryLabel === '') {
       ctx.addIssue({
         code: 'custom',
-        path: ['scoring', 'pointCap'],
-        message: key('events.form.errors.pointCapBelowPoints'),
+        path: ['categoryLabel'],
+        message: key('events.form.errors.categoryLabelRequired'),
       });
     }
-    if (data.format !== 'POOLS_THEN_ELIMINATION') return;
-
-    const { poolSize, qualifiersPerPool } = data;
-    if (!Number.isInteger(poolSize) || poolSize < 3 || poolSize > 8) {
+    const max = data.maxEntries;
+    if (!Number.isNaN(max) && (!Number.isInteger(max) || max < 2 || max > 256)) {
       ctx.addIssue({
         code: 'custom',
-        path: ['poolSize'],
-        message: key('events.form.errors.poolSizeRange'),
-      });
-    }
-    if (
-      !Number.isInteger(qualifiersPerPool) ||
-      qualifiersPerPool < 1 ||
-      qualifiersPerPool >= poolSize
-    ) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['qualifiersPerPool'],
-        message: key('events.form.errors.qualifiersRange'),
+        path: ['maxEntries'],
+        message: key('events.form.errors.maxEntriesRange'),
       });
     }
   });
 
 export type EventFormValues = z.infer<typeof eventFormSchema>;
 
-/** Corps envoyé à l'API : les champs de poule seulement pour le format "poules" */
+/** Corps envoyé à l'API (création et modification) */
 export type EventInput = {
   name: string;
-  type: EventFormValues['type'];
-  format: EventFormValues['format'];
-  poolSize?: number;
-  qualifiersPerPool?: number;
-  scoring: ScoringRules;
+  discipline: EventFormValues['discipline'];
+  categoryType: EventFormValues['categoryType'];
+  categoryLabel: string | null;
+  plannedDate: string | null; // ISO, UTC
+  maxEntries: number | null;
 };
 
 export function toEventInput(values: EventFormValues): EventInput {
-  const { poolSize, qualifiersPerPool, ...rest } = values;
-  return values.format === 'POOLS_THEN_ELIMINATION'
-    ? { ...rest, poolSize, qualifiersPerPool }
-    : rest;
+  return {
+    name: values.name,
+    discipline: values.discipline,
+    categoryType: values.categoryType,
+    categoryLabel: values.categoryType === 'OPEN' ? null : values.categoryLabel,
+    plannedDate: values.plannedDate ? tahitiInputToIso(values.plannedDate) : null,
+    maxEntries: Number.isNaN(values.maxEntries) ? null : values.maxEntries,
+  };
 }
 
 export function toEventFormValues(event: Event): EventFormValues {
   return {
     name: event.name,
-    type: event.type,
-    format: event.format,
-    poolSize: event.poolSize ?? 4,
-    qualifiersPerPool: event.qualifiersPerPool ?? 2,
-    scoring: event.scoring,
+    discipline: event.discipline,
+    categoryType: event.categoryType,
+    categoryLabel: event.categoryLabel ?? '',
+    plannedDate: event.plannedDate ? isoToTahitiInput(event.plannedDate) : '',
+    maxEntries: event.maxEntries ?? Number.NaN,
   };
 }
