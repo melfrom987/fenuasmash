@@ -1,16 +1,17 @@
 package com.tao.fenuasmash.event;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+import com.tao.fenuasmash.tournament.Discipline;
+
 public record UpdateEventRequest(
 		@Size(max = 100) @Pattern(regexp = "(?s).*\\S.*", message = "must not be blank") String name,
-		EventType type,
-		EventFormat format,
+		Discipline discipline,
+		@Size(max = 100) @Pattern(regexp = "(?s).*\\S.*", message = "must not be blank") String category,
+		@Min(1) Integer poolCount,
 		@Min(3) @Max(8) Integer poolSize,
-		@Min(1) @Max(7) Integer qualifiersPerPool,
-		@Valid ScoringRulesRequest scoring) {
+		@Min(1) @Max(7) Integer qualifiersPerPool) {
 }

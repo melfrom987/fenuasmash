@@ -3,12 +3,13 @@ package com.tao.fenuasmash.event;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
+import com.tao.fenuasmash.tournament.Discipline;
 
 @Entity
 @Table(name = "event")
@@ -25,11 +26,13 @@ public class Event {
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 2)
-	private EventType type;
+	private Discipline discipline;
 
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false, length = 30)
-	private EventFormat format;
+	@Column(nullable = false, length = 100)
+	private String category;
+
+	@Column(name = "pool_count")
+	private Integer poolCount;
 
 	@Column(name = "pool_size")
 	private Integer poolSize;
@@ -37,25 +40,22 @@ public class Event {
 	@Column(name = "qualifiers_per_pool")
 	private Integer qualifiersPerPool;
 
-	@Embedded
-	private ScoringRules scoring;
-
 	protected Event() {
 	}
 
-	Event(UUID tournamentId, String name, EventType type, EventSettings settings) {
+	Event(UUID tournamentId, String name, Discipline discipline, String category, PoolStructure structure) {
 		this.id = UUID.randomUUID();
 		this.tournamentId = tournamentId;
-		update(name, type, settings);
+		update(name, discipline, category, structure);
 	}
 
-	void update(String name, EventType type, EventSettings settings) {
+	void update(String name, Discipline discipline, String category, PoolStructure structure) {
 		this.name = name;
-		this.type = type;
-		this.format = settings.format();
-		this.poolSize = settings.poolSize();
-		this.qualifiersPerPool = settings.qualifiersPerPool();
-		this.scoring = settings.scoring();
+		this.discipline = discipline;
+		this.category = category;
+		this.poolCount = structure.poolCount();
+		this.poolSize = structure.poolSize();
+		this.qualifiersPerPool = structure.qualifiersPerPool();
 	}
 
 	public UUID getId() {
@@ -70,12 +70,16 @@ public class Event {
 		return name;
 	}
 
-	public EventType getType() {
-		return type;
+	public Discipline getDiscipline() {
+		return discipline;
 	}
 
-	public EventFormat getFormat() {
-		return format;
+	public String getCategory() {
+		return category;
+	}
+
+	public Integer getPoolCount() {
+		return poolCount;
 	}
 
 	public Integer getPoolSize() {
@@ -84,10 +88,6 @@ public class Event {
 
 	public Integer getQualifiersPerPool() {
 		return qualifiersPerPool;
-	}
-
-	public ScoringRules getScoring() {
-		return scoring;
 	}
 
 }

@@ -54,8 +54,13 @@ public class TournamentService {
 			throw new InvalidRequestException("INVALID_ORGANIZATION",
 					"Organization " + request.organizationId() + " does not exist");
 		}
+		ScoringRulesRequest scoring = request.scoring();
+		TournamentRules rules = checkRules(new TournamentRules(request.competitionType(), request.drawFormat(),
+				request.playMode(),
+				new ScoringRules(scoring.gamesToWin(), scoring.pointsToWin(), scoring.twoPointLead(), scoring.pointCap()),
+				request.relayStep(), request.disciplines()));
 		Tournament tournament = repository.save(new Tournament(request.organizationId(), request.name().strip(),
-				request.startsAt(), request.endsAt(), request.minimumRestMinutes()));
+				request.startsAt(), request.endsAt(), request.minimumRestMinutes(), rules));
 		courtInitializer.createInitialCourts(tournament.getId(), request.courtCount());
 		return TournamentResponse.from(tournament);
 	}
@@ -69,7 +74,8 @@ public class TournamentService {
 		int minimumRestMinutes = Objects.requireNonNullElse(request.minimumRestMinutes(),
 				tournament.getMinimumRestMinutes());
 		checkDateRange(startsAt, endsAt);
-		tournament.update(name, startsAt, endsAt, minimumRestMinutes);
+		TournamentRules rules = checkRules(mergeRules(tournament.getRules(), request));
+		tournament.update(name, startsAt, endsAt, minimumRestMinutes, rules);
 		return TournamentResponse.from(tournament);
 	}
 
@@ -90,6 +96,58 @@ public class TournamentService {
 	private static void checkDateRange(Instant startsAt, Instant endsAt) {
 		if (!endsAt.isAfter(startsAt)) {
 			throw new InvalidRequestException("INVALID_DATE_RANGE", "endsAt must be after startsAt");
+		}
+	}
+
+	private static TournamentRules mergeRules(TournamentRules current, UpdateTournamentRequest request) {
+		PlayMode playMode = Objects.requireNonNullElse(request.playMode(), current.playMode());
+		Integer relayStep = request.relayStep() != null ? request.relayStep()
+				: playMode == PlayMode.RELAY ? current.relayStep() : null;
+		return new TournamentRules(Objects.requireNonNullElse(request.competitionType(), current.competitionType()),
+				Objects.requireNonNullElse(request.drawFormat(), current.drawFormat()), playMode,
+				mergeScoring(current.scoring(), request.scoring()), relayStep,
+				Objects.requireNonNullElse(request.disciplines(), current.disciplines()));
+	}
+
+	private static ScoringRules mergeScoring(ScoringRules current, UpdateScoringRulesRequest requested) {
+		if (requested == null) {
+			return current;
+		}
+		boolean twoPointLead = Objects.requireNonNullElse(requested.twoPointLead(), current.twoPointLead());
+		Integer pointCap = requested.pointCap() != null ? requested.pointCap()
+				: twoPointLead ? current.pointCap() : null;
+		return new ScoringRules(Objects.requireNonNullElse(requested.gamesToWin(), current.gamesToWin()),
+				Objects.requireNonNullElse(requested.pointsToWin(), current.pointsToWin()), twoPointLead, pointCap);
+	}
+
+	private static TournamentRules checkRules(TournamentRules rules) {
+		checkScoring(rules.scoring());
+		checkRelay(rules);
+		return rules;
+	}
+
+	private static void checkScoring(ScoringRules scoring) {
+		if (scoring.twoPointLead() && scoring.pointCap() == null) {
+			throw new InvalidRequestException("INVALID_SCORING_RULES", "pointCap is required with a two-point lead");
+		}
+		if (!scoring.twoPointLead() && scoring.pointCap() != null) {
+			throw new InvalidRequestException("INVALID_SCORING_RULES", "pointCap is only allowed with a two-point lead");
+		}
+		if (scoring.pointCap() != null && scoring.pointCap() < scoring.pointsToWin()) {
+			throw new InvalidRequestException("INVALID_SCORING_RULES",
+					"pointCap must be greater than or equal to pointsToWin");
+		}
+	}
+
+	private static void checkRelay(TournamentRules rules) {
+		if (rules.playMode() == PlayMode.SETS) {
+			if (rules.relayStep() != null) {
+				throw new InvalidRequestException("INVALID_RELAY_SETTINGS", "relayStep is only allowed in relay mode");
+			}
+			return;
+		}
+		if (rules.relayStep() == null) {
+			throw new InvalidRequestException("INVALID_RELAY_SETTINGS", "relayStep is required in relay mode");
 		}
 	}
 
