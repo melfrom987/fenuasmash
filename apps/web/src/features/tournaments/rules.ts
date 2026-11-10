@@ -16,6 +16,8 @@ const intBetween = (min: number, max: number, rangeKey: TranslationKey) =>
     .min(min, rangeKey)
     .max(max, rangeKey);
 
+const discipline = z.enum(DISCIPLINES);
+
 export const rulesSchema = z
   .object({
     drawFormat: z.enum(DRAW_FORMATS),
@@ -26,18 +28,36 @@ export const rulesSchema = z
       // Champ masqué quand twoPointLead est décoché : NaN accepté, vérifié plus bas
       pointCap: z.union([z.number(), z.nan()]),
     }),
-    disciplines: z.array(z.enum(DISCIPLINES)).min(1, key('rules.errors.disciplinesRequired')),
+    disciplines: z.array(discipline).min(1, key('rules.errors.disciplinesRequired')),
+    forbiddenCombinations: z.array(z.object({ first: discipline, second: discipline })),
   })
   .superRefine((data, ctx) => {
     const { twoPointLead, pointCap, pointsToWin } = data.scoring;
-    if (!twoPointLead) return;
-    if (!Number.isInteger(pointCap) || pointCap < pointsToWin || pointCap > 50) {
+    if (twoPointLead && (!Number.isInteger(pointCap) || pointCap < pointsToWin || pointCap > 50)) {
       ctx.addIssue({
         code: 'custom',
         path: ['scoring', 'pointCap'],
         message: key('rules.errors.pointCapRange'),
       });
     }
+
+    const seen = new Set<string>();
+    data.forbiddenCombinations.forEach(({ first, second }, index) => {
+      const path = ['forbiddenCombinations', index, 'second'];
+      if (first === second) {
+        ctx.addIssue({ code: 'custom', path, message: key('rules.errors.combinationSame') });
+        return;
+      }
+      if (!data.disciplines.includes(first) || !data.disciplines.includes(second)) {
+        ctx.addIssue({ code: 'custom', path, message: key('rules.errors.combinationNotOffered') });
+        return;
+      }
+      const id = [first, second].sort().join('+');
+      if (seen.has(id)) {
+        ctx.addIssue({ code: 'custom', path, message: key('rules.errors.combinationDuplicate') });
+      }
+      seen.add(id);
+    });
   });
 
 export type RulesValues = z.infer<typeof rulesSchema>;
@@ -50,6 +70,7 @@ export const DEFAULT_RULES: RulesValues = {
   drawFormat: 'POOLS_THEN_ELIMINATION',
   scoring: { gamesToWin: 2, pointsToWin: 21, twoPointLead: true, pointCap: 30 },
   disciplines: ['MS', 'WS', 'MD', 'WD', 'XD'],
+  forbiddenCombinations: [],
 };
 
 /** Corps envoyé à l'API */
@@ -59,6 +80,7 @@ export type RulesInput = {
   drawFormat: DrawFormat;
   scoring: ScoringRules;
   disciplines: Discipline[];
+  forbiddenCombinations: [Discipline, Discipline][];
 };
 
 export function toRulesInput(values: RulesValues): RulesInput {
@@ -68,7 +90,11 @@ export function toRulesInput(values: RulesValues): RulesInput {
     playMode: 'SETS',
     drawFormat: values.drawFormat,
     scoring: { ...values.scoring, pointCap: twoPointLead ? pointCap : null },
-    disciplines: values.disciplines,
+    // Toujours dans l'ordre officiel, quel que soit l'ordre des cases cochées
+    disciplines: DISCIPLINES.filter((d) => values.disciplines.includes(d)),
+    forbiddenCombinations: values.forbiddenCombinations.map(
+      ({ first, second }): [Discipline, Discipline] => [first, second],
+    ),
   };
 }
 
@@ -82,5 +108,9 @@ export function toRulesValues(tournament: Tournament): RulesValues {
     disciplines: tournament.disciplines?.length
       ? tournament.disciplines
       : DEFAULT_RULES.disciplines,
+    forbiddenCombinations: (tournament.forbiddenCombinations ?? []).map(([first, second]) => ({
+      first,
+      second,
+    })),
   };
 }

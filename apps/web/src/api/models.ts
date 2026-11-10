@@ -33,7 +33,8 @@ export type Tournament = {
   drawFormat?: DrawFormat;
   playMode?: PlayMode;
   scoring?: ScoringRules;
-  disciplines?: Discipline[]; // dans l'ordre où elles se jouent
+  disciplines?: Discipline[];
+  forbiddenCombinations?: [Discipline, Discipline][];
 };
 
 export type Player = {

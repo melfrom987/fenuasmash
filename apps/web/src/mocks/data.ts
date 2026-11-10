@@ -25,6 +25,7 @@ const tournaments: Tournament[] = [
     playMode: 'SETS',
     scoring: { gamesToWin: 2, pointsToWin: 21, twoPointLead: true, pointCap: 30 },
     disciplines: ['MS', 'WS', 'MD', 'WD', 'XD'],
+    forbiddenCombinations: [['MS', 'XD']],
   },
   {
     id: '10000000-0000-4000-8000-000000000002',
@@ -40,6 +41,7 @@ const tournaments: Tournament[] = [
     playMode: 'SETS',
     scoring: { gamesToWin: 2, pointsToWin: 21, twoPointLead: true, pointCap: 30 },
     disciplines: ['MS', 'WS', 'MD', 'WD', 'XD'],
+    forbiddenCombinations: [],
   },
 ];
 
