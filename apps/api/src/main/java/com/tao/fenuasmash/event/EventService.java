@@ -78,8 +78,8 @@ public class EventService {
 				event.getQualifiersPerPool());
 		PoolStructure structure = resolveStructure(tournament.drawFormat(), current, request.poolCount(),
 				request.poolSize(), request.qualifiersPerPool());
-		Instant plannedDate = request.plannedDate() != null ? request.plannedDate() : event.getPlannedDate();
-		Integer maxEntries = request.maxEntries() != null ? request.maxEntries() : event.getMaxEntries();
+		Instant plannedDate = request.plannedDateSent() ? request.plannedDate() : event.getPlannedDate();
+		Integer maxEntries = request.maxEntriesSent() ? request.maxEntries() : event.getMaxEntries();
 		event.update(name, discipline, categoryType, categoryLabel, plannedDate, maxEntries, structure);
 		return EventResponse.from(event);
 	}

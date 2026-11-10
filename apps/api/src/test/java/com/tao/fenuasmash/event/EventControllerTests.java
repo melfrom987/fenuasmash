@@ -199,6 +199,41 @@ class EventControllerTests {
 	}
 
 	@Test
+	void updateClearsPlannedDateWhenNull() throws Exception {
+		UUID eventId = createScheduledEvent();
+
+		update(eventId, "{\"plannedDate\": null}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.plannedDate").doesNotExist())
+			.andExpect(jsonPath("$.maxEntries").value(24));
+
+		mvc.perform(get("/api/events/" + eventId)).andExpect(jsonPath("$.plannedDate").doesNotExist());
+	}
+
+	@Test
+	void updateClearsMaxEntriesWhenNull() throws Exception {
+		UUID eventId = createScheduledEvent();
+
+		update(eventId, "{\"maxEntries\": null}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.maxEntries").doesNotExist())
+			.andExpect(jsonPath("$.plannedDate").value("2026-11-14T18:00:00Z"));
+
+		mvc.perform(get("/api/events/" + eventId)).andExpect(jsonPath("$.maxEntries").doesNotExist());
+	}
+
+	@Test
+	void updateAcceptsFullBodySentByTheWebApp() throws Exception {
+		UUID eventId = createScheduledEvent();
+
+		update(eventId, """
+				{"name": "Simple Adultes", "discipline": "MS", "categoryType": "OPEN", "categoryLabel": null,
+				 "plannedDate": null, "maxEntries": null}
+				""").andExpect(status().isOk())
+			.andExpect(jsonPath("$.name").value("Simple Adultes"))
+			.andExpect(jsonPath("$.plannedDate").doesNotExist())
+			.andExpect(jsonPath("$.maxEntries").doesNotExist());
+	}
+
+	@Test
 	void updateRejectsMaxEntriesOutOfRange() throws Exception {
 		UUID eventId = createScheduledEvent();
 
