@@ -28,8 +28,12 @@ public class Event {
 	@Column(nullable = false, length = 2)
 	private Discipline discipline;
 
-	@Column(nullable = false, length = 100)
-	private String category;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "category_type", nullable = false, length = 5)
+	private CategoryType categoryType;
+
+	@Column(name = "category_label", length = 50)
+	private String categoryLabel;
 
 	@Column(name = "pool_count")
 	private Integer poolCount;
@@ -43,16 +47,19 @@ public class Event {
 	protected Event() {
 	}
 
-	Event(UUID tournamentId, String name, Discipline discipline, String category, PoolStructure structure) {
+	Event(UUID tournamentId, String name, Discipline discipline, CategoryType categoryType, String categoryLabel,
+			PoolStructure structure) {
 		this.id = UUID.randomUUID();
 		this.tournamentId = tournamentId;
-		update(name, discipline, category, structure);
+		update(name, discipline, categoryType, categoryLabel, structure);
 	}
 
-	void update(String name, Discipline discipline, String category, PoolStructure structure) {
+	void update(String name, Discipline discipline, CategoryType categoryType, String categoryLabel,
+			PoolStructure structure) {
 		this.name = name;
 		this.discipline = discipline;
-		this.category = category;
+		this.categoryType = categoryType;
+		this.categoryLabel = categoryLabel;
 		this.poolCount = structure.poolCount();
 		this.poolSize = structure.poolSize();
 		this.qualifiersPerPool = structure.qualifiersPerPool();
@@ -74,8 +81,12 @@ public class Event {
 		return discipline;
 	}
 
-	public String getCategory() {
-		return category;
+	public CategoryType getCategoryType() {
+		return categoryType;
+	}
+
+	public String getCategoryLabel() {
+		return categoryLabel;
 	}
 
 	public Integer getPoolCount() {

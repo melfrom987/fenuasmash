@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.tao.fenuasmash.common.error.ConflictException;
+import com.tao.fenuasmash.common.error.FieldValidationException;
 import com.tao.fenuasmash.common.error.InvalidRequestException;
 import com.tao.fenuasmash.common.error.NotFoundException;
 import com.tao.fenuasmash.tournament.Discipline;
@@ -49,14 +50,14 @@ public class EventService {
 	public EventResponse create(UUID tournamentId, CreateEventRequest request) {
 		TournamentResponse tournament = tournamentService.findById(tournamentId);
 		String name = request.name().strip();
-		String category = request.category().strip();
+		String categoryLabel = resolveCategoryLabel(request.categoryType(), request.categoryLabel());
 		if (repository.existsByTournamentIdAndNameIgnoreCase(tournamentId, name)) {
 			throw duplicateName(name);
 		}
 		PoolStructure structure = resolveStructure(tournament.drawFormat(), PoolStructure.NONE, request.poolCount(),
 				request.poolSize(), request.qualifiersPerPool());
-		return EventResponse
-			.from(repository.save(new Event(tournamentId, name, request.discipline(), category, structure)));
+		return EventResponse.from(repository
+			.save(new Event(tournamentId, name, request.discipline(), request.categoryType(), categoryLabel, structure)));
 	}
 
 	@Transactional
@@ -64,7 +65,10 @@ public class EventService {
 		Event event = getEvent(id);
 		TournamentResponse tournament = tournamentService.findById(event.getTournamentId());
 		String name = request.name() != null ? request.name().strip() : event.getName();
-		String category = request.category() != null ? request.category().strip() : event.getCategory();
+		CategoryType categoryType = Objects.requireNonNullElse(request.categoryType(), event.getCategoryType());
+		String requestedLabel = request.categoryType() != null || request.categoryLabel() != null
+				? request.categoryLabel() : event.getCategoryLabel();
+		String categoryLabel = resolveCategoryLabel(categoryType, requestedLabel);
 		Discipline discipline = Objects.requireNonNullElse(request.discipline(), event.getDiscipline());
 		if (repository.existsByTournamentIdAndNameIgnoreCaseAndIdNot(event.getTournamentId(), name, id)) {
 			throw duplicateName(name);
@@ -73,13 +77,23 @@ public class EventService {
 				event.getQualifiersPerPool());
 		PoolStructure structure = resolveStructure(tournament.drawFormat(), current, request.poolCount(),
 				request.poolSize(), request.qualifiersPerPool());
-		event.update(name, discipline, category, structure);
+		event.update(name, discipline, categoryType, categoryLabel, structure);
 		return EventResponse.from(event);
 	}
 
 	@Transactional
 	public void delete(UUID id) {
 		repository.delete(getEvent(id));
+	}
+
+	private static String resolveCategoryLabel(CategoryType categoryType, String categoryLabel) {
+		if (categoryType == CategoryType.OPEN) {
+			return null;
+		}
+		if (categoryLabel == null || categoryLabel.isBlank()) {
+			throw new FieldValidationException("categoryLabel", "must not be blank");
+		}
+		return categoryLabel.strip();
 	}
 
 	private static PoolStructure resolveStructure(DrawFormat format, PoolStructure current, Integer requestedPoolCount,

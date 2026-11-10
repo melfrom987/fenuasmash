@@ -41,8 +41,6 @@ class EventControllerTests {
 
 	private static final List<String> ALL_DISCIPLINES = List.of("MS", "WS", "MD", "WD", "XD");
 
-	private static final String CATEGORY = "Senior";
-
 	@Autowired
 	private MockMvc mvc;
 
@@ -70,7 +68,8 @@ class EventControllerTests {
 			.andExpect(jsonPath("$.tournamentId").value(tournamentId.toString()))
 			.andExpect(jsonPath("$.name").value("Simple Homme"))
 			.andExpect(jsonPath("$.discipline").value("MS"))
-			.andExpect(jsonPath("$.category").value(CATEGORY));
+			.andExpect(jsonPath("$.categoryType").value("OPEN"))
+			.andExpect(jsonPath("$.categoryLabel").doesNotExist());
 	}
 
 	@Test
@@ -82,12 +81,60 @@ class EventControllerTests {
 	}
 
 	@Test
-	void createTrimsNameAndCategory() throws Exception {
+	void createTrimsNameAndCategoryLabel() throws Exception {
 		postJson(tournamentId, """
-				{"name": "  Double Mixte  ", "discipline": "XD", "category": "  Cadet  "}
+				{"name": "  Double Mixte  ", "discipline": "XD", "categoryType": "AGE", "categoryLabel": "  Cadet  "}
 				""").andExpect(status().isCreated())
 			.andExpect(jsonPath("$.name").value("Double Mixte"))
-			.andExpect(jsonPath("$.category").value("Cadet"));
+			.andExpect(jsonPath("$.categoryType").value("AGE"))
+			.andExpect(jsonPath("$.categoryLabel").value("Cadet"));
+	}
+
+	@Test
+	void createAcceptsLevelCategory() throws Exception {
+		postJson(tournamentId, """
+				{"name": "Simple D8/D9", "discipline": "MS", "categoryType": "LEVEL", "categoryLabel": "D8/D9"}
+				""").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.categoryType").value("LEVEL"))
+			.andExpect(jsonPath("$.categoryLabel").value("D8/D9"));
+	}
+
+	@Test
+	void createClearsCategoryLabelWhenOpen() throws Exception {
+		postJson(tournamentId, """
+				{"name": "Simple Homme", "discipline": "MS", "categoryType": "OPEN", "categoryLabel": "Cadet"}
+				""").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.categoryType").value("OPEN"))
+			.andExpect(jsonPath("$.categoryLabel").doesNotExist());
+	}
+
+	@Test
+	void createRejectsMissingCategoryLabelWhenNotOpen() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple Cadet", "discipline": "MS", "categoryType": "AGE"}
+				"""), "categoryLabel");
+	}
+
+	@Test
+	void createRejectsBlankCategoryLabelWhenNotOpen() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple D8", "discipline": "MS", "categoryType": "LEVEL", "categoryLabel": "   "}
+				"""), "categoryLabel");
+	}
+
+	@Test
+	void createRejectsCategoryLabelTooLong() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple Cadet", "discipline": "MS", "categoryType": "AGE", "categoryLabel": "%s"}
+				""".formatted("x".repeat(51))), "categoryLabel");
+	}
+
+	@Test
+	void createRejectsUnknownCategoryType() throws Exception {
+		postJson(tournamentId, """
+				{"name": "Simple Cadet", "discipline": "MS", "categoryType": "SENIOR"}
+				""").andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
 	}
 
 	@Test
@@ -104,15 +151,15 @@ class EventControllerTests {
 	@Test
 	void createRejectsMissingDiscipline() throws Exception {
 		assertValidationError(postJson(tournamentId, """
-				{"name": "Simple Homme", "category": "Senior"}
+				{"name": "Simple Homme", "categoryType": "OPEN"}
 				"""), "discipline");
 	}
 
 	@Test
-	void createRejectsMissingCategory() throws Exception {
+	void createRejectsMissingCategoryType() throws Exception {
 		assertValidationError(postJson(tournamentId, """
 				{"name": "Simple Homme", "discipline": "MS"}
-				"""), "category");
+				"""), "categoryType");
 	}
 
 	@Test
@@ -142,7 +189,7 @@ class EventControllerTests {
 		create(tournamentId, "Simple Homme Senior", "MS").andExpect(status().isCreated());
 
 		postJson(tournamentId, """
-				{"name": "Simple Homme Cadet", "discipline": "MS", "category": "Cadet"}
+				{"name": "Simple Homme Cadet", "discipline": "MS", "categoryType": "AGE", "categoryLabel": "Cadet"}
 				""").andExpect(status().isCreated());
 	}
 
@@ -200,15 +247,53 @@ class EventControllerTests {
 		update(eventId, "{\"name\": \"Double Homme Vétérans\"}").andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("Double Homme Vétérans"))
 			.andExpect(jsonPath("$.discipline").value("MD"))
-			.andExpect(jsonPath("$.category").value(CATEGORY));
+			.andExpect(jsonPath("$.categoryType").value("OPEN"));
 
 		update(eventId, "{\"discipline\": \"WD\"}").andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("Double Homme Vétérans"))
 			.andExpect(jsonPath("$.discipline").value("WD"));
 
-		update(eventId, "{\"category\": \"Vétéran\"}").andExpect(status().isOk())
+		update(eventId, "{\"categoryType\": \"AGE\", \"categoryLabel\": \"Vétéran\"}").andExpect(status().isOk())
 			.andExpect(jsonPath("$.discipline").value("WD"))
-			.andExpect(jsonPath("$.category").value("Vétéran"));
+			.andExpect(jsonPath("$.categoryType").value("AGE"))
+			.andExpect(jsonPath("$.categoryLabel").value("Vétéran"));
+
+		update(eventId, "{\"name\": \"Double Dame Vétérans\"}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.categoryType").value("AGE"))
+			.andExpect(jsonPath("$.categoryLabel").value("Vétéran"));
+	}
+
+	@Test
+	void updateChangesOnlyCategoryLabel() throws Exception {
+		UUID eventId = createAgeEvent();
+
+		update(eventId, "{\"categoryLabel\": \"  Minime  \"}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.categoryType").value("AGE"))
+			.andExpect(jsonPath("$.categoryLabel").value("Minime"));
+	}
+
+	@Test
+	void updateToOpenClearsCategoryLabel() throws Exception {
+		UUID eventId = createAgeEvent();
+
+		update(eventId, "{\"categoryType\": \"OPEN\", \"categoryLabel\": null}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.categoryType").value("OPEN"))
+			.andExpect(jsonPath("$.categoryLabel").doesNotExist());
+	}
+
+	@Test
+	void updateToAgeRequiresCategoryLabel() throws Exception {
+		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
+
+		assertValidationError(update(eventId, "{\"categoryType\": \"AGE\"}"), "categoryLabel");
+	}
+
+	@Test
+	void updateRejectsNullCategoryLabelWhenTypeIsSent() throws Exception {
+		UUID eventId = createAgeEvent();
+
+		assertValidationError(update(eventId, "{\"categoryType\": \"LEVEL\", \"categoryLabel\": null}"),
+				"categoryLabel");
 	}
 
 	@Test
@@ -236,10 +321,10 @@ class EventControllerTests {
 	}
 
 	@Test
-	void updateRejectsBlankCategory() throws Exception {
-		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
+	void updateRejectsBlankCategoryLabelWhenNotOpen() throws Exception {
+		UUID eventId = createAgeEvent();
 
-		assertValidationError(update(eventId, "{\"category\": \"  \"}"), "category");
+		assertValidationError(update(eventId, "{\"categoryLabel\": \"  \"}"), "categoryLabel");
 	}
 
 	@Test
@@ -351,7 +436,7 @@ class EventControllerTests {
 
 	private ResultActions postPools(UUID tournament, int poolCount, int poolSize, int qualifiers) throws Exception {
 		return postJson(tournament, """
-				{"name": "Simple Dame", "discipline": "WS", "category": "Senior",
+				{"name": "Simple Dame", "discipline": "WS", "categoryType": "OPEN",
 				 "poolCount": %d, "poolSize": %d, "qualifiersPerPool": %d}
 				""".formatted(poolCount, poolSize, qualifiers));
 	}
@@ -394,7 +479,14 @@ class EventControllerTests {
 
 	private ResultActions create(UUID tournamentId, String name, String discipline) throws Exception {
 		return postJson(tournamentId,
-				"{\"name\": \"%s\", \"discipline\": \"%s\", \"category\": \"%s\"}".formatted(name, discipline, CATEGORY));
+				"{\"name\": \"%s\", \"discipline\": \"%s\", \"categoryType\": \"OPEN\"}".formatted(name, discipline));
+	}
+
+	private UUID createAgeEvent() throws Exception {
+		String response = postJson(tournamentId, """
+				{"name": "Simple Cadet", "discipline": "MS", "categoryType": "AGE", "categoryLabel": "Cadet"}
+				""").andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+		return UUID.fromString(JsonPath.read(response, "$.id"));
 	}
 
 	private ResultActions postJson(UUID tournamentId, String json) throws Exception {

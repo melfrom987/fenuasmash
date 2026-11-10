@@ -9,14 +9,16 @@ public record EventResponse(
 		UUID tournamentId,
 		String name,
 		Discipline discipline,
-		String category,
+		CategoryType categoryType,
+		String categoryLabel,
 		Integer poolCount,
 		Integer poolSize,
 		Integer qualifiersPerPool) {
 
 	static EventResponse from(Event event) {
 		return new EventResponse(event.getId(), event.getTournamentId(), event.getName(), event.getDiscipline(),
-				event.getCategory(), event.getPoolCount(), event.getPoolSize(), event.getQualifiersPerPool());
+				event.getCategoryType(), event.getCategoryLabel(), event.getPoolCount(), event.getPoolSize(),
+				event.getQualifiersPerPool());
 	}
 
 }

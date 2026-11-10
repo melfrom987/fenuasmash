@@ -11,7 +11,8 @@ import com.tao.fenuasmash.tournament.Discipline;
 public record CreateEventRequest(
 		@NotBlank @Size(max = 100) String name,
 		@NotNull Discipline discipline,
-		@NotBlank @Size(max = 100) String category,
+		@NotNull CategoryType categoryType,
+		@Size(max = 50) String categoryLabel,
 		@Min(1) Integer poolCount,
 		@Min(3) @Max(8) Integer poolSize,
 		@Min(1) @Max(7) Integer qualifiersPerPool) {
