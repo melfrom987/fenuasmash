@@ -29,6 +29,11 @@ export type Tournament = {
   minimumRestMinutes: number;
   createdAt: IsoDate;
   updatedAt: IsoDate;
+  competitionType?: CompetitionType;
+  drawFormat?: DrawFormat;
+  playMode?: PlayMode;
+  scoring?: ScoringRules;
+  disciplines?: Discipline[]; // dans l'ordre où elles se jouent
 };
 
 export type Player = {
@@ -37,15 +42,6 @@ export type Player = {
   lastName: string;
   externalReference: string | null;
   createdAt: IsoDate;
-};
-
-export type EventFormat =
-  'SINGLE_ELIMINATION' | 'POOLS_THEN_ELIMINATION' | 'ROUND_ROBIN' | 'TEAM_TIE';
-
-export type ScoringRules = {
-  gamesToWin: number;
-  pointsToWin: number;
-  pointCap: number;
 };
 
 export type Event = {
@@ -66,7 +62,6 @@ export type Entry = {
   eventId: string;
 };
 
-// Entry avec ses joueurs (include: { players: { include: { player: true } } })
 export type EntryWithPlayers = Entry & {
   players: { entryId: string; playerId: string; player: Player }[];
 };
@@ -103,7 +98,6 @@ export type MatchAssignment = {
   releasedAt: IsoDate | null;
 };
 
-// Version publique d'un Device : sans tokenHash
 export type Device = {
   id: string;
   courtId: string;
@@ -112,4 +106,15 @@ export type Device = {
   pairedAt: IsoDate;
   revokedAt: IsoDate | null;
   lastSeenAt: IsoDate | null;
+};
+
+export type CompetitionType = 'INDIVIDUAL' | 'TEAM';
+export type DrawFormat = 'SINGLE_ELIMINATION' | 'POOLS_THEN_ELIMINATION' | 'SINGLE_POOL';
+export type PlayMode = 'SETS' | 'RELAY';
+
+export type ScoringRules = {
+  gamesToWin: number;
+  pointsToWin: number;
+  twoPointLead: boolean;
+  pointCap: number | null;
 };

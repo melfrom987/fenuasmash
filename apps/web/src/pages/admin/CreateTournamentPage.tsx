@@ -7,6 +7,7 @@ import { TournamentForm } from '@/features/tournaments/components/TournamentForm
 import type { TournamentFormValues } from '@/features/tournaments/schema';
 import { tahitiInputToIso } from '@/lib/dates';
 import { useErrorMessage } from '@/lib/use-error-message';
+import { toRulesInput } from '@/features/tournaments/rules';
 
 export function CreateTournamentPage() {
   const { t } = useTranslation();
@@ -15,12 +16,13 @@ export function CreateTournamentPage() {
   const organizations = useOrganizations();
   const createTournament = useCreateTournament();
 
-  // Les erreurs remontent au formulaire, qui les affiche sous le bon champ
   const handleSubmit = async (values: TournamentFormValues) => {
+    const { rules, startsAt, endsAt, ...rest } = values;
     await createTournament.mutateAsync({
-      ...values,
-      startsAt: tahitiInputToIso(values.startsAt),
-      endsAt: tahitiInputToIso(values.endsAt),
+      ...rest,
+      startsAt: tahitiInputToIso(startsAt),
+      endsAt: tahitiInputToIso(endsAt),
+      ...toRulesInput(rules),
     });
     await navigate('/admin');
   };

@@ -137,6 +137,47 @@ export const fr = {
       confirm: 'Confirmer la suppression',
     },
   },
+  rules: {
+    title: 'Règles du tournoi',
+    hint: 'Communes à tous les tableaux. Pré-remplies avec les règles officielles, modifiables ensuite dans Paramètres.',
+    settingsHint:
+      "Communes à tous les tableaux du tournoi. Modifiables tant qu'aucun tableau n'est lancé.",
+    drawFormat: 'Format des tableaux',
+    drawFormats: {
+      SINGLE_ELIMINATION: 'Élimination directe',
+      POOLS_THEN_ELIMINATION: 'Poules puis sortie de poule',
+      SINGLE_POOL: "Poule unique (ronde à l'italienne)",
+    },
+    drawFormatHints: {
+      SINGLE_ELIMINATION: 'Le perdant de chaque match est éliminé.',
+      POOLS_THEN_ELIMINATION:
+        'Des poules, puis les meilleurs de chaque poule passent en élimination directe. La taille des poules se fixe par tableau, selon les inscrits.',
+      SINGLE_POOL: 'Chaque participant rencontre tous les autres.',
+    },
+    scoring: 'Règles de score',
+    gamesToWin: 'Sets gagnants',
+    pointsToWin: 'Points par set',
+    twoPointLead: "2 points d'écart pour gagner un set",
+    twoPointLeadHint: 'Décoché : le premier à atteindre le score gagne le set.',
+    pointCap: 'Plafond',
+    pointCapHint: "Score auquel le set s'arrête, même sans 2 points d'écart (ex. 30).",
+    disciplines: 'Disciplines proposées',
+    disciplinesHint: "Dans l'ordre où elles se jouent.",
+    moveUp: 'Monter',
+    moveDown: 'Descendre',
+    remove: 'Retirer',
+    save: 'Enregistrer les règles',
+    saving: 'Enregistrement…',
+    saved: 'Règles enregistrées',
+    errors: {
+      numberExpected: 'Indiquez un nombre',
+      integerExpected: 'Nombre entier attendu',
+      gamesToWinRange: 'Entre 1 et 3',
+      pointsRange: 'Entre 1 et 50',
+      pointCapRange: 'Entre les points par set et 50',
+      disciplinesRequired: 'Choisissez au moins une discipline',
+    },
+  },
   apiErrors: {
     VALIDATION_FAILED: 'Certains champs sont invalides.',
     INVALID_DATE_RANGE: 'La fin doit être après le début.',
@@ -152,6 +193,7 @@ export const fr = {
     COURT_NOT_LAST: 'Seul le dernier terrain peut être retiré.',
     COURT_IN_USE: 'Ce terrain a déjà reçu des matchs : désactivez-le plutôt.',
     INTERNAL_ERROR: "Erreur du serveur. Réessayez, ou prévenez l'équipe technique.",
+    RULES_LOCKED: 'Un tableau est déjà lancé : les règles ne peuvent plus être modifiées.',
   },
 };
 

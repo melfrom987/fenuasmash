@@ -20,6 +20,11 @@ const tournaments: Tournament[] = [
     minimumRestMinutes: 20,
     createdAt: now,
     updatedAt: now,
+    competitionType: 'INDIVIDUAL',
+    drawFormat: 'POOLS_THEN_ELIMINATION',
+    playMode: 'SETS',
+    scoring: { gamesToWin: 2, pointsToWin: 21, twoPointLead: true, pointCap: 30 },
+    disciplines: ['MS', 'WS', 'MD', 'WD', 'XD'],
   },
   {
     id: '10000000-0000-4000-8000-000000000002',
@@ -30,6 +35,11 @@ const tournaments: Tournament[] = [
     minimumRestMinutes: 20,
     createdAt: now,
     updatedAt: now,
+    competitionType: 'INDIVIDUAL',
+    drawFormat: 'POOLS_THEN_ELIMINATION',
+    playMode: 'SETS',
+    scoring: { gamesToWin: 2, pointsToWin: 21, twoPointLead: true, pointCap: 30 },
+    disciplines: ['MS', 'WS', 'MD', 'WD', 'XD'],
   },
 ];
 

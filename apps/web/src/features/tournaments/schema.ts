@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { key } from '@/i18n';
+import { rulesSchema } from './rules';
 
 export const tournamentFormSchema = z
   .object({
@@ -21,6 +22,7 @@ export const tournamentFormSchema = z
       .int(key('tournaments.form.errors.integerExpected'))
       .min(1, key('tournaments.form.errors.courtCountRange'))
       .max(50, key('tournaments.form.errors.courtCountRange')),
+    rules: rulesSchema,
   })
   .refine((data) => data.endsAt > data.startsAt, {
     message: key('tournaments.form.errors.endsBeforeStart'),
