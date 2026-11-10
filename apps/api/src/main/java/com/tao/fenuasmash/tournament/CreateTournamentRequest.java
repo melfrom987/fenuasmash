@@ -24,5 +24,6 @@ public record CreateTournamentRequest(
 		@NotNull PlayMode playMode,
 		@NotNull @Valid ScoringRulesRequest scoring,
 		@Min(1) @Max(50) Integer relayStep,
-		@NotEmpty List<@NotNull Discipline> disciplines) {
+		@NotEmpty List<@NotNull Discipline> disciplines,
+		List<List<Discipline>> forbiddenCombinations) {
 }
