@@ -2,12 +2,23 @@ package com.tao.fenuasmash.tournament;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
+
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(name = "tournament")
@@ -31,6 +42,32 @@ public class Tournament {
 	@Column(name = "minimum_rest_minutes", nullable = false)
 	private int minimumRestMinutes;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "competition_type", nullable = false, length = 10)
+	private CompetitionType competitionType;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "draw_format", nullable = false, length = 30)
+	private DrawFormat drawFormat;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "play_mode", nullable = false, length = 5)
+	private PlayMode playMode;
+
+	@Embedded
+	private ScoringRules scoring;
+
+	@Column(name = "relay_step")
+	private Integer relayStep;
+
+	@ElementCollection
+	@CollectionTable(name = "tournament_discipline", joinColumns = @JoinColumn(name = "tournament_id"))
+	@OrderColumn(name = "sort_order")
+	@Enumerated(EnumType.STRING)
+	@Column(name = "discipline", nullable = false, length = 2)
+	@BatchSize(size = 50)
+	private List<Discipline> disciplines = new ArrayList<>();
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -40,7 +77,8 @@ public class Tournament {
 	protected Tournament() {
 	}
 
-	Tournament(UUID organizationId, String name, Instant startsAt, Instant endsAt, int minimumRestMinutes) {
+	Tournament(UUID organizationId, String name, Instant startsAt, Instant endsAt, int minimumRestMinutes,
+			TournamentRules rules) {
 		Instant now = Instant.now().truncatedTo(ChronoUnit.MICROS);
 		this.id = UUID.randomUUID();
 		this.organizationId = organizationId;
@@ -48,16 +86,28 @@ public class Tournament {
 		this.startsAt = startsAt.truncatedTo(ChronoUnit.MICROS);
 		this.endsAt = endsAt.truncatedTo(ChronoUnit.MICROS);
 		this.minimumRestMinutes = minimumRestMinutes;
+		applyRules(rules);
 		this.createdAt = now;
 		this.updatedAt = now;
 	}
 
-	void update(String name, Instant startsAt, Instant endsAt, int minimumRestMinutes) {
+	void update(String name, Instant startsAt, Instant endsAt, int minimumRestMinutes, TournamentRules rules) {
 		this.name = name;
 		this.startsAt = startsAt.truncatedTo(ChronoUnit.MICROS);
 		this.endsAt = endsAt.truncatedTo(ChronoUnit.MICROS);
 		this.minimumRestMinutes = minimumRestMinutes;
+		applyRules(rules);
 		this.updatedAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
+	}
+
+	private void applyRules(TournamentRules rules) {
+		this.competitionType = rules.competitionType();
+		this.drawFormat = rules.drawFormat();
+		this.playMode = rules.playMode();
+		this.scoring = rules.scoring();
+		this.relayStep = rules.relayStep();
+		this.disciplines.clear();
+		this.disciplines.addAll(rules.disciplines());
 	}
 
 	boolean hasStarted(Instant now) {
@@ -86,6 +136,10 @@ public class Tournament {
 
 	public int getMinimumRestMinutes() {
 		return minimumRestMinutes;
+	}
+
+	TournamentRules getRules() {
+		return new TournamentRules(competitionType, drawFormat, playMode, scoring, relayStep, List.copyOf(disciplines));
 	}
 
 	public Instant getCreatedAt() {

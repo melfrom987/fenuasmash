@@ -323,8 +323,10 @@ class CourtControllerTests {
 		Timestamp now = Timestamp.from(Instant.now());
 		jdbc.update(
 				"""
-						INSERT INTO tournament (id, organization_id, name, starts_at, ends_at, minimum_rest_minutes, created_at, updated_at)
-						VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+						INSERT INTO tournament (id, organization_id, name, starts_at, ends_at, minimum_rest_minutes,
+						    competition_type, draw_format, play_mode, games_to_win, points_to_win, two_point_lead, point_cap,
+						    created_at, updated_at)
+						VALUES (?, ?, ?, ?, ?, ?, 'INDIVIDUAL', 'SINGLE_ELIMINATION', 'SETS', 2, 21, TRUE, 30, ?, ?)
 						""",
 				id, organizationId, name, Timestamp.from(startsAt), Timestamp.from(startsAt.plus(2, ChronoUnit.DAYS)), 20,
 				now, now);

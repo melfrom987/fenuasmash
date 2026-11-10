@@ -16,6 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,10 @@ import com.tao.fenuasmash.TestcontainersConfiguration;
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
 class EventControllerTests {
+
+	private static final List<String> ALL_DISCIPLINES = List.of("MS", "WS", "MD", "WD", "XD");
+
+	private static final String CATEGORY = "Senior";
 
 	@Autowired
 	private MockMvc mvc;
@@ -64,13 +69,25 @@ class EventControllerTests {
 			.andExpect(jsonPath("$.id").isNotEmpty())
 			.andExpect(jsonPath("$.tournamentId").value(tournamentId.toString()))
 			.andExpect(jsonPath("$.name").value("Simple Homme"))
-			.andExpect(jsonPath("$.type").value("MS"));
+			.andExpect(jsonPath("$.discipline").value("MS"))
+			.andExpect(jsonPath("$.category").value(CATEGORY));
 	}
 
 	@Test
-	void createTrimsName() throws Exception {
-		create(tournamentId, "  Double Mixte  ", "XD").andExpect(status().isCreated())
-			.andExpect(jsonPath("$.name").value("Double Mixte"));
+	void eventNoLongerExposesFormatOrScoring() throws Exception {
+		create(tournamentId, "Simple Homme", "MS").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.format").doesNotExist())
+			.andExpect(jsonPath("$.type").doesNotExist())
+			.andExpect(jsonPath("$.scoring").doesNotExist());
+	}
+
+	@Test
+	void createTrimsNameAndCategory() throws Exception {
+		postJson(tournamentId, """
+				{"name": "  Double Mixte  ", "discipline": "XD", "category": "  Cadet  "}
+				""").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.name").value("Double Mixte"))
+			.andExpect(jsonPath("$.category").value("Cadet"));
 	}
 
 	@Test
@@ -85,14 +102,31 @@ class EventControllerTests {
 	}
 
 	@Test
-	void createRejectsMissingType() throws Exception {
-		assertValidationError(postJson(tournamentId, "{\"name\": \"Simple Homme\"}"), "type");
+	void createRejectsMissingDiscipline() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple Homme", "category": "Senior"}
+				"""), "discipline");
 	}
 
 	@Test
-	void createRejectsUnknownType() throws Exception {
+	void createRejectsMissingCategory() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple Homme", "discipline": "MS"}
+				"""), "category");
+	}
+
+	@Test
+	void createRejectsUnknownDiscipline() throws Exception {
 		create(tournamentId, "Simple Homme", "XX").andExpect(status().isBadRequest())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+	}
+
+	@Test
+	void createAcceptsOpenDouble() throws Exception {
+		UUID openDouble = insertTournament("Open intergenre", "SINGLE_ELIMINATION", List.of("OD"));
+
+		create(openDouble, "Double intergenre", "OD").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.discipline").value("OD"));
 	}
 
 	@Test
@@ -101,6 +135,15 @@ class EventControllerTests {
 
 		create(tournamentId, "simple homme", "MS").andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("EVENT_NAME_ALREADY_EXISTS"));
+	}
+
+	@Test
+	void createAllowsSameDisciplineInAnotherCategory() throws Exception {
+		create(tournamentId, "Simple Homme Senior", "MS").andExpect(status().isCreated());
+
+		postJson(tournamentId, """
+				{"name": "Simple Homme Cadet", "discipline": "MS", "category": "Cadet"}
+				""").andExpect(status().isCreated());
 	}
 
 	@Test
@@ -121,9 +164,9 @@ class EventControllerTests {
 		mvc.perform(get(eventsUrl(tournamentId)))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$", hasSize(3)))
-			.andExpect(jsonPath("$[0].type").value("MS"))
-			.andExpect(jsonPath("$[1].type").value("WD"))
-			.andExpect(jsonPath("$[2].type").value("XD"));
+			.andExpect(jsonPath("$[0].discipline").value("MS"))
+			.andExpect(jsonPath("$[1].discipline").value("WD"))
+			.andExpect(jsonPath("$[2].discipline").value("XD"));
 	}
 
 	@Test
@@ -156,11 +199,16 @@ class EventControllerTests {
 
 		update(eventId, "{\"name\": \"Double Homme Vétérans\"}").andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("Double Homme Vétérans"))
-			.andExpect(jsonPath("$.type").value("MD"));
+			.andExpect(jsonPath("$.discipline").value("MD"))
+			.andExpect(jsonPath("$.category").value(CATEGORY));
 
-		update(eventId, "{\"type\": \"WD\"}").andExpect(status().isOk())
+		update(eventId, "{\"discipline\": \"WD\"}").andExpect(status().isOk())
 			.andExpect(jsonPath("$.name").value("Double Homme Vétérans"))
-			.andExpect(jsonPath("$.type").value("WD"));
+			.andExpect(jsonPath("$.discipline").value("WD"));
+
+		update(eventId, "{\"category\": \"Vétéran\"}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.discipline").value("WD"))
+			.andExpect(jsonPath("$.category").value("Vétéran"));
 	}
 
 	@Test
@@ -185,6 +233,13 @@ class EventControllerTests {
 		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
 
 		assertValidationError(update(eventId, "{\"name\": \"  \"}"), "name");
+	}
+
+	@Test
+	void updateRejectsBlankCategory() throws Exception {
+		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
+
+		assertValidationError(update(eventId, "{\"category\": \"  \"}"), "category");
 	}
 
 	@Test
@@ -221,145 +276,84 @@ class EventControllerTests {
 	}
 
 	@Test
-	void createUsesSingleEliminationAndStandardScoringByDefault() throws Exception {
+	void createHasNoPoolStructureForSingleElimination() throws Exception {
 		create(tournamentId, "Simple Homme", "MS").andExpect(status().isCreated())
-			.andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
-			.andExpect(jsonPath("$.poolSize").doesNotExist())
-			.andExpect(jsonPath("$.qualifiersPerPool").doesNotExist())
-			.andExpect(jsonPath("$.scoring.gamesToWin").value(2))
-			.andExpect(jsonPath("$.scoring.pointsToWin").value(21))
-			.andExpect(jsonPath("$.scoring.pointCap").value(30));
-	}
-
-	@Test
-	void createWithPoolsFormat() throws Exception {
-		postJson(tournamentId, """
-				{"name": "Simple Dame", "type": "WS", "format": "POOLS_THEN_ELIMINATION",
-				 "poolSize": 4, "qualifiersPerPool": 2}
-				""").andExpect(status().isCreated())
-			.andExpect(jsonPath("$.format").value("POOLS_THEN_ELIMINATION"))
-			.andExpect(jsonPath("$.poolSize").value(4))
-			.andExpect(jsonPath("$.qualifiersPerPool").value(2));
-	}
-
-	@Test
-	void createWithRoundRobinAndCustomScoring() throws Exception {
-		postJson(tournamentId, """
-				{"name": "Simple Jeunes", "type": "MS", "format": "ROUND_ROBIN",
-				 "scoring": {"gamesToWin": 1, "pointsToWin": 15, "pointCap": 15}}
-				""").andExpect(status().isCreated())
-			.andExpect(jsonPath("$.format").value("ROUND_ROBIN"))
-			.andExpect(jsonPath("$.scoring.gamesToWin").value(1))
-			.andExpect(jsonPath("$.scoring.pointsToWin").value(15))
-			.andExpect(jsonPath("$.scoring.pointCap").value(15));
-	}
-
-	@Test
-	void createRejectsPoolsFormatWithoutPoolSettings() throws Exception {
-		assertBadRequest(postJson(tournamentId, """
-				{"name": "Simple Dame", "type": "WS", "format": "POOLS_THEN_ELIMINATION"}
-				"""), "INVALID_FORMAT_SETTINGS");
-	}
-
-	@Test
-	void createRejectsQualifiersNotLessThanPoolSize() throws Exception {
-		assertBadRequest(postJson(tournamentId, """
-				{"name": "Simple Dame", "type": "WS", "format": "POOLS_THEN_ELIMINATION",
-				 "poolSize": 4, "qualifiersPerPool": 4}
-				"""), "INVALID_FORMAT_SETTINGS");
-	}
-
-	@Test
-	void createRejectsPoolSettingsForOtherFormats() throws Exception {
-		assertBadRequest(postJson(tournamentId, """
-				{"name": "Simple Dame", "type": "WS", "format": "ROUND_ROBIN", "poolSize": 4}
-				"""), "INVALID_FORMAT_SETTINGS");
-	}
-
-	@Test
-	void createRejectsPoolSizeOutOfRange() throws Exception {
-		assertValidationError(postJson(tournamentId, """
-				{"name": "Simple Dame", "type": "WS", "format": "POOLS_THEN_ELIMINATION",
-				 "poolSize": 9, "qualifiersPerPool": 2}
-				"""), "poolSize");
-	}
-
-	@Test
-	void createRejectsPointCapBelowPointsToWin() throws Exception {
-		assertBadRequest(postJson(tournamentId, """
-				{"name": "Simple Homme", "type": "MS", "scoring": {"pointsToWin": 21, "pointCap": 20}}
-				"""), "INVALID_SCORING_RULES");
-	}
-
-	@Test
-	void createRejectsGamesToWinOutOfRange() throws Exception {
-		assertValidationError(postJson(tournamentId, """
-				{"name": "Simple Homme", "type": "MS", "scoring": {"gamesToWin": 4}}
-				"""), "scoring.gamesToWin");
-	}
-
-	@Test
-	void createRejectsUnknownFormat() throws Exception {
-		postJson(tournamentId, """
-				{"name": "Simple Homme", "type": "MS", "format": "SWISS"}
-				""").andExpect(status().isBadRequest());
-	}
-
-	@Test
-	void updateToPoolsRequiresPoolSettings() throws Exception {
-		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
-
-		assertBadRequest(update(eventId, "{\"format\": \"POOLS_THEN_ELIMINATION\"}"), "INVALID_FORMAT_SETTINGS");
-
-		update(eventId, """
-				{"format": "POOLS_THEN_ELIMINATION", "poolSize": 3, "qualifiersPerPool": 1}
-				""").andExpect(status().isOk())
-			.andExpect(jsonPath("$.format").value("POOLS_THEN_ELIMINATION"))
-			.andExpect(jsonPath("$.poolSize").value(3))
-			.andExpect(jsonPath("$.qualifiersPerPool").value(1));
-	}
-
-	@Test
-	void updateKeepsPoolSettingsWhenChangingOnlyOneOfThem() throws Exception {
-		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
-		update(eventId, """
-				{"format": "POOLS_THEN_ELIMINATION", "poolSize": 4, "qualifiersPerPool": 2}
-				""");
-
-		update(eventId, "{\"poolSize\": 5}").andExpect(status().isOk())
-			.andExpect(jsonPath("$.poolSize").value(5))
-			.andExpect(jsonPath("$.qualifiersPerPool").value(2));
-	}
-
-	@Test
-	void updateToAnotherFormatClearsPoolSettings() throws Exception {
-		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
-		update(eventId, """
-				{"format": "POOLS_THEN_ELIMINATION", "poolSize": 4, "qualifiersPerPool": 2}
-				""");
-
-		update(eventId, "{\"format\": \"SINGLE_ELIMINATION\"}").andExpect(status().isOk())
-			.andExpect(jsonPath("$.format").value("SINGLE_ELIMINATION"))
+			.andExpect(jsonPath("$.poolCount").doesNotExist())
 			.andExpect(jsonPath("$.poolSize").doesNotExist())
 			.andExpect(jsonPath("$.qualifiersPerPool").doesNotExist());
 	}
 
 	@Test
-	void updateChangesOnlyProvidedScoringFields() throws Exception {
-		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
-
-		update(eventId, "{\"scoring\": {\"pointsToWin\": 15, \"pointCap\": 21}}").andExpect(status().isOk())
-			.andExpect(jsonPath("$.scoring.gamesToWin").value(2))
-			.andExpect(jsonPath("$.scoring.pointsToWin").value(15))
-			.andExpect(jsonPath("$.scoring.pointCap").value(21));
+	void createWithPoolStructure() throws Exception {
+		postPools(insertPoolsTournament(), 4, 4, 2).andExpect(status().isCreated())
+			.andExpect(jsonPath("$.poolCount").value(4))
+			.andExpect(jsonPath("$.poolSize").value(4))
+			.andExpect(jsonPath("$.qualifiersPerPool").value(2));
 	}
 
 	@Test
-	void updateRejectsPointCapBelowExistingPointsToWin() throws Exception {
+	void createRejectsPoolsTournamentWithoutStructure() throws Exception {
+		assertBadRequest(create(insertPoolsTournament(), "Simple Dame", "WS"), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void createRejectsQualifiersNotLessThanPoolSize() throws Exception {
+		assertBadRequest(postPools(insertPoolsTournament(), 2, 4, 4), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void createRejectsPoolStructureForSingleElimination() throws Exception {
+		assertBadRequest(postPools(tournamentId, 2, 4, 2), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void createRejectsPoolStructureForSinglePool() throws Exception {
+		UUID singlePool = insertTournament("Poule unique", "SINGLE_POOL", ALL_DISCIPLINES);
+
+		assertBadRequest(postPools(singlePool, 1, 4, 2), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void createRejectsPoolSizeOutOfRange() throws Exception {
+		assertValidationError(postPools(insertPoolsTournament(), 2, 9, 2), "poolSize");
+	}
+
+	@Test
+	void createRejectsPoolCountOutOfRange() throws Exception {
+		assertValidationError(postPools(insertPoolsTournament(), 0, 4, 2), "poolCount");
+	}
+
+	@Test
+	void updateKeepsPoolStructureWhenChangingOnlyOneValue() throws Exception {
+		String response = postPools(insertPoolsTournament(), 4, 4, 2).andReturn().getResponse().getContentAsString();
+		UUID eventId = UUID.fromString(JsonPath.read(response, "$.id"));
+
+		update(eventId, "{\"poolCount\": 3}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.poolCount").value(3))
+			.andExpect(jsonPath("$.poolSize").value(4))
+			.andExpect(jsonPath("$.qualifiersPerPool").value(2));
+	}
+
+	@Test
+	void updateRejectsQualifiersNotLessThanExistingPoolSize() throws Exception {
+		String response = postPools(insertPoolsTournament(), 4, 4, 2).andReturn().getResponse().getContentAsString();
+		UUID eventId = UUID.fromString(JsonPath.read(response, "$.id"));
+
+		assertBadRequest(update(eventId, "{\"qualifiersPerPool\": 4}"), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void updateRejectsPoolStructureForSingleElimination() throws Exception {
 		UUID eventId = createAndGetId(tournamentId, "Simple Homme", "MS");
 
-		assertBadRequest(update(eventId, "{\"scoring\": {\"pointCap\": 15}}"), "INVALID_SCORING_RULES");
-		mvc.perform(get("/api/events/" + eventId)).andExpect(jsonPath("$.scoring.pointCap").value(30));
+		assertBadRequest(update(eventId, "{\"poolSize\": 4}"), "INVALID_FORMAT_SETTINGS");
+	}
+
+	private ResultActions postPools(UUID tournament, int poolCount, int poolSize, int qualifiers) throws Exception {
+		return postJson(tournament, """
+				{"name": "Simple Dame", "discipline": "WS", "category": "Senior",
+				 "poolCount": %d, "poolSize": %d, "qualifiersPerPool": %d}
+				""".formatted(poolCount, poolSize, qualifiers));
 	}
 
 	private static void assertBadRequest(ResultActions result, String code) throws Exception {
@@ -369,13 +363,28 @@ class EventControllerTests {
 	}
 
 	private UUID insertTournament(String name) {
+		return insertTournament(name, "SINGLE_ELIMINATION", ALL_DISCIPLINES);
+	}
+
+	private UUID insertPoolsTournament() {
+		return insertTournament("Open en poules", "POOLS_THEN_ELIMINATION", ALL_DISCIPLINES);
+	}
+
+	private UUID insertTournament(String name, String drawFormat, List<String> disciplines) {
 		UUID id = UUID.randomUUID();
 		Instant now = Instant.now();
-		jdbc.update(
-				"INSERT INTO tournament (id, organization_id, name, starts_at, ends_at, minimum_rest_minutes, created_at, updated_at) "
-						+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-				id, organizationId, name, Timestamp.from(now.plus(30, ChronoUnit.DAYS)),
-				Timestamp.from(now.plus(32, ChronoUnit.DAYS)), 20, Timestamp.from(now), Timestamp.from(now));
+		jdbc.update("""
+				INSERT INTO tournament (id, organization_id, name, starts_at, ends_at, minimum_rest_minutes,
+				    competition_type, draw_format, play_mode, games_to_win, points_to_win, two_point_lead, point_cap,
+				    created_at, updated_at)
+				VALUES (?, ?, ?, ?, ?, ?, 'INDIVIDUAL', ?, 'SETS', 2, 21, TRUE, 30, ?, ?)
+				""", id, organizationId, name, Timestamp.from(now.plus(30, ChronoUnit.DAYS)),
+				Timestamp.from(now.plus(32, ChronoUnit.DAYS)), 20, drawFormat, Timestamp.from(now),
+				Timestamp.from(now));
+		for (int position = 0; position < disciplines.size(); position++) {
+			jdbc.update("INSERT INTO tournament_discipline (tournament_id, sort_order, discipline) VALUES (?, ?, ?)", id,
+					position, disciplines.get(position));
+		}
 		return id;
 	}
 
@@ -383,16 +392,17 @@ class EventControllerTests {
 		return "/api/tournaments/" + tournamentId + "/events";
 	}
 
-	private ResultActions create(UUID tournamentId, String name, String type) throws Exception {
-		return postJson(tournamentId, "{\"name\": \"%s\", \"type\": \"%s\"}".formatted(name, type));
+	private ResultActions create(UUID tournamentId, String name, String discipline) throws Exception {
+		return postJson(tournamentId,
+				"{\"name\": \"%s\", \"discipline\": \"%s\", \"category\": \"%s\"}".formatted(name, discipline, CATEGORY));
 	}
 
 	private ResultActions postJson(UUID tournamentId, String json) throws Exception {
 		return mvc.perform(post(eventsUrl(tournamentId)).contentType(MediaType.APPLICATION_JSON).content(json));
 	}
 
-	private UUID createAndGetId(UUID tournamentId, String name, String type) throws Exception {
-		String response = create(tournamentId, name, type).andExpect(status().isCreated())
+	private UUID createAndGetId(UUID tournamentId, String name, String discipline) throws Exception {
+		String response = create(tournamentId, name, discipline).andExpect(status().isCreated())
 			.andReturn()
 			.getResponse()
 			.getContentAsString();

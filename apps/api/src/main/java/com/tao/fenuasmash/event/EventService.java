@@ -11,17 +11,17 @@ import org.springframework.transaction.annotation.Transactional;
 import com.tao.fenuasmash.common.error.ConflictException;
 import com.tao.fenuasmash.common.error.InvalidRequestException;
 import com.tao.fenuasmash.common.error.NotFoundException;
+import com.tao.fenuasmash.tournament.Discipline;
+import com.tao.fenuasmash.tournament.DrawFormat;
+import com.tao.fenuasmash.tournament.TournamentResponse;
 import com.tao.fenuasmash.tournament.TournamentService;
 
 @Service
 @Transactional(readOnly = true)
 public class EventService {
 
-	private static final Comparator<Event> DISPLAY_ORDER = Comparator.comparing(Event::getType)
+	private static final Comparator<Event> DISPLAY_ORDER = Comparator.comparing(Event::getDiscipline)
 		.thenComparing(Event::getName, String.CASE_INSENSITIVE_ORDER);
-
-	private static final EventSettings DEFAULT_SETTINGS = new EventSettings(EventFormat.SINGLE_ELIMINATION, null,
-			null, ScoringRules.STANDARD);
 
 	private final EventRepository repository;
 
@@ -47,29 +47,33 @@ public class EventService {
 
 	@Transactional
 	public EventResponse create(UUID tournamentId, CreateEventRequest request) {
-		checkTournamentExists(tournamentId);
+		TournamentResponse tournament = tournamentService.findById(tournamentId);
 		String name = request.name().strip();
+		String category = request.category().strip();
 		if (repository.existsByTournamentIdAndNameIgnoreCase(tournamentId, name)) {
 			throw duplicateName(name);
 		}
-		EventSettings settings = resolveSettings(DEFAULT_SETTINGS, request.format(), request.poolSize(),
-				request.qualifiersPerPool(), request.scoring());
-		return EventResponse.from(repository.save(new Event(tournamentId, name, request.type(), settings)));
+		PoolStructure structure = resolveStructure(tournament.drawFormat(), PoolStructure.NONE, request.poolCount(),
+				request.poolSize(), request.qualifiersPerPool());
+		return EventResponse
+			.from(repository.save(new Event(tournamentId, name, request.discipline(), category, structure)));
 	}
 
 	@Transactional
 	public EventResponse update(UUID id, UpdateEventRequest request) {
 		Event event = getEvent(id);
+		TournamentResponse tournament = tournamentService.findById(event.getTournamentId());
 		String name = request.name() != null ? request.name().strip() : event.getName();
-		EventType type = Objects.requireNonNullElse(request.type(), event.getType());
+		String category = request.category() != null ? request.category().strip() : event.getCategory();
+		Discipline discipline = Objects.requireNonNullElse(request.discipline(), event.getDiscipline());
 		if (repository.existsByTournamentIdAndNameIgnoreCaseAndIdNot(event.getTournamentId(), name, id)) {
 			throw duplicateName(name);
 		}
-		EventSettings current = new EventSettings(event.getFormat(), event.getPoolSize(),
-				event.getQualifiersPerPool(), event.getScoring());
-		EventSettings settings = resolveSettings(current, request.format(), request.poolSize(),
-				request.qualifiersPerPool(), request.scoring());
-		event.update(name, type, settings);
+		PoolStructure current = new PoolStructure(event.getPoolCount(), event.getPoolSize(),
+				event.getQualifiersPerPool());
+		PoolStructure structure = resolveStructure(tournament.drawFormat(), current, request.poolCount(),
+				request.poolSize(), request.qualifiersPerPool());
+		event.update(name, discipline, category, structure);
 		return EventResponse.from(event);
 	}
 
@@ -78,47 +82,29 @@ public class EventService {
 		repository.delete(getEvent(id));
 	}
 
-	private static EventSettings resolveSettings(EventSettings current, EventFormat requestedFormat,
-			Integer requestedPoolSize, Integer requestedQualifiersPerPool, ScoringRulesRequest requestedScoring) {
-		EventFormat format = Objects.requireNonNullElse(requestedFormat, current.format());
-		Integer poolSize = null;
-		Integer qualifiersPerPool = null;
-		if (format == EventFormat.POOLS_THEN_ELIMINATION) {
-			boolean keepCurrent = current.format() == EventFormat.POOLS_THEN_ELIMINATION;
-			poolSize = requestedPoolSize != null ? requestedPoolSize : keepCurrent ? current.poolSize() : null;
-			qualifiersPerPool = requestedQualifiersPerPool != null ? requestedQualifiersPerPool
-					: keepCurrent ? current.qualifiersPerPool() : null;
-			if (poolSize == null || qualifiersPerPool == null) {
+	private static PoolStructure resolveStructure(DrawFormat format, PoolStructure current, Integer requestedPoolCount,
+			Integer requestedPoolSize, Integer requestedQualifiersPerPool) {
+		if (format != DrawFormat.POOLS_THEN_ELIMINATION) {
+			if (requestedPoolCount != null || requestedPoolSize != null || requestedQualifiersPerPool != null) {
 				throw new InvalidRequestException("INVALID_FORMAT_SETTINGS",
-						"poolSize and qualifiersPerPool are required for format " + format);
+						"Pool settings are only allowed when the tournament format is "
+								+ DrawFormat.POOLS_THEN_ELIMINATION);
 			}
-			if (qualifiersPerPool >= poolSize) {
-				throw new InvalidRequestException("INVALID_FORMAT_SETTINGS",
-						"qualifiersPerPool must be less than poolSize");
-			}
+			return PoolStructure.NONE;
 		}
-		else if (requestedPoolSize != null || requestedQualifiersPerPool != null) {
+		Integer poolCount = requestedPoolCount != null ? requestedPoolCount : current.poolCount();
+		Integer poolSize = requestedPoolSize != null ? requestedPoolSize : current.poolSize();
+		Integer qualifiersPerPool = requestedQualifiersPerPool != null ? requestedQualifiersPerPool
+				: current.qualifiersPerPool();
+		if (poolCount == null || poolSize == null || qualifiersPerPool == null) {
 			throw new InvalidRequestException("INVALID_FORMAT_SETTINGS",
-					"poolSize and qualifiersPerPool are only allowed for format "
-							+ EventFormat.POOLS_THEN_ELIMINATION);
+					"poolCount, poolSize and qualifiersPerPool are required for format " + format);
 		}
-		return new EventSettings(format, poolSize, qualifiersPerPool,
-				resolveScoring(current.scoring(), requestedScoring));
-	}
-
-	private static ScoringRules resolveScoring(ScoringRules current, ScoringRulesRequest requested) {
-		if (requested == null) {
-			return current;
+		if (qualifiersPerPool >= poolSize) {
+			throw new InvalidRequestException("INVALID_FORMAT_SETTINGS",
+					"qualifiersPerPool must be less than poolSize");
 		}
-		ScoringRules scoring = new ScoringRules(
-				Objects.requireNonNullElse(requested.gamesToWin(), current.gamesToWin()),
-				Objects.requireNonNullElse(requested.pointsToWin(), current.pointsToWin()),
-				Objects.requireNonNullElse(requested.pointCap(), current.pointCap()));
-		if (scoring.pointCap() < scoring.pointsToWin()) {
-			throw new InvalidRequestException("INVALID_SCORING_RULES",
-					"pointCap must be greater than or equal to pointsToWin");
-		}
-		return scoring;
+		return new PoolStructure(poolCount, poolSize, qualifiersPerPool);
 	}
 
 	private Event getEvent(UUID id) {
