@@ -7,6 +7,7 @@ import { TournamentForm } from '@/features/tournaments/components/TournamentForm
 import type { TournamentFormValues } from '@/features/tournaments/schema';
 import { tahitiInputToIso } from '@/lib/dates';
 import { useErrorMessage } from '@/lib/use-error-message';
+import { toRulesInput } from '@/features/tournaments/rules';
 
 export function CreateTournamentPage() {
   const { t } = useTranslation();
@@ -15,25 +16,26 @@ export function CreateTournamentPage() {
   const organizations = useOrganizations();
   const createTournament = useCreateTournament();
 
-  // Les erreurs remontent au formulaire, qui les affiche sous le bon champ
   const handleSubmit = async (values: TournamentFormValues) => {
+    const { rules, startsAt, endsAt, ...rest } = values;
     await createTournament.mutateAsync({
-      ...values,
-      startsAt: tahitiInputToIso(values.startsAt),
-      endsAt: tahitiInputToIso(values.endsAt),
+      ...rest,
+      startsAt: tahitiInputToIso(startsAt),
+      endsAt: tahitiInputToIso(endsAt),
+      ...toRulesInput(rules),
     });
     await navigate('/admin');
   };
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-6xl">
       <Link to="/admin" className="text-lagon-700 text-sm hover:underline">
         {t('tournaments.backToList')}
       </Link>
       <h1 className="font-display mt-2 text-2xl font-semibold">{t('tournaments.create.title')}</h1>
       <p className="text-sable-600 mt-1 text-sm">{t('tournaments.create.timezoneHint')}</p>
 
-      <div className="mt-6 space-y-4 rounded-lg bg-white p-6 shadow-sm">
+      <div className="mt-6">
         {organizations.isPending && <p className="text-sable-600">{t('common.loading')}</p>}
         {organizations.isError && (
           <ErrorMessage>
@@ -43,7 +45,9 @@ export function CreateTournamentPage() {
           </ErrorMessage>
         )}
         {organizations.data?.length === 0 && (
-          <p className="text-sable-600">{t('tournaments.create.noOrganization')}</p>
+          <p className="text-sable-600 rounded-lg bg-white p-6 shadow-sm">
+            {t('tournaments.create.noOrganization')}
+          </p>
         )}
         {organizations.data && organizations.data.length > 0 && (
           <TournamentForm organizations={organizations.data} onSubmit={handleSubmit} />

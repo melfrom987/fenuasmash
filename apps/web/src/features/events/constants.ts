@@ -1,6 +1,5 @@
 import type { CategoryType, Discipline } from '@/api/models';
 
-/** Ordre officiel d'affichage */
 export const DISCIPLINES = [
   'MS',
   'WS',
