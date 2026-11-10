@@ -9,6 +9,9 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { CreateTournamentPage } from '@/pages/admin/CreateTournamentPage';
 import { TournamentLayout } from '@/pages/admin/tournament/TournamentLayout';
 import { SettingsPage } from '@/pages/admin/tournament/SettingsPage';
+import { EventsPage } from '@/pages/admin/tournament/EventsPage';
+import { CreateEventPage } from '@/pages/admin/tournament/CreateEventPage';
+import { EditEventPage } from '@/pages/admin/tournament/EditEventPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/admin" replace /> },
@@ -24,6 +27,9 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="settings" replace /> },
           { path: 'settings', element: <SettingsPage /> },
+          { path: 'events', element: <EventsPage /> },
+          { path: 'events/new', element: <CreateEventPage /> },
+          { path: 'events/:eventId', element: <EditEventPage /> },
         ],
       },
     ],

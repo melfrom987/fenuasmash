@@ -1,4 +1,4 @@
-import type { Court, Organization, Tournament } from '@/api/models';
+import type { Court, Organization, Tournament, Event } from '@/api/models';
 
 const now = '2026-10-28T00:00:00.000Z';
 
@@ -40,4 +40,46 @@ const courts: Court[] = [1, 2, 3, 4].map((n) => ({
   active: true,
 }));
 
-export const db = { organizations, tournaments, courts };
+const events: Event[] = [
+  {
+    id: '30000000-0000-4000-8000-000000000001',
+    tournamentId: tournaments[0].id,
+    name: 'Simple Homme',
+    discipline: 'MS',
+    categoryType: 'OPEN',
+    categoryLabel: null,
+    plannedDate: '2026-11-14T18:00:00.000Z', // samedi 8h à Tahiti
+    maxEntries: 24,
+    poolCount: null,
+    poolSize: null,
+    qualifiersPerPool: null,
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000002',
+    tournamentId: tournaments[0].id,
+    name: 'Simple Homme Cadet',
+    discipline: 'MS',
+    categoryType: 'AGE',
+    categoryLabel: 'Cadet',
+    plannedDate: '2026-11-14T18:00:00.000Z',
+    maxEntries: null,
+    poolCount: null,
+    poolSize: null,
+    qualifiersPerPool: null,
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000003',
+    tournamentId: tournaments[0].id,
+    name: 'Double Mixte',
+    discipline: 'XD',
+    categoryType: 'OPEN',
+    categoryLabel: null,
+    plannedDate: '2026-11-16T00:00:00.000Z', // dimanche 14h à Tahiti
+    maxEntries: 16,
+    poolCount: null,
+    poolSize: null,
+    qualifiersPerPool: null,
+  },
+];
+
+export const db = { organizations, tournaments, courts, events };

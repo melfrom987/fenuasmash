@@ -3,6 +3,7 @@ export const fr = {
     loading: 'Chargement…',
     language: 'Langue',
     invalidField: 'Valeur invalide',
+    cancel: 'Annuler',
   },
   nav: {
     tournaments: 'Tournois',
@@ -63,6 +64,7 @@ export const fr = {
   tournamentDetail: {
     tabs: {
       settings: 'Paramètres',
+      events: 'Tableaux',
     },
   },
   courts: {
@@ -76,6 +78,64 @@ export const fr = {
     inactive: 'Désactivé',
     activate: 'Réactiver',
     deactivate: 'Désactiver',
+  },
+  events: {
+    title: 'Tableaux',
+    hint: 'Les tableaux du tournoi : discipline et catégorie. Le format et les règles de score sont ceux du tournoi.',
+    new: 'Nouveau tableau',
+    empty:
+      'Aucun tableau. Créez-les maintenant pour que les joueurs s’y inscrivent, ou après les inscriptions.',
+    backToList: '← Retour aux tableaux',
+    edit: 'Modifier',
+    createTitle: 'Nouveau tableau',
+    editTitle: 'Modifier le tableau',
+    plannedOn: 'Prévu le {{date}} à {{time}}',
+    maxEntriesSummary: '{{max}} inscrits maximum',
+    unlimited: 'Inscriptions non limitées',
+    disciplines: {
+      MS: 'Simple Homme',
+      WS: 'Simple Dame',
+      MD: 'Double Homme',
+      WD: 'Double Dame',
+      XD: 'Double Mixte',
+      OD: 'Double Intergenre',
+    },
+    categoryTypes: {
+      OPEN: 'Ouvert à tous',
+      AGE: 'Catégorie d’âge',
+      LEVEL: 'Niveau de classement',
+    },
+    form: {
+      discipline: 'Discipline',
+      categoryType: 'Catégorie',
+      categoryLabel: 'Libellé de la catégorie',
+      categoryLabelHint:
+        'Choisissez une suggestion ou saisissez un libellé (ex. : Cadet, Vétéran, D8/D9).',
+      name: 'Nom du tableau',
+      nameHint: 'Rempli automatiquement à partir de la discipline et de la catégorie. Modifiable.',
+      plannedDate: 'Date prévue',
+      plannedDateHint: 'Facultatif. Heure de Tahiti. Affichée aux joueurs à l’inscription.',
+      maxEntries: 'Nombre maximum d’inscrits',
+      maxEntriesHint: 'Facultatif. Joueurs, paires ou équipes. Vide = non limité.',
+      create: 'Créer le tableau',
+      save: 'Enregistrer',
+      saving: 'Enregistrement…',
+      errors: {
+        nameRequired: 'Le nom est obligatoire',
+        nameTooLong: '100 caractères maximum',
+        nameTaken: 'Un tableau porte déjà ce nom dans ce tournoi',
+        disciplineRequired: 'Choisissez une discipline',
+        categoryLabelRequired: 'Indiquez la catégorie',
+        categoryLabelTooLong: '50 caractères maximum',
+        maxEntriesRange: 'Entre 2 et 256',
+      },
+    },
+    delete: {
+      title: 'Supprimer le tableau',
+      hint: 'Cette action est définitive.',
+      button: 'Supprimer…',
+      confirm: 'Confirmer la suppression',
+    },
   },
   apiErrors: {
     VALIDATION_FAILED: 'Certains champs sont invalides.',
