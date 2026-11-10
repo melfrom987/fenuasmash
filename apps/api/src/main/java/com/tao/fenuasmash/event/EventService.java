@@ -110,9 +110,12 @@ public class EventService {
 		Integer poolSize = requestedPoolSize != null ? requestedPoolSize : current.poolSize();
 		Integer qualifiersPerPool = requestedQualifiersPerPool != null ? requestedQualifiersPerPool
 				: current.qualifiersPerPool();
+		if (poolCount == null && poolSize == null && qualifiersPerPool == null) {
+			return PoolStructure.NONE;
+		}
 		if (poolCount == null || poolSize == null || qualifiersPerPool == null) {
 			throw new InvalidRequestException("INVALID_FORMAT_SETTINGS",
-					"poolCount, poolSize and qualifiersPerPool are required for format " + format);
+					"poolCount, poolSize and qualifiersPerPool must be provided together");
 		}
 		if (qualifiersPerPool >= poolSize) {
 			throw new InvalidRequestException("INVALID_FORMAT_SETTINGS",

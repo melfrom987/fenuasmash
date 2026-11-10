@@ -377,8 +377,54 @@ class EventControllerTests {
 	}
 
 	@Test
-	void createRejectsPoolsTournamentWithoutStructure() throws Exception {
-		assertBadRequest(create(insertPoolsTournament(), "Simple Dame", "WS"), "INVALID_FORMAT_SETTINGS");
+	void createAcceptsPoolsTournamentWithoutStructure() throws Exception {
+		create(insertPoolsTournament(), "Simple Dame", "WS").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.poolCount").doesNotExist())
+			.andExpect(jsonPath("$.poolSize").doesNotExist())
+			.andExpect(jsonPath("$.qualifiersPerPool").doesNotExist());
+	}
+
+	@Test
+	void createAcceptsExplicitNullStructure() throws Exception {
+		postJson(insertPoolsTournament(), """
+				{"name": "Simple Dame", "discipline": "WS", "categoryType": "OPEN",
+				 "poolCount": null, "poolSize": null, "qualifiersPerPool": null}
+				""").andExpect(status().isCreated()).andExpect(jsonPath("$.poolCount").doesNotExist());
+	}
+
+	@Test
+	void createRejectsPartialStructure() throws Exception {
+		assertBadRequest(postJson(insertPoolsTournament(), """
+				{"name": "Simple Dame", "discipline": "WS", "categoryType": "OPEN", "poolCount": 2}
+				"""), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void updateSetsStructureAfterCreation() throws Exception {
+		UUID eventId = createAndGetId(insertPoolsTournament(), "Simple Dame", "WS");
+
+		update(eventId, """
+				{"poolCount": 3, "poolSize": 4, "qualifiersPerPool": 2}
+				""").andExpect(status().isOk())
+			.andExpect(jsonPath("$.poolCount").value(3))
+			.andExpect(jsonPath("$.poolSize").value(4))
+			.andExpect(jsonPath("$.qualifiersPerPool").value(2));
+	}
+
+	@Test
+	void updateRejectsPartialStructureWhenNoneIsStored() throws Exception {
+		UUID eventId = createAndGetId(insertPoolsTournament(), "Simple Dame", "WS");
+
+		assertBadRequest(update(eventId, "{\"poolSize\": 4}"), "INVALID_FORMAT_SETTINGS");
+	}
+
+	@Test
+	void updateOfOtherFieldsWorksWithoutStructure() throws Exception {
+		UUID eventId = createAndGetId(insertPoolsTournament(), "Simple Dame", "WS");
+
+		update(eventId, "{\"name\": \"Simple Dames\"}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.name").value("Simple Dames"))
+			.andExpect(jsonPath("$.poolCount").doesNotExist());
 	}
 
 	@Test
