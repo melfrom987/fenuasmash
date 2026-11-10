@@ -130,6 +130,82 @@ class EventControllerTests {
 	}
 
 	@Test
+	void createStoresPlannedDateAndMaxEntries() throws Exception {
+		UUID eventId = createScheduledEvent();
+
+		mvc.perform(get("/api/events/" + eventId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.plannedDate").value("2026-11-14T18:00:00Z"))
+			.andExpect(jsonPath("$.maxEntries").value(24));
+	}
+
+	@Test
+	void createLeavesPlannedDateAndMaxEntriesEmptyByDefault() throws Exception {
+		create(tournamentId, "Simple Homme", "MS").andExpect(status().isCreated())
+			.andExpect(jsonPath("$.plannedDate").doesNotExist())
+			.andExpect(jsonPath("$.maxEntries").doesNotExist());
+	}
+
+	@Test
+	void createAcceptsMaxEntriesLimits() throws Exception {
+		postJson(tournamentId, """
+				{"name": "Simple Homme", "discipline": "MS", "categoryType": "OPEN", "maxEntries": 2}
+				""").andExpect(status().isCreated()).andExpect(jsonPath("$.maxEntries").value(2));
+		postJson(tournamentId, """
+				{"name": "Simple Dame", "discipline": "WS", "categoryType": "OPEN", "maxEntries": 256}
+				""").andExpect(status().isCreated()).andExpect(jsonPath("$.maxEntries").value(256));
+	}
+
+	@Test
+	void createRejectsMaxEntriesBelowTwo() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple Homme", "discipline": "MS", "categoryType": "OPEN", "maxEntries": 1}
+				"""), "maxEntries");
+	}
+
+	@Test
+	void createRejectsMaxEntriesAboveLimit() throws Exception {
+		assertValidationError(postJson(tournamentId, """
+				{"name": "Simple Homme", "discipline": "MS", "categoryType": "OPEN", "maxEntries": 257}
+				"""), "maxEntries");
+	}
+
+	@Test
+	void createRejectsMalformedPlannedDate() throws Exception {
+		postJson(tournamentId, """
+				{"name": "Simple Homme", "discipline": "MS", "categoryType": "OPEN", "plannedDate": "samedi"}
+				""").andExpect(status().isBadRequest())
+			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON));
+	}
+
+	@Test
+	void updateChangesPlannedDateAndMaxEntries() throws Exception {
+		UUID eventId = createScheduledEvent();
+
+		update(eventId, """
+				{"plannedDate": "2026-11-15T20:30:00Z", "maxEntries": 32}
+				""").andExpect(status().isOk())
+			.andExpect(jsonPath("$.plannedDate").value("2026-11-15T20:30:00Z"))
+			.andExpect(jsonPath("$.maxEntries").value(32));
+	}
+
+	@Test
+	void updateKeepsPlannedDateAndMaxEntriesWhenAbsent() throws Exception {
+		UUID eventId = createScheduledEvent();
+
+		update(eventId, "{\"name\": \"Simple Adultes\"}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.plannedDate").value("2026-11-14T18:00:00Z"))
+			.andExpect(jsonPath("$.maxEntries").value(24));
+	}
+
+	@Test
+	void updateRejectsMaxEntriesOutOfRange() throws Exception {
+		UUID eventId = createScheduledEvent();
+
+		assertValidationError(update(eventId, "{\"maxEntries\": 1}"), "maxEntries");
+	}
+
+	@Test
 	void createRejectsUnknownCategoryType() throws Exception {
 		postJson(tournamentId, """
 				{"name": "Simple Cadet", "discipline": "MS", "categoryType": "SENIOR"}
@@ -526,6 +602,14 @@ class EventControllerTests {
 	private ResultActions create(UUID tournamentId, String name, String discipline) throws Exception {
 		return postJson(tournamentId,
 				"{\"name\": \"%s\", \"discipline\": \"%s\", \"categoryType\": \"OPEN\"}".formatted(name, discipline));
+	}
+
+	private UUID createScheduledEvent() throws Exception {
+		String response = postJson(tournamentId, """
+				{"name": "Simple Adultes", "discipline": "MS", "categoryType": "OPEN",
+				 "plannedDate": "2026-11-14T18:00:00Z", "maxEntries": 24}
+				""").andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+		return UUID.fromString(JsonPath.read(response, "$.id"));
 	}
 
 	private UUID createAgeEvent() throws Exception {

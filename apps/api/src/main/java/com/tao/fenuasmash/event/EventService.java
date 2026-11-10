@@ -1,5 +1,6 @@
 package com.tao.fenuasmash.event;
 
+import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -56,8 +57,8 @@ public class EventService {
 		}
 		PoolStructure structure = resolveStructure(tournament.drawFormat(), PoolStructure.NONE, request.poolCount(),
 				request.poolSize(), request.qualifiersPerPool());
-		return EventResponse.from(repository
-			.save(new Event(tournamentId, name, request.discipline(), request.categoryType(), categoryLabel, structure)));
+		return EventResponse.from(repository.save(new Event(tournamentId, name, request.discipline(),
+				request.categoryType(), categoryLabel, request.plannedDate(), request.maxEntries(), structure)));
 	}
 
 	@Transactional
@@ -77,7 +78,9 @@ public class EventService {
 				event.getQualifiersPerPool());
 		PoolStructure structure = resolveStructure(tournament.drawFormat(), current, request.poolCount(),
 				request.poolSize(), request.qualifiersPerPool());
-		event.update(name, discipline, categoryType, categoryLabel, structure);
+		Instant plannedDate = request.plannedDate() != null ? request.plannedDate() : event.getPlannedDate();
+		Integer maxEntries = request.maxEntries() != null ? request.maxEntries() : event.getMaxEntries();
+		event.update(name, discipline, categoryType, categoryLabel, plannedDate, maxEntries, structure);
 		return EventResponse.from(event);
 	}
 

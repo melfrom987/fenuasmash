@@ -1,5 +1,7 @@
 package com.tao.fenuasmash.event;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -35,6 +37,12 @@ public class Event {
 	@Column(name = "category_label", length = 50)
 	private String categoryLabel;
 
+	@Column(name = "planned_date")
+	private Instant plannedDate;
+
+	@Column(name = "max_entries")
+	private Integer maxEntries;
+
 	@Column(name = "pool_count")
 	private Integer poolCount;
 
@@ -48,18 +56,20 @@ public class Event {
 	}
 
 	Event(UUID tournamentId, String name, Discipline discipline, CategoryType categoryType, String categoryLabel,
-			PoolStructure structure) {
+			Instant plannedDate, Integer maxEntries, PoolStructure structure) {
 		this.id = UUID.randomUUID();
 		this.tournamentId = tournamentId;
-		update(name, discipline, categoryType, categoryLabel, structure);
+		update(name, discipline, categoryType, categoryLabel, plannedDate, maxEntries, structure);
 	}
 
 	void update(String name, Discipline discipline, CategoryType categoryType, String categoryLabel,
-			PoolStructure structure) {
+			Instant plannedDate, Integer maxEntries, PoolStructure structure) {
 		this.name = name;
 		this.discipline = discipline;
 		this.categoryType = categoryType;
 		this.categoryLabel = categoryLabel;
+		this.plannedDate = plannedDate != null ? plannedDate.truncatedTo(ChronoUnit.MICROS) : null;
+		this.maxEntries = maxEntries;
 		this.poolCount = structure.poolCount();
 		this.poolSize = structure.poolSize();
 		this.qualifiersPerPool = structure.qualifiersPerPool();
@@ -87,6 +97,14 @@ public class Event {
 
 	public String getCategoryLabel() {
 		return categoryLabel;
+	}
+
+	public Instant getPlannedDate() {
+		return plannedDate;
+	}
+
+	public Integer getMaxEntries() {
+		return maxEntries;
 	}
 
 	public Integer getPoolCount() {
