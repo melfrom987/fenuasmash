@@ -487,6 +487,55 @@ class TournamentControllerTests {
 	}
 
 	@Test
+	void createRejectsCombinationWithSameDisciplineTwice() throws Exception {
+		assertBadRequest(create(bodyWithCombinations("[[\"MS\", \"MS\"]]")), "INVALID_FORBIDDEN_COMBINATION");
+		assertNoTournamentCreated();
+	}
+
+	@Test
+	void createRejectsCombinationWithDisciplineNotOffered() throws Exception {
+		assertBadRequest(create(bodyWithCombinations("[[\"MS\", \"MD\"]]")), "INVALID_FORBIDDEN_COMBINATION");
+		assertNoTournamentCreated();
+	}
+
+	@Test
+	void updateRejectsCombinationWithSameDisciplineTwice() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		assertBadRequest(update(tournamentId, "{\"forbiddenCombinations\": [[\"XD\", \"XD\"]]}"),
+				"INVALID_FORBIDDEN_COMBINATION");
+	}
+
+	@Test
+	void updateRejectsCombinationWithDisciplineNotOffered() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		assertBadRequest(update(tournamentId, "{\"forbiddenCombinations\": [[\"MS\", \"OD\"]]}"),
+				"INVALID_FORBIDDEN_COMBINATION");
+		mvc.perform(get(URL + "/" + tournamentId))
+			.andExpect(jsonPath("$.forbiddenCombinations[0][1]").value("XD"));
+	}
+
+	@Test
+	void updateRejectsRemovingDisciplineUsedByCombination() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		assertBadRequest(update(tournamentId, "{\"disciplines\": [\"WS\", \"XD\"]}"), "INVALID_FORBIDDEN_COMBINATION");
+		mvc.perform(get(URL + "/" + tournamentId)).andExpect(jsonPath("$.disciplines", hasSize(3)));
+	}
+
+	@Test
+	void updateAcceptsNewDisciplinesWithMatchingCombinations() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		update(tournamentId, """
+				{"disciplines": ["WS", "OD"], "forbiddenCombinations": [["WS", "OD"]]}
+				""").andExpect(status().isOk())
+			.andExpect(jsonPath("$.disciplines", hasSize(2)))
+			.andExpect(jsonPath("$.forbiddenCombinations[0][1]").value("OD"));
+	}
+
+	@Test
 	void updateReplacesForbiddenCombinations() throws Exception {
 		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
 

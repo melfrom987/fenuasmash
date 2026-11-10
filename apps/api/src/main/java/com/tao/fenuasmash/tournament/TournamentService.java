@@ -135,6 +135,14 @@ public class TournamentService {
 				throw new InvalidRequestException("INVALID_FORBIDDEN_COMBINATION",
 						"A forbidden combination must contain exactly two disciplines");
 			}
+			if (pair.get(0) == pair.get(1)) {
+				throw new InvalidRequestException("INVALID_FORBIDDEN_COMBINATION",
+						"A forbidden combination must contain two different disciplines");
+			}
+			if (!rules.disciplines().containsAll(pair)) {
+				throw new InvalidRequestException("INVALID_FORBIDDEN_COMBINATION",
+						"A forbidden combination must only contain disciplines offered by the tournament");
+			}
 		}
 	}
 
