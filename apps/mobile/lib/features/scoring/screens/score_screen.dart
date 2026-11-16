@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/l10n.dart';
+
 /// Score entry for one match, point by point.
 ///
 /// Placeholder until the score screen (#104).
@@ -11,7 +13,7 @@ class ScoreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Score')),
+      appBar: AppBar(title: Text(context.l10n.scoreTitle)),
       body: Center(child: Text(matchId)),
     );
   }

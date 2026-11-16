@@ -9,8 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   go_router: ^18.1.4
   hugeicons: ^4.4.0
+  intl: any
 
 dev_dependencies:
   flutter_test:
@@ -19,6 +22,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Generates lib/l10n/app_localizations*.dart from the ARB files (see l10n.yaml)
+  generate: true
 
   # Fonts of the design system, bundled so that the app works offline
   assets:

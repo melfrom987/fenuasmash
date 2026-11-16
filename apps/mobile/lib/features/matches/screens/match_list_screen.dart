@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../l10n/l10n.dart';
 
 /// Matches assigned to the court of this tablet.
 ///
@@ -12,11 +13,11 @@ class MatchListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Matchs')),
+      appBar: AppBar(title: Text(context.l10n.matchesTitle)),
       body: ListView(
         children: [
           ListTile(
-            title: const Text('Match exemple'),
+            title: Text(context.l10n.matchesExample),
             onTap: () => context.push(AppRoutes.score('example')),
           ),
         ],

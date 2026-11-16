@@ -1,0 +1,9 @@
+# Translations: `flutter gen-l10n` (also run by `flutter pub get` and `flutter run`)
+# turns the ARB files into lib/l10n/app_localizations*.dart.
+arb-dir: lib/l10n
+# French is the reference language: every key is written there first
+template-arb-file: app_fr.arb
+output-localization-file: app_localizations.dart
+output-class: AppLocalizations
+nullable-getter: false
+format: true

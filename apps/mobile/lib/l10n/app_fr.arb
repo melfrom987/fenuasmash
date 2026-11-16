@@ -1,0 +1,23 @@
+{
+  "@@locale": "fr",
+  "appTitle": "FenuaSmash",
+  "@appTitle": {
+    "description": "Name of the app, never translated"
+  },
+  "pairingContinue": "Continuer",
+  "@pairingContinue": {
+    "description": "Pairing screen button, temporary until the court code entry"
+  },
+  "matchesTitle": "Matchs",
+  "@matchesTitle": {
+    "description": "Title of the screen listing the matches of the court"
+  },
+  "matchesExample": "Match exemple",
+  "@matchesExample": {
+    "description": "Example match shown until the real match list"
+  },
+  "scoreTitle": "Score",
+  "@scoreTitle": {
+    "description": "Title of the score entry screen"
+  }
+}

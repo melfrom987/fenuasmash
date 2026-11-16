@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/app_config.dart';
+import '../l10n/l10n.dart';
 import 'router.dart';
 import 'theme/app_theme.dart';
 
@@ -27,8 +28,11 @@ class _FenuaSmashAppState extends State<FenuaSmashApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'FenuaSmash',
+      onGenerateTitle: (context) => context.l10n.appTitle,
       theme: AppTheme.light(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localeListResolutionCallback: resolveLocale,
       routerConfig: _router,
     );
   }

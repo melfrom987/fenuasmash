@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/routing/app_routes.dart';
+import '../../../l10n/l10n.dart';
 
 /// Links the tablet to a court with the code shown in the administration.
 ///
@@ -17,11 +18,14 @@ class PairingScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('FenuaSmash', style: Theme.of(context).textTheme.displaySmall),
+            Text(
+              context.l10n.appTitle,
+              style: Theme.of(context).textTheme.displaySmall,
+            ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: () => context.go(AppRoutes.matches),
-              child: const Text('Continuer'),
+              child: Text(context.l10n.pairingContinue),
             ),
           ],
         ),

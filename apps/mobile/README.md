@@ -52,6 +52,14 @@ Inside a feature, files are grouped by kind:
 
 A feature never imports another feature: shared code moves to `core/`. To open another screen, use its path from `core/routing/app_routes.dart` (`context.go(AppRoutes.matches)`); the routes themselves are declared in `app/router.dart`.
 
+## Translations
+
+The app is in French and English, following the device language, with French when the device uses another language (same as the web app). No text is written in the code:
+
+1. Add the key to `lib/l10n/app_fr.arb` (the reference, with a `description`), then to `lib/l10n/app_en.arb`.
+2. Run `flutter pub get` (or `flutter gen-l10n`) to regenerate `AppLocalizations`. The generated files are not committed.
+3. Use it with `context.l10n.myKey` (import `l10n/l10n.dart`).
+
 ## Design
 
 The app follows the [design system](../../docs/design-system.md):
