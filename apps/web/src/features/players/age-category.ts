@@ -23,14 +23,12 @@ type YouthCategory = (typeof YOUTH_CATEGORIES)[number][1];
 
 export type AgeCategory =
   | { code: YouthCategory | 'SENIOR' }
-  /** Vétéran V1 (35-39 ans) à V8 (70 ans et plus) */
   | { code: 'VETERAN'; level: number };
 
-/** Une saison porte le nom de l'année où elle se termine : 2026-2027 → 2027 */
 export function seasonReferenceYear(date = new Date()): number {
   const year = date.getFullYear();
-  if (SEASON_START_MONTH === 1) return year;
-  return date.getMonth() + 1 >= SEASON_START_MONTH ? year + 1 : year;
+  const seasonEndsNextYear = SEASON_START_MONTH > 1 && date.getMonth() + 1 >= SEASON_START_MONTH;
+  return seasonEndsNextYear ? year + 1 : year;
 }
 
 export function getAgeCategory(
