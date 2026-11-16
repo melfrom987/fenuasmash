@@ -22,6 +22,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.tao.fenuasmash.account.UserRole;
 
 /**
  * Unit tests for {@link JwtService}, with a fixed clock so that expiry can be
@@ -39,32 +40,45 @@ class JwtServiceTests {
 
 	private static final UUID ORGANIZATION_ID = UUID.fromString("22222222-2222-2222-2222-222222222222");
 
+	private static final TokenClaims ORGANIZER = new TokenClaims(USER_ID, UserRole.ORGANIZER, ORGANIZATION_ID);
+
 	private final JwtService service = serviceAt(NOW);
 
 	@Test
 	void issuedTokenIsVerifiedWithItsClaims() {
-		String token = service.issue(USER_ID, ORGANIZATION_ID);
+		IssuedToken token = service.issue(ORGANIZER);
 
-		assertThat(service.verify(token)).isEqualTo(new TokenClaims(USER_ID, ORGANIZATION_ID));
+		assertThat(service.verify(token.value())).isEqualTo(ORGANIZER);
+		assertThat(token.expiresAt()).isEqualTo(NOW.plus(TTL));
+	}
+
+	@Test
+	void tokenWithoutOrganizationIsVerifiedForOtherRoles() {
+		TokenClaims admin = new TokenClaims(USER_ID, UserRole.ADMIN, null);
+
+		String token = service.issue(admin).value();
+
+		assertThat(service.verify(token)).isEqualTo(admin);
+		assertThat(decode(token.split("\\.")[1])).doesNotContain("\"org\"");
 	}
 
 	@Test
 	void tokenIsStillValidJustBeforeItsExpiry() {
-		String token = service.issue(USER_ID, ORGANIZATION_ID);
+		String token = service.issue(ORGANIZER).value();
 
 		assertThat(serviceAt(NOW.plus(TTL).minusSeconds(1)).verify(token).userId()).isEqualTo(USER_ID);
 	}
 
 	@Test
 	void expiredTokenIsRejected() {
-		String token = service.issue(USER_ID, ORGANIZATION_ID);
+		String token = service.issue(ORGANIZER).value();
 
 		assertInvalid(serviceAt(NOW.plus(TTL).plusSeconds(1)), token);
 	}
 
 	@Test
 	void tokenWithModifiedPayloadIsRejected() {
-		String token = service.issue(USER_ID, ORGANIZATION_ID);
+		String token = service.issue(ORGANIZER).value();
 		String[] parts = token.split("\\.");
 		String payload = decode(parts[1]).replace(ORGANIZATION_ID.toString(), UUID.randomUUID().toString());
 		String forged = parts[0] + "." + encode(payload) + "." + parts[2];
@@ -81,7 +95,7 @@ class JwtServiceTests {
 
 	@Test
 	void unsignedTokenIsRejected() {
-		String token = service.issue(USER_ID, ORGANIZATION_ID);
+		String token = service.issue(ORGANIZER).value();
 		String payload = token.split("\\.")[1];
 		String unsigned = encode("{\"alg\":\"none\"}") + "." + payload + ".";
 
@@ -99,8 +113,23 @@ class JwtServiceTests {
 	}
 
 	@Test
-	void tokenWithoutOrganizationIsRejected() {
+	void organizerTokenWithoutOrganizationIsRejected() {
 		assertInvalid(service, sign(SECRET, claims -> claims.claims(map -> map.remove(JwtService.ORGANIZATION_CLAIM))));
+	}
+
+	@Test
+	void otherRoleTokenWithOrganizationIsRejected() {
+		assertInvalid(service, sign(SECRET, claims -> claims.claim(JwtService.ROLE_CLAIM, "ADMIN")));
+	}
+
+	@Test
+	void tokenWithoutRoleIsRejected() {
+		assertInvalid(service, sign(SECRET, claims -> claims.claims(map -> map.remove(JwtService.ROLE_CLAIM))));
+	}
+
+	@Test
+	void tokenWithUnknownRoleIsRejected() {
+		assertInvalid(service, sign(SECRET, claims -> claims.claim(JwtService.ROLE_CLAIM, "REFEREE")));
 	}
 
 	@Test
@@ -138,6 +167,7 @@ class JwtServiceTests {
 		JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
 			.issuer(JwtService.ISSUER)
 			.subject(USER_ID.toString())
+			.claim(JwtService.ROLE_CLAIM, "ORGANIZER")
 			.claim(JwtService.ORGANIZATION_CLAIM, ORGANIZATION_ID.toString())
 			.issuedAt(NOW)
 			.expiresAt(NOW.plus(TTL));

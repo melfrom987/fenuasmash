@@ -26,15 +26,19 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Component;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import com.tao.fenuasmash.account.UserRole;
 
 /**
  * Issues and verifies the access tokens: JWTs signed with HMAC-SHA256, holding
- * the account id ({@code sub}) and its organization id ({@code org}).
+ * the account id ({@code sub}), its role ({@code role}) and, for organizers,
+ * its federation ({@code org}).
  */
 @Component
 public class JwtService {
 
 	static final String ISSUER = "fenuasmash";
+
+	static final String ROLE_CLAIM = "role";
 
 	static final String ORGANIZATION_CLAIM = "org";
 
@@ -74,17 +78,21 @@ public class JwtService {
 		this.clock = clock;
 	}
 
-	public String issue(UUID userId, UUID organizationId) {
+	public IssuedToken issue(TokenClaims holder) {
 		Instant now = clock.instant();
-		JwtClaimsSet claims = JwtClaimsSet.builder()
+		Instant expiresAt = now.plus(ttl);
+		JwtClaimsSet.Builder claims = JwtClaimsSet.builder()
 			.issuer(ISSUER)
-			.subject(userId.toString())
-			.claim(ORGANIZATION_CLAIM, organizationId.toString())
+			.subject(holder.userId().toString())
+			.claim(ROLE_CLAIM, holder.role().name())
 			.issuedAt(now)
-			.expiresAt(now.plus(ttl))
-			.build();
+			.expiresAt(expiresAt);
+		if (holder.organizationId() != null) {
+			claims.claim(ORGANIZATION_CLAIM, holder.organizationId().toString());
+		}
 		JwsHeader header = JwsHeader.with(ALGORITHM).build();
-		return encoder.encode(JwtEncoderParameters.from(header, claims)).getTokenValue();
+		String value = encoder.encode(JwtEncoderParameters.from(header, claims.build())).getTokenValue();
+		return new IssuedToken(value, expiresAt);
 	}
 
 	/**
@@ -102,7 +110,14 @@ public class JwtService {
 		if (jwt.getExpiresAt() == null) {
 			throw new InvalidTokenException("Access token has no expiry");
 		}
-		return new TokenClaims(readUuid(jwt.getSubject()), readUuid(jwt.getClaimAsString(ORGANIZATION_CLAIM)));
+		UUID userId = readUuid(jwt.getSubject());
+		UserRole role = readRole(jwt.getClaimAsString(ROLE_CLAIM));
+		String organization = jwt.getClaimAsString(ORGANIZATION_CLAIM);
+		UUID organizationId = organization != null ? readUuid(organization) : null;
+		if ((role == UserRole.ORGANIZER) != (organizationId != null)) {
+			throw new InvalidTokenException("Access token organization does not match its role");
+		}
+		return new TokenClaims(userId, role, organizationId);
 	}
 
 	private static UUID readUuid(String value) {
@@ -114,6 +129,18 @@ public class JwtService {
 		}
 		catch (IllegalArgumentException ex) {
 			throw new InvalidTokenException("Access token has a malformed claim", ex);
+		}
+	}
+
+	private static UserRole readRole(String value) {
+		if (value == null) {
+			throw new InvalidTokenException("Access token is missing a claim");
+		}
+		try {
+			return UserRole.valueOf(value);
+		}
+		catch (IllegalArgumentException ex) {
+			throw new InvalidTokenException("Access token has an unknown role", ex);
 		}
 	}
 
