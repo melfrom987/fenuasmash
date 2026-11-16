@@ -17,13 +17,16 @@ import org.springframework.security.web.SecurityFilterChain;
 class SecurityConfig {
 
 	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+	SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityProblemHandler problemHandler)
+			throws Exception {
 		http.csrf(AbstractHttpConfigurer::disable)
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)
 			.logout(AbstractHttpConfigurer::disable)
 			.requestCache(AbstractHttpConfigurer::disable)
+			.exceptionHandling(errors -> errors.authenticationEntryPoint(problemHandler)
+				.accessDeniedHandler(problemHandler))
 			// Every route stays open until the access rules are added
 			.authorizeHttpRequests(requests -> requests.anyRequest().permitAll());
 		return http.build();
