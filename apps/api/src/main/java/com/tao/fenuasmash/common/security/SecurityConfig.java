@@ -36,6 +36,8 @@ class SecurityConfig {
 			// The other routes stay open until the access rules are added
 			.authorizeHttpRequests(requests -> requests.requestMatchers(HttpMethod.GET, "/api/auth/me")
 				.authenticated()
+				.requestMatchers("/api/accounts", "/api/accounts/**")
+				.hasRole("ADMIN")
 				.anyRequest()
 				.permitAll());
 		return http.build();
