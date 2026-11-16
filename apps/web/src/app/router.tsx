@@ -12,6 +12,12 @@ import { SettingsPage } from '@/pages/admin/tournament/SettingsPage';
 import { EventsPage } from '@/pages/admin/tournament/EventsPage';
 import { CreateEventPage } from '@/pages/admin/tournament/CreateEventPage';
 import { EditEventPage } from '@/pages/admin/tournament/EditEventPage';
+import { PlayersPage } from '@/pages/admin/players/PlayersPage';
+import { CreatePlayerPage } from '@/pages/admin/players/CreatePlayerPage';
+import { EditPlayerPage } from '@/pages/admin/players/EditPlayerPage';
+import { ClubsPage } from '@/pages/admin/clubs/ClubsPage';
+import { CreateClubPage } from '@/pages/admin/clubs/CreateClubPage';
+import { EditClubPage } from '@/pages/admin/clubs/EditClubPage';
 
 export const router = createBrowserRouter([
   { path: '/', element: <Navigate to="/admin" replace /> },
@@ -32,6 +38,12 @@ export const router = createBrowserRouter([
           { path: 'events/:eventId', element: <EditEventPage /> },
         ],
       },
+      { path: 'players', element: <PlayersPage /> },
+      { path: 'players/new', element: <CreatePlayerPage /> },
+      { path: 'players/:playerId', element: <EditPlayerPage /> },
+      { path: 'clubs', element: <ClubsPage /> },
+      { path: 'clubs/new', element: <CreateClubPage /> },
+      { path: 'clubs/:clubId', element: <EditClubPage /> },
     ],
   },
   {

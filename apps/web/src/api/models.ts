@@ -37,12 +37,54 @@ export type Tournament = {
   forbiddenCombinations?: [Discipline, Discipline][];
 };
 
+export type Gender = 'MALE' | 'FEMALE';
+
+export type Club = {
+  id: string;
+  name: string;
+  city: string;
+  address: string | null;
+  email: string | null;
+  phone: string | null;
+  /** Fixé par l'envoi du logo (PUT /clubs/{id}/logo), jamais dans le JSON */
+  logoUrl: string | null;
+};
+
+/** Club tel qu'il apparaît dans un joueur */
+export type ClubSummary = Pick<Club, 'id' | 'name' | 'logoUrl'>;
+
+/** Classement de Polynésie dans une discipline (null = pas classé) */
+export type Ranking = {
+  points: number | null;
+  position: number | null;
+};
+
+export type PlayerRankings = {
+  singles: Ranking;
+  doubles: Ranking;
+  mixed: Ranking;
+};
+
 export type Player = {
   id: string;
   firstName: string;
   lastName: string;
-  externalReference: string | null;
-  createdAt: IsoDate;
+  gender: Gender;
+  /** Date seule, sans heure : YYYY-MM-DD */
+  birthDate: string;
+  club: ClubSummary;
+  licenseNumber: string | null;
+  email: string | null;
+  phone: string | null;
+  rankings: PlayerRankings;
+};
+
+/** Une page de résultats (page à partir de 0) */
+export type PlayerPage = {
+  items: Player[];
+  page: number;
+  size: number;
+  totalItems: number;
 };
 
 export type Event = {

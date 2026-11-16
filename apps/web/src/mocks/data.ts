@@ -1,4 +1,5 @@
 import type { Court, Organization, Tournament, Event } from '@/api/models';
+import { clubs, players } from './people';
 
 const now = '2026-10-28T00:00:00.000Z';
 
@@ -94,4 +95,4 @@ const events: Event[] = [
   },
 ];
 
-export const db = { organizations, tournaments, courts, events };
+export const db = { organizations, tournaments, courts, events, clubs, players };
