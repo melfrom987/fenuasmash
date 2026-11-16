@@ -34,6 +34,10 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      FENUASMASH_SECURITY_JWT_SECRET: ${JWT_SECRET:?JWT_SECRET manquant dans .env}
+      # Premier admin : facultatif, ignoré dès qu'un admin existe
+      FENUASMASH_BOOTSTRAP_ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      FENUASMASH_BOOTSTRAP_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       # Mémoire max de la JVM, en % de la mémoire du conteneur
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError
     networks: [backend, frontend]

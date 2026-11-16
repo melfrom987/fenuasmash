@@ -21,7 +21,10 @@ sudo chown "$USER" /opt/fenuasmash
 cd /opt/fenuasmash
 ```
 
-Create a `.env` file based on `.env.example` with production credentials.
+Create a `.env` file based on `.env.example` with production credentials. In particular:
+
+- `JWT_SECRET` must be a new random value (`openssl rand -base64 48`): anyone who knows it can forge login tokens. The API refuses to start without it.
+- `ADMIN_EMAIL` and `ADMIN_PASSWORD` create the first admin account on the first start. The account is never changed afterwards; change its password once logged in, or remove the two values.
 
 Create a dedicated SSH key pair for deployments and add the public key to `~/.ssh/authorized_keys` of the deployment user. This user must belong to the `docker` group.
 
