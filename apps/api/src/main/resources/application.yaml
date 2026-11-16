@@ -22,6 +22,10 @@ spring:
     problemdetails:
       enabled: true
 
+  autoconfigure:
+    # No default in-memory user with a generated password: accounts live in the database
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
 server:
   # Finish in-flight requests before stopping (deployments, restarts)
   shutdown: graceful
