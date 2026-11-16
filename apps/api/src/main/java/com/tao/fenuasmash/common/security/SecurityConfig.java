@@ -1,5 +1,6 @@
 package com.tao.fenuasmash.common.security;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -12,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
  * form and no HTTP Basic. Clients will authenticate with a bearer token.
  */
 @Configuration
+@EnableConfigurationProperties(JwtProperties.class)
 class SecurityConfig {
 
 	@Bean
