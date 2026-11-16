@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router';
-import { ChampionIcon } from '@hugeicons/core-free-icons';
+import { useTranslation } from 'react-i18next';
+import { Building03Icon, ChampionIcon, UserGroupIcon } from '@hugeicons/core-free-icons';
 import { Icon } from '@/components/ui/Icon';
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -8,6 +9,8 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export function AdminLayout() {
+  const { t } = useTranslation();
+
   return (
     <div className="flex min-h-screen">
       <aside className="bg-ocean-950 w-56 shrink-0 p-4">
@@ -15,7 +18,15 @@ export function AdminLayout() {
         <nav className="space-y-1">
           <NavLink to="/admin" end className={linkClass}>
             <Icon icon={ChampionIcon} size={18} />
-            Tournois
+            {t('nav.tournaments')}
+          </NavLink>
+          <NavLink to="/admin/players" className={linkClass}>
+            <Icon icon={UserGroupIcon} size={18} />
+            {t('nav.players')}
+          </NavLink>
+          <NavLink to="/admin/clubs" className={linkClass}>
+            <Icon icon={Building03Icon} size={18} />
+            {t('nav.clubs')}
           </NavLink>
         </nav>
       </aside>
