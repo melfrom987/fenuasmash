@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
+import 'core/config/app_config.dart';
 
 void main() {
-  runApp(const FenuaSmashApp());
+  final config = AppConfig.fromEnvironment();
+  runApp(FenuaSmashApp(config: config));
 }

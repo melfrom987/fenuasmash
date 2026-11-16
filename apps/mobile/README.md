@@ -9,6 +9,17 @@ flutter pub get
 flutter run
 ```
 
+The app calls the API started by `make api` at the repository root. It reaches it at `http://10.0.2.2:8081`, the address of your computer from the Android emulator.
+
+To use another server, pass its root URL, **without `/api`** (the app adds it):
+
+```bash
+flutter run --dart-define=API_URL=http://192.168.1.20:8081   # real tablet on the same Wi-Fi
+flutter build apk --release --dart-define=API_URL=https://fenuasmash.example
+```
+
+Debug builds accept plain HTTP; release builds need HTTPS. The release APK built by CD uses the `MOBILE_API_URL` repository variable.
+
 Before pushing, run the same checks as CI:
 
 ```bash
