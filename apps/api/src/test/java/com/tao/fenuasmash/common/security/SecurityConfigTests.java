@@ -1,5 +1,6 @@
 package com.tao.fenuasmash.common.security;
 
+import static com.tao.fenuasmash.TestTokens.admin;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,6 +29,9 @@ class SecurityConfigTests {
 	private MockMvc mvc;
 
 	@Autowired
+	private JwtService jwtService;
+
+	@Autowired
 	private JdbcTemplate jdbc;
 
 	@BeforeEach
@@ -37,7 +41,8 @@ class SecurityConfigTests {
 
 	@Test
 	void writeWithoutCsrfTokenIsAcceptedAndCreatesNoSession() throws Exception {
-		mvc.perform(post("/api/organizations").contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"Club\"}"))
+		mvc.perform(post("/api/organizations").with(admin(jwtService))
+			.contentType(MediaType.APPLICATION_JSON).content("{\"name\": \"Club\"}"))
 			.andExpect(status().isCreated())
 			.andExpect(header().doesNotExist("Set-Cookie"))
 			.andExpect(result -> assertThat(result.getRequest().getSession(false)).isNull());

@@ -1,5 +1,7 @@
 package com.tao.fenuasmash.common.security;
 
+import jakarta.servlet.DispatcherType;
+
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,7 +16,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 /**
  * Security setup for a stateless JSON API: no session, no CSRF token, no login
- * form and no HTTP Basic. Clients will authenticate with a bearer token.
+ * form and no HTTP Basic. Clients authenticate with a bearer token.
+ * <p>
+ * Reads are public. Organizers manage tournaments, events and courts; the admin
+ * manages accounts and organizations.
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -33,13 +38,29 @@ class SecurityConfig {
 				.accessDeniedHandler(problemHandler))
 			.addFilterBefore(new BearerTokenFilter(jwtService, problemHandler),
 					UsernamePasswordAuthenticationFilter.class)
-			// The other routes stay open until the access rules are added
-			.authorizeHttpRequests(requests -> requests.requestMatchers(HttpMethod.GET, "/api/auth/me")
+			// The first matching rule wins
+			.authorizeHttpRequests(requests -> requests
+				// Spring Boot's error page, reached after a request was already let in
+				.dispatcherTypeMatchers(DispatcherType.ERROR)
+				.permitAll()
+				.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**")
+				.permitAll()
+				.requestMatchers(HttpMethod.POST, "/api/auth/login")
+				.permitAll()
+				.requestMatchers(HttpMethod.GET, "/api/auth/me")
 				.authenticated()
 				.requestMatchers("/api/accounts", "/api/accounts/**")
 				.hasRole("ADMIN")
+				.requestMatchers(HttpMethod.POST, "/api/organizations")
+				.hasRole("ADMIN")
+				// Tournaments, events, courts and organizations are public to read
+				.requestMatchers(HttpMethod.GET, "/api/**")
+				.permitAll()
+				.requestMatchers("/api/tournaments", "/api/tournaments/**", "/api/events/**", "/api/courts/**")
+				.hasRole("ORGANIZER")
+				// Anything not listed above is closed by default
 				.anyRequest()
-				.permitAll());
+				.denyAll());
 		return http.build();
 	}
 
