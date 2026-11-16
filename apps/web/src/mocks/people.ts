@@ -1,7 +1,5 @@
 import type { Club, Gender, Player } from '@/api/models';
 
-// Clubs et joueurs fictifs pour le mode mock (npm run dev:mock)
-
 export const clubs: Club[] = [
   {
     id: '40000000-0000-4000-8000-000000000001',
@@ -69,7 +67,7 @@ export const players: Player[] = Array.from({ length: 34 }, (_, i) => {
   const gender: Gender = i % 2 === 0 ? 'MALE' : 'FEMALE';
   const firstNames = gender === 'MALE' ? maleFirstNames : femaleFirstNames;
   const club = clubs[i % clubs.length];
-  const hasLicense = i % 5 !== 0; // licence facultative dans le MVP
+  const hasLicense = i % 5 !== 0;
 
   return {
     id: `50000000-0000-4000-8000-${pad(i + 1, 12)}`,
@@ -81,7 +79,6 @@ export const players: Player[] = Array.from({ length: 34 }, (_, i) => {
     licenseNumber: hasLicense ? `PF${pad(10_000 + i * 37, 6)}` : null,
     email: i % 3 === 0 ? `joueur${i + 1}@example.com` : null,
     phone: i % 4 === 0 ? `87 ${pad(10 + i, 2)} ${pad(20 + i, 2)} ${pad(30 + i, 2)}` : null,
-    // Les 12 premiers sont classés en simple, un sur deux en double et en mixte
     rankings: {
       singles: i < 12 ? { points: 1200 - i * 80, position: Math.floor(i / 2) + 1 } : unranked(),
       doubles: i % 2 === 0 ? { points: 900 - i * 20, position: i / 2 + 1 } : unranked(),

@@ -20,7 +20,6 @@ const blank = (fields: string[]) =>
 
 const textOrNull = (value: string | null | undefined) => value?.trim() || null;
 
-/** Le nom et le logo du club sont recopiés dans chaque joueur (ClubSummary) */
 const syncPlayers = (club: Club) => {
   for (const player of db.players) {
     if (player.club.id === club.id) {
@@ -107,7 +106,6 @@ export const clubHandlers = [
     if (file.size > LOGO_MAX_BYTES) {
       return problem(413, 'LOGO_TOO_LARGE', 'Logo must not exceed 1 MB');
     }
-    // En mock, le logo reste dans le navigateur ; le backend renverra une vraie URL
     club.logoUrl = URL.createObjectURL(file);
     syncPlayers(club);
     return HttpResponse.json(club);

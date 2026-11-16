@@ -5,7 +5,6 @@ import { ClubForm } from '@/features/clubs/components/ClubForm';
 import type { LogoChange } from '@/features/clubs/logo';
 import { toClubInput, type ClubFormValues } from '@/features/clubs/schema';
 
-/** Passé à la page de modification si le club est créé mais pas son logo */
 export type ClubPageState = { logoFailed?: boolean };
 
 export function CreateClubPage() {
@@ -20,7 +19,6 @@ export function CreateClubPage() {
       try {
         await uploadLogo.mutateAsync({ clubId: club.id, file: logo.file });
       } catch {
-        // Le club existe déjà : on ne doit pas le recréer, on passe en modification
         const state: ClubPageState = { logoFailed: true };
         await navigate(`/admin/clubs/${club.id}`, { state });
         return;

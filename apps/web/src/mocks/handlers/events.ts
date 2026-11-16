@@ -100,7 +100,6 @@ export const eventHandlers = [
       return error(409, 'EVENT_NAME_ALREADY_EXISTS', 'Event name already exists');
     }
 
-    // Un champ envoyé à null est effacé ; un champ absent est conservé
     Object.assign(event, body, { name });
     if (event.categoryType === 'OPEN') event.categoryLabel = null;
     return HttpResponse.json(event);

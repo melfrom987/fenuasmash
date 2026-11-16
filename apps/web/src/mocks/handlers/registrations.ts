@@ -12,7 +12,6 @@ type UpdateBody = { partnerId?: string | null; confirm?: boolean };
 const findPlayer = (id: unknown) => db.players.find((p) => p.id === id);
 const findEvent = (id: unknown) => db.events.find((e) => e.id === id);
 
-/** Inscrit dans ce tableau, comme joueur ou partenaire (sauf l'inscription `exceptId`) */
 const registeredIn = (eventId: string, playerId: string, exceptId?: string) =>
   db.registrations.some(
     (r) =>
@@ -21,13 +20,11 @@ const registeredIn = (eventId: string, playerId: string, exceptId?: string) =>
       (r.player.id === playerId || r.partner?.id === playerId),
   );
 
-/** Le genre convient à la discipline. Les bornes d'âge viendront avec minBirthYear/maxBirthYear. */
 const genderFits = (event: Event, player: Player, partnerOf?: Player) => {
   const gender = requiredGender(event.discipline, partnerOf?.gender);
   return gender === null || player.gender === gender;
 };
 
-/** Le joueur est déjà dans un tableau dont la discipline est interdite avec celle-ci */
 const forbiddenCombination = (event: Event, playerId: string) => {
   const tournament = db.tournaments.find((t) => t.id === event.tournamentId);
   const forbidden = (tournament?.forbiddenCombinations ?? [])
@@ -47,7 +44,6 @@ const forbiddenCombination = (event: Event, playerId: string) => {
 const eventOrder = (r: Registration) =>
   DISCIPLINES.indexOf(findEvent(r.eventId)?.discipline ?? 'MS');
 
-/** Vérifie un partenaire ; renvoie la réponse d'erreur, ou null s'il convient */
 function checkPartner(event: Event, player: Player, partnerId: string, exceptId?: string) {
   const partner = findPlayer(partnerId);
   if (!partner) return problem(404, 'PLAYER_NOT_FOUND', 'Partner not found');

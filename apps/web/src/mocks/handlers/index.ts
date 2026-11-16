@@ -5,7 +5,7 @@ import { eventHandlers } from './events';
 import { clubHandlers } from './clubs';
 import { playerHandlers } from './players';
 import { registrationHandlers } from './registrations';
-// ...
+import { registrationImportHandlers } from './registration-import';
 export const handlers = [
   ...organizationHandlers,
   ...tournamentHandlers,
@@ -14,4 +14,5 @@ export const handlers = [
   ...clubHandlers,
   ...playerHandlers,
   ...registrationHandlers,
+  ...registrationImportHandlers,
 ];

@@ -24,7 +24,6 @@ export function PlayersPage() {
   const [gender, setGender] = useState<Gender | ''>('');
   const [page, setPage] = useState(0);
 
-  // On attend que l'utilisateur ait fini de taper avant d'interroger l'API
   const q = useDebouncedValue(search.trim());
   const players = usePlayers({ q, clubId, gender, page });
 
