@@ -3,7 +3,6 @@ import { HugeiconsIcon } from '@hugeicons/react';
 
 type IconProps = {
   icon: ComponentProps<typeof HugeiconsIcon>['icon'];
-  /** Texte lu par les lecteurs d'écran. Sans label, l'icône est décorative. */
   label?: string;
   size?: number;
   className?: string;

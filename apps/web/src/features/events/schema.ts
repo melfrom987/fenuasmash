@@ -14,8 +14,8 @@ export const eventFormSchema = z
     discipline: z.enum(DISCIPLINES, key('events.form.errors.disciplineRequired')),
     categoryType: z.enum(CATEGORY_TYPES),
     categoryLabel: z.string().trim().max(50, key('events.form.errors.categoryLabelTooLong')),
-    plannedDate: z.string(), // '' = pas de date prévue
-    maxEntries: z.union([z.number(), z.nan()]), // NaN (champ vide) = non limité
+    plannedDate: z.string(),
+    maxEntries: z.union([z.number(), z.nan()]),
   })
   .superRefine((data, ctx) => {
     if (data.categoryType !== 'OPEN' && data.categoryLabel === '') {
@@ -37,13 +37,12 @@ export const eventFormSchema = z
 
 export type EventFormValues = z.infer<typeof eventFormSchema>;
 
-/** Corps envoyé à l'API (création et modification) */
 export type EventInput = {
   name: string;
   discipline: EventFormValues['discipline'];
   categoryType: EventFormValues['categoryType'];
   categoryLabel: string | null;
-  plannedDate: string | null; // ISO, UTC
+  plannedDate: string | null;
   maxEntries: number | null;
 };
 

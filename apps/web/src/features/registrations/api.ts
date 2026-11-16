@@ -6,19 +6,16 @@ import { PICKER_PAGE_SIZE } from './constants';
 
 export type EligiblePlayersParams = {
   q: string;
-  /** Pour choisir un partenaire : seulement ceux qui peuvent jouer avec ce joueur */
   partnerOf?: string;
 };
 
 export type CreateRegistrationInput = {
   playerId: string;
-  /** Doubles : null = cherche un partenaire */
   partnerId?: string | null;
 };
 
 export type UpdateRegistrationInput = { partnerId: string | null } | { confirm: true };
 
-/** Toutes les inscriptions du tournoi : sert aussi à compter les inscrits par tableau */
 export function useTournamentRegistrations(tournamentId: string) {
   return useQuery({
     queryKey: queryKeys.registrations(tournamentId),
@@ -40,7 +37,6 @@ export function useEligiblePlayers(eventId: string, params: EligiblePlayersParam
   });
 }
 
-/** Après un changement : liste des inscrits et joueurs encore disponibles dans le tableau */
 function useRefreshRegistrations(tournamentId: string) {
   const qc = useQueryClient();
   return async (eventId: string) => {

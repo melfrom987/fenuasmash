@@ -7,9 +7,9 @@ import type { PlayerInput } from './schema';
 
 export type PlayerFilters = {
   q: string;
-  clubId: string; // '' = tous les clubs
-  gender: Gender | ''; // '' = tous
-  page: number; // à partir de 0
+  clubId: string;
+  gender: Gender | '';
+  page: number;
 };
 
 export function usePlayers(filters: PlayerFilters) {
@@ -25,7 +25,6 @@ export function usePlayers(filters: PlayerFilters) {
       if (filters.gender) params.set('gender', filters.gender);
       return api<PlayerPage>(`/players?${params.toString()}`);
     },
-    // Garde la page affichée pendant le chargement de la suivante (pas de clignotement)
     placeholderData: keepPreviousData,
   });
 }

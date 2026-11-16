@@ -1,15 +1,7 @@
-/**
- * Catégorie d'âge, calculée depuis l'année de naissance (jamais stockée).
- * Règle décrite dans docs/competition-rules.md (« Age Categories ») :
- * le backend applique la même.
- */
-
-/** Mois de début de saison (9 = septembre). À confirmer avec la fédération. */
 export const SEASON_START_MONTH = 9;
 
 export const VETERAN_MIN_AGE = 35;
 
-// Âge maximal (dans l'année de référence) de chaque catégorie jeune
 const YOUTH_CATEGORIES = [
   [8, 'MINIBAD'],
   [10, 'POUSSIN'],

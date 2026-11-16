@@ -20,7 +20,6 @@ export const clubFormSchema = z.object({
 
 export type ClubFormValues = z.infer<typeof clubFormSchema>;
 
-/** Corps envoyé à l'API (création et modification). Le logo part à part. */
 export type ClubInput = {
   name: string;
   city: string;

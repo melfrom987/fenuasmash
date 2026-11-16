@@ -21,7 +21,6 @@ export function ClubForm({
   currentLogoUrl = null,
   onSubmit,
 }: {
-  /** Absent = création ; présent = modification */
   defaultValues?: ClubFormValues;
   currentLogoUrl?: string | null;
   onSubmit: (values: ClubFormValues, logo: LogoChange) => Promise<unknown>;

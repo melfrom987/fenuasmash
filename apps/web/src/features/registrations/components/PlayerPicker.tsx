@@ -7,10 +7,6 @@ import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { useEligiblePlayers } from '../api';
 import { playerName } from '../format';
 
-/**
- * Choix d'un joueur parmi ceux qui peuvent s'inscrire dans le tableau
- * (ou jouer avec `partnerOf`). La vérification finale reste faite par l'API.
- */
 export function PlayerPicker({
   eventId,
   partnerOf,
@@ -89,7 +85,6 @@ export function PlayerPicker({
   );
 }
 
-/** Nom, club et catégorie d'un joueur, sur une ligne */
 export function PlayerLine({
   player,
   clubName,

@@ -20,7 +20,6 @@ export const tahitiInputToIso = (value: string) => new Date(`${value}:00-10:00`)
 export const isoToTahitiInput = (iso: string) =>
   new Date(new Date(iso).getTime() - 10 * 3_600_000).toISOString().slice(0, 16);
 
-/** Date de naissance « YYYY-MM-DD » → « 23/04/1998 » (pas de fuseau : c'est une date seule) */
 export const formatBirthDate = (date: string) => {
   const [year, month, day] = date.split('-');
   return `${day}/${month}/${year}`;

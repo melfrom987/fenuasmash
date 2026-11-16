@@ -9,13 +9,11 @@ export const queryKeys = {
   events: (tournamentId: string) => ['tournaments', tournamentId, 'events'] as const,
   event: (eventId: string) => ['events', eventId] as const,
   registrations: (tournamentId: string) => ['tournaments', tournamentId, 'registrations'] as const,
-  /** Préfixe : invalide toutes les recherches de joueurs disponibles du tableau */
   eligiblePlayersAll: (eventId: string) => ['events', eventId, 'eligible-players'] as const,
   eligiblePlayers: (eventId: string, params: EligiblePlayersParams) =>
     ['events', eventId, 'eligible-players', params] as const,
   clubs: ['clubs'] as const,
   club: (clubId: string) => ['clubs', clubId] as const,
-  /** Préfixe commun : invalider playersAll rafraîchit listes et fiches */
   playersAll: ['players'] as const,
   players: (filters: PlayerFilters) => ['players', 'list', filters] as const,
   player: (playerId: string) => ['players', 'detail', playerId] as const,

@@ -7,7 +7,6 @@ export function Pagination({
   totalItems,
   onChange,
 }: {
-  /** Page courante, à partir de 0 */
   page: number;
   size: number;
   totalItems: number;

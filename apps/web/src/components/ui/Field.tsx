@@ -9,7 +9,6 @@ export function Field({
   children,
 }: {
   label: string;
-  /** Clé de traduction du message d'erreur */
   error?: string;
   hint?: string;
   children: ReactNode;

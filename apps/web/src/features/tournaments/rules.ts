@@ -25,7 +25,6 @@ export const rulesSchema = z
       gamesToWin: intBetween(1, 3, key('rules.errors.gamesToWinRange')),
       pointsToWin: intBetween(1, 50, key('rules.errors.pointsRange')),
       twoPointLead: z.boolean(),
-      // Champ masqué quand twoPointLead est décoché : NaN accepté, vérifié plus bas
       pointCap: z.union([z.number(), z.nan()]),
     }),
     disciplines: z.array(discipline).min(1, key('rules.errors.disciplinesRequired')),
@@ -62,10 +61,8 @@ export const rulesSchema = z
 
 export type RulesValues = z.infer<typeof rulesSchema>;
 
-/** Formulaire de l'onglet Paramètres : uniquement les règles */
 export const rulesFormSchema = z.object({ rules: rulesSchema });
 
-/** Règles officielles : poules puis sortie, 2 sets gagnants de 21, plafond à 30 */
 export const DEFAULT_RULES: RulesValues = {
   drawFormat: 'POOLS_THEN_ELIMINATION',
   scoring: { gamesToWin: 2, pointsToWin: 21, twoPointLead: true, pointCap: 30 },
@@ -73,7 +70,6 @@ export const DEFAULT_RULES: RulesValues = {
   forbiddenCombinations: [],
 };
 
-/** Corps envoyé à l'API */
 export type RulesInput = {
   competitionType: 'INDIVIDUAL';
   playMode: 'SETS';
@@ -90,7 +86,6 @@ export function toRulesInput(values: RulesValues): RulesInput {
     playMode: 'SETS',
     drawFormat: values.drawFormat,
     scoring: { ...values.scoring, pointCap: twoPointLead ? pointCap : null },
-    // Toujours dans l'ordre officiel, quel que soit l'ordre des cases cochées
     disciplines: DISCIPLINES.filter((d) => values.disciplines.includes(d)),
     forbiddenCombinations: values.forbiddenCombinations.map(
       ({ first, second }): [Discipline, Discipline] => [first, second],
@@ -98,7 +93,6 @@ export function toRulesInput(values: RulesValues): RulesInput {
   };
 }
 
-/** Règles d'un tournoi existant ; valeurs officielles si le back ne les renvoie pas encore */
 export function toRulesValues(tournament: Tournament): RulesValues {
   return {
     drawFormat: tournament.drawFormat ?? DEFAULT_RULES.drawFormat,

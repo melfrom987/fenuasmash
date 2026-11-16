@@ -5,7 +5,6 @@ import { GENDERS } from './constants';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-// Champs numériques facultatifs : vide = NaN (valueAsNumber)
 const optionalInt = (min: number, minKey: TranslationKey) =>
   z.union([z.number().int(key('players.form.errors.integerExpected')).min(min, minKey), z.nan()]);
 
@@ -45,12 +44,11 @@ export const playerFormSchema = z.object({
 
 export type PlayerFormValues = z.infer<typeof playerFormSchema>;
 
-/** Corps envoyé à l'API (création et modification) */
 export type PlayerInput = {
   firstName: string;
   lastName: string;
   gender: Gender;
-  birthDate: string; // YYYY-MM-DD
+  birthDate: string;
   clubId: string;
   licenseNumber: string | null;
   email: string | null;
