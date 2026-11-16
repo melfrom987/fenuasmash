@@ -50,7 +50,7 @@ Inside a feature, files are grouped by kind:
 | `widgets/` | Widgets used only by this feature |
 | `data/` | API calls and local storage for this feature |
 
-A feature never imports another feature: shared code moves to `core/`.
+A feature never imports another feature: shared code moves to `core/`. To open another screen, use its path from `core/routing/app_routes.dart` (`context.go(AppRoutes.matches)`); the routes themselves are declared in `app/router.dart`.
 
 ## Design
 
