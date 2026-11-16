@@ -10,10 +10,6 @@ export const toPlayerSummary = (player: Player): PlayerSummary => ({
   licenseNumber: player.licenseNumber,
 });
 
-/**
- * Quelques inscriptions de départ (index = position dans la liste des joueurs fictifs :
- * pairs = hommes, impairs = femmes). Respecte l'interdiction Simple + Mixte du tournoi.
- */
 export function seedRegistrations(events: Event[], players: Player[]): Registration[] {
   const [singles, , mixed] = events;
   let n = 0;

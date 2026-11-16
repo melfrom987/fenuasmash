@@ -7,10 +7,8 @@ import { fr } from './locales/fr';
 export const supportedLanguages = ['fr', 'en'] as const;
 export type Language = (typeof supportedLanguages)[number];
 
-// Une clé de traduction valide, ex. 'tournaments.title'
 export type TranslationKey = ParseKeys;
 
-// Pour les messages des schémas Zod : vérifie que la clé existe
 export const key = (k: TranslationKey) => k;
 
 export const resources = {

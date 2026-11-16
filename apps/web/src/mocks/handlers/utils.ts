@@ -1,6 +1,5 @@
 import { HttpResponse } from 'msw';
 
-/** Réponse d'erreur au format Problem Details, comme le backend */
 export const problem = (
   status: number,
   code: string,
@@ -8,7 +7,6 @@ export const problem = (
   errors?: { field: string; message: string }[],
 ) => HttpResponse.json({ code, detail, status, errors }, { status });
 
-/** Minuscules et sans accents : « Léa » et « lea » se retrouvent */
 export const normalize = (value: string) =>
   value
     .normalize('NFD')

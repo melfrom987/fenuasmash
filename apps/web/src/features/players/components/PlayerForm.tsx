@@ -23,7 +23,6 @@ export function PlayerForm({
   defaultValues,
   onSubmit,
 }: {
-  /** Absent = création ; présent = modification */
   defaultValues?: PlayerFormValues;
   onSubmit: (values: PlayerFormValues) => Promise<unknown>;
 }) {
@@ -41,7 +40,6 @@ export function PlayerForm({
     formState: { errors, isSubmitting },
   } = useForm<PlayerFormValues>({
     resolver: zodResolver(playerFormSchema),
-    // Le genre n'a pas de valeur par défaut : l'organisateur doit le choisir
     defaultValues: defaultValues ?? {
       lastName: '',
       firstName: '',
@@ -54,7 +52,6 @@ export function PlayerForm({
     },
   });
 
-  // Catégorie affichée dès que la date de naissance est complète
   const birthDate = useWatch({ control, name: 'birthDate' });
   const hasBirthDate = /^\d{4}-\d{2}-\d{2}$/.test(birthDate ?? '');
   const referenceYear = seasonReferenceYear();

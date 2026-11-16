@@ -42,7 +42,6 @@ export function EditClubPage() {
           <h1 className="font-display text-2xl font-semibold">
             {t('clubs.editTitle', { name: club.data.name })}
           </h1>
-          {/* key : réinitialise le formulaire si on passe d'un club à un autre */}
           <ClubForm
             key={club.data.id}
             defaultValues={toClubFormValues(club.data)}

@@ -21,7 +21,6 @@ export function EventForm({
   defaultValues,
   onSubmit,
 }: {
-  /** Absent = création ; présent = modification */
   defaultValues?: EventFormValues;
   onSubmit: (values: EventFormValues) => Promise<unknown>;
 }) {
@@ -52,7 +51,6 @@ export function EventForm({
 
   const categoryType = useWatch({ control, name: 'categoryType' });
 
-  // En création, le nom suit la discipline et la catégorie tant qu'il n'a pas été modifié
   const syncName = () => {
     if (!isCreation || dirtyFields.name) return;
     const { discipline, categoryType: type, categoryLabel } = getValues();

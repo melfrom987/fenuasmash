@@ -6,7 +6,6 @@ const sizes = {
   lg: 'size-20 text-lg',
 };
 
-/** Initiales du club : « Badminton Club de Papeete » → « BP » */
 const initials = (name: string) =>
   name
     .split(/[\s'’-]+/)
@@ -15,7 +14,6 @@ const initials = (name: string) =>
     .map((word) => word[0].toUpperCase())
     .join('');
 
-/** Logo du club, ou ses initiales s'il n'en a pas */
 export function ClubLogo({
   club,
   size = 'md',

@@ -12,7 +12,6 @@ export function LogoInput({
   onChange,
 }: {
   clubName: string;
-  /** Logo déjà enregistré (modification), ou null */
   currentUrl: string | null;
   value: LogoChange;
   onChange: (change: LogoChange) => void;
@@ -50,7 +49,7 @@ export function LogoInput({
             className="sr-only"
             onChange={(e) => {
               void handleFile(e.target.files?.[0]);
-              e.target.value = ''; // permet de rechoisir le même fichier
+              e.target.value = '';
             }}
           />
           {shownUrl && (

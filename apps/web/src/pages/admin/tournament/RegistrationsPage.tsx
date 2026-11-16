@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router';
+import { Link, useParams, useSearchParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import type { RegistrationStatus } from '@/api/models';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
@@ -20,7 +20,6 @@ export function RegistrationsPage() {
   const registrations = useTournamentRegistrations(tournamentId);
   const [status, setStatus] = useState<RegistrationStatus | ''>('');
 
-  // Le tableau choisi est dans l'URL (?event=…) : on peut partager ou recharger la page
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('event') ?? events.data?.[0]?.id;
   const event = events.data?.find((e) => e.id === selectedId);
@@ -44,86 +43,97 @@ export function RegistrationsPage() {
   }
 
   return (
-    <div className="grid max-w-6xl items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-      <EventPicker
-        events={events.data}
-        counts={counts}
-        selectedId={selectedId}
-        onSelect={(eventId) => {
-          setSearchParams({ event: eventId });
-          setStatus('');
-        }}
-      />
+    <div className="max-w-6xl space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-white p-4 shadow-sm">
+        <p className="text-sable-700 text-sm">{t('registrations.importHint')}</p>
+        <Link
+          to="import"
+          className="bg-lagon-600 hover:bg-lagon-700 rounded-md px-4 py-2 text-sm font-medium text-white"
+        >
+          {t('registrations.importLink')}
+        </Link>
+      </div>
 
-      {event && (
-        <div className="space-y-6">
-          <div>
-            <h2 className="font-display text-lg font-semibold">{event.name}</h2>
-            <p className="text-sable-600 text-sm">
-              {event.maxEntries === null
-                ? t('registrations.count', { count })
-                : t('registrations.countOfMax', { count, max: event.maxEntries })}
-            </p>
-          </div>
+      <div className="grid items-start gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <EventPicker
+          events={events.data}
+          counts={counts}
+          selectedId={selectedId}
+          onSelect={(eventId) => {
+            setSearchParams({ event: eventId });
+            setStatus('');
+          }}
+        />
 
-          <section className="space-y-3 rounded-lg bg-white p-6 shadow-sm">
-            <h3 className="font-display text-base font-semibold">{t('registrations.add')}</h3>
-            {full ? (
-              <p className="text-sm text-red-700">{t('registrations.full')}</p>
-            ) : (
-              // key : repart d'un formulaire vide quand on change de tableau
-              <RegistrationForm key={event.id} tournamentId={tournamentId} event={event} />
-            )}
-          </section>
-
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <h3 className="font-display text-base font-semibold">
-                {t('registrations.listTitle')}
-              </h3>
-              {isDoubles(event.discipline) && (
-                <label className="block">
-                  <span className="sr-only">{t('registrations.filterStatus')}</span>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as RegistrationStatus | '')}
-                    className={`${inputClass} mt-0 w-auto`}
-                  >
-                    <option value="">{t('registrations.allStatuses')}</option>
-                    {REGISTRATION_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {t(`registrations.statuses.${s}`)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
+        {event && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="font-display text-lg font-semibold">{event.name}</h2>
+              <p className="text-sable-600 text-sm">
+                {event.maxEntries === null
+                  ? t('registrations.count', { count })
+                  : t('registrations.countOfMax', { count, max: event.maxEntries })}
+              </p>
             </div>
 
-            {registrations.isPending && <p className="text-sable-600">{t('common.loading')}</p>}
-            {registrations.isError && (
-              <ErrorMessage>{errorMessage(registrations.error)}</ErrorMessage>
-            )}
-            {registrations.data && eventRegistrations.length === 0 && (
-              <p className="text-sable-600 rounded-lg bg-white p-6 text-center shadow-sm">
-                {status ? t('registrations.noneWithStatus') : t('registrations.empty')}
-              </p>
-            )}
-            {eventRegistrations.length > 0 && (
-              <ul className="divide-sable-200 divide-y rounded-lg bg-white shadow-sm">
-                {eventRegistrations.map((registration) => (
-                  <RegistrationRow
-                    key={registration.id}
-                    tournamentId={tournamentId}
-                    event={event}
-                    registration={registration}
-                  />
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
-      )}
+            <section className="space-y-3 rounded-lg bg-white p-6 shadow-sm">
+              <h3 className="font-display text-base font-semibold">{t('registrations.add')}</h3>
+              {full ? (
+                <p className="text-sm text-red-700">{t('registrations.full')}</p>
+              ) : (
+                <RegistrationForm key={event.id} tournamentId={tournamentId} event={event} />
+              )}
+            </section>
+
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <h3 className="font-display text-base font-semibold">
+                  {t('registrations.listTitle')}
+                </h3>
+                {isDoubles(event.discipline) && (
+                  <label className="block">
+                    <span className="sr-only">{t('registrations.filterStatus')}</span>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as RegistrationStatus | '')}
+                      className={`${inputClass} mt-0 w-auto`}
+                    >
+                      <option value="">{t('registrations.allStatuses')}</option>
+                      {REGISTRATION_STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {t(`registrations.statuses.${s}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
+
+              {registrations.isPending && <p className="text-sable-600">{t('common.loading')}</p>}
+              {registrations.isError && (
+                <ErrorMessage>{errorMessage(registrations.error)}</ErrorMessage>
+              )}
+              {registrations.data && eventRegistrations.length === 0 && (
+                <p className="text-sable-600 rounded-lg bg-white p-6 text-center shadow-sm">
+                  {status ? t('registrations.noneWithStatus') : t('registrations.empty')}
+                </p>
+              )}
+              {eventRegistrations.length > 0 && (
+                <ul className="divide-sable-200 divide-y rounded-lg bg-white shadow-sm">
+                  {eventRegistrations.map((registration) => (
+                    <RegistrationRow
+                      key={registration.id}
+                      tournamentId={tournamentId}
+                      event={event}
+                      registration={registration}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -46,14 +46,11 @@ export type Club = {
   address: string | null;
   email: string | null;
   phone: string | null;
-  /** Fixé par l'envoi du logo (PUT /clubs/{id}/logo), jamais dans le JSON */
   logoUrl: string | null;
 };
 
-/** Club tel qu'il apparaît dans un joueur */
 export type ClubSummary = Pick<Club, 'id' | 'name' | 'logoUrl'>;
 
-/** Classement de Polynésie dans une discipline (null = pas classé) */
 export type Ranking = {
   points: number | null;
   position: number | null;
@@ -70,7 +67,6 @@ export type Player = {
   firstName: string;
   lastName: string;
   gender: Gender;
-  /** Date seule, sans heure : YYYY-MM-DD */
   birthDate: string;
   club: ClubSummary;
   licenseNumber: string | null;
@@ -79,7 +75,6 @@ export type Player = {
   rankings: PlayerRankings;
 };
 
-/** Une page de résultats (page à partir de 0) */
 export type PlayerPage = {
   items: Player[];
   page: number;
@@ -164,7 +159,6 @@ export type ScoringRules = {
 
 export type RegistrationStatus = 'CONFIRMED' | 'PENDING_PARTNER' | 'LOOKING_FOR_PARTNER';
 
-/** Joueur tel qu'il apparaît dans une inscription */
 export type PlayerSummary = Pick<
   Player,
   'id' | 'firstName' | 'lastName' | 'gender' | 'birthDate' | 'licenseNumber'
@@ -176,7 +170,6 @@ export type Registration = {
   eventId: string;
   status: RegistrationStatus;
   player: PlayerSummary;
-  /** Null en simple, et en double quand le joueur cherche un partenaire */
   partner: PlayerSummary | null;
   createdAt: IsoDate;
 };

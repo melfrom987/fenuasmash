@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { Event } from '@/api/models';
 
-/** Liste des tableaux avec leur nombre d'inscrits ; le tableau choisi est mis en avant */
 export function EventPicker({
   events,
   counts,

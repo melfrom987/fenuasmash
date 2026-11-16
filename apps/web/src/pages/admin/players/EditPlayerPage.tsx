@@ -39,7 +39,6 @@ export function EditPlayerPage() {
               name: `${player.data.firstName} ${player.data.lastName}`,
             })}
           </h1>
-          {/* key : réinitialise le formulaire si on passe d'un joueur à un autre */}
           <PlayerForm
             key={player.data.id}
             defaultValues={toPlayerFormValues(player.data)}

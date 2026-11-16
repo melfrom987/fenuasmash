@@ -51,7 +51,7 @@ export function RegistrationForm({ tournamentId, event }: { tournamentId: string
           value={player}
           onChange={(selected) => {
             setPlayer(selected);
-            setPartner(null); // le partenaire possible dépend du joueur
+            setPartner(null);
             createRegistration.reset();
           }}
         />

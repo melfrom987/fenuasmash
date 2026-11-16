@@ -19,7 +19,6 @@ export function useClub(clubId: string) {
   });
 }
 
-/** Après un changement de club : listes de clubs, fiche, et joueurs (nom et logo recopiés) */
 function useInvalidateClub() {
   const qc = useQueryClient();
   return async (club: Club) => {
