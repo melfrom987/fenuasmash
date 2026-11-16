@@ -28,6 +28,22 @@ flutter analyze
 flutter test
 ```
 
+### Phones and Tablets
+
+The app runs on Android phones and tablets, in portrait and landscape. Screens use `PageBody` (`lib/core/widgets/page_body.dart`): content centered with a maximum width, padding that grows with the screen (`WindowSize`: compact for phones, medium for tablets in portrait, expanded for tablets in landscape), and scrolling when the screen is too short.
+
+`test/app/screen_sizes_test.dart` opens every screen on phone and tablet sizes, in both orientations: any overflow fails the test. Add new screens to it.
+
+To try it on emulators, create a tablet in Android Studio (**Device Manager → Pixel Tablet**), then:
+
+```bash
+flutter emulators                      # list the emulators
+flutter emulators --launch <id>
+flutter run
+```
+
+Run one emulator at a time: two at once need more than 16 GB of memory.
+
 ## Project Structure
 
 ```
