@@ -74,6 +74,7 @@ export const fr = {
     tabs: {
       settings: 'Paramètres',
       events: 'Tableaux',
+      registrations: 'Inscriptions',
     },
   },
   courts: {
@@ -320,6 +321,48 @@ export const fr = {
       },
     },
   },
+  registrations: {
+    eventsLabel: 'Tableaux',
+    noEvents: "Créez d'abord les tableaux du tournoi : les joueurs s'inscrivent dans un tableau.",
+    count_one: '{{count}} inscription',
+    count_other: '{{count}} inscriptions',
+    countOfMax: '{{count}} inscriptions sur {{max}}',
+    add: 'Inscrire',
+    full: 'Ce tableau est complet.',
+    listTitle: 'Inscrits',
+    empty: 'Aucune inscription dans ce tableau.',
+    noneWithStatus: 'Aucune inscription avec ce statut.',
+    filterStatus: 'Filtrer par statut',
+    allStatuses: 'Tous les statuts',
+    statuses: {
+      CONFIRMED: 'Confirmée',
+      PENDING_PARTNER: 'En attente du partenaire',
+      LOOKING_FOR_PARTNER: 'Cherche un partenaire',
+    },
+    picker: {
+      searchPlaceholder: 'Rechercher un joueur…',
+      noPlayer: 'Aucun joueur disponible pour ce tableau.',
+      refine: 'Seuls les premiers résultats sont affichés : affinez la recherche.',
+      change: 'Changer',
+    },
+    form: {
+      player: 'Joueur',
+      player1: 'Joueur 1',
+      partner: 'Partenaire',
+      choosePlayerFirst: "Choisissez d'abord le premier joueur.",
+      lookingForPartner: 'Cherche un partenaire',
+      submit: 'Inscrire',
+      saving: 'Inscription…',
+    },
+    row: {
+      confirm: 'Confirmer la paire',
+      addPartner: 'Ajouter un partenaire',
+      changePartner: 'Changer de partenaire',
+      removePartner: 'Laisser sans partenaire',
+      withdraw: 'Désinscrire',
+      withdrawConfirm: 'Désinscrire ce joueur du tableau ? Son partenaire sera aussi désinscrit.',
+    },
+  },
   apiErrors: {
     VALIDATION_FAILED: 'Certains champs sont invalides.',
     INVALID_DATE_RANGE: 'La fin doit être après le début.',
@@ -343,6 +386,15 @@ export const fr = {
     PLAYER_LICENSE_ALREADY_EXISTS: 'Un joueur a déjà ce numéro de licence.',
     LOGO_TOO_LARGE: 'Le logo dépasse 1 Mo.',
     UNSUPPORTED_LOGO_TYPE: 'Le logo doit être une image PNG, JPEG ou WebP.',
+    REGISTRATION_NOT_FOUND: 'Inscription introuvable',
+    PLAYER_NOT_ELIGIBLE: 'Ce joueur ne peut pas jouer dans ce tableau (genre ou âge).',
+    PARTNER_NOT_ELIGIBLE: 'Ce partenaire ne peut pas jouer avec ce joueur dans ce tableau.',
+    ALREADY_REGISTERED: 'Ce joueur est déjà inscrit dans ce tableau.',
+    PARTNER_ALREADY_REGISTERED: 'Ce partenaire est déjà inscrit dans ce tableau.',
+    EVENT_FULL: 'Ce tableau est complet.',
+    FORBIDDEN_COMBINATION:
+      'Ce joueur est déjà inscrit dans une discipline que le tournoi interdit de cumuler avec celle-ci.',
+    NOT_PENDING: "Cette inscription n'attend plus de confirmation.",
   },
 };
 

@@ -161,3 +161,22 @@ export type ScoringRules = {
   twoPointLead: boolean;
   pointCap: number | null;
 };
+
+export type RegistrationStatus = 'CONFIRMED' | 'PENDING_PARTNER' | 'LOOKING_FOR_PARTNER';
+
+/** Joueur tel qu'il apparaît dans une inscription */
+export type PlayerSummary = Pick<
+  Player,
+  'id' | 'firstName' | 'lastName' | 'gender' | 'birthDate' | 'licenseNumber'
+> & { clubName: string };
+
+export type Registration = {
+  id: string;
+  tournamentId: string;
+  eventId: string;
+  status: RegistrationStatus;
+  player: PlayerSummary;
+  /** Null en simple, et en double quand le joueur cherche un partenaire */
+  partner: PlayerSummary | null;
+  createdAt: IsoDate;
+};

@@ -1,4 +1,5 @@
 import type { PlayerFilters } from '@/features/players/api';
+import type { EligiblePlayersParams } from '@/features/registrations/api';
 
 export const queryKeys = {
   organizations: ['organizations'] as const,
@@ -7,6 +8,11 @@ export const queryKeys = {
   courts: (tournamentId: string) => ['tournaments', tournamentId, 'courts'] as const,
   events: (tournamentId: string) => ['tournaments', tournamentId, 'events'] as const,
   event: (eventId: string) => ['events', eventId] as const,
+  registrations: (tournamentId: string) => ['tournaments', tournamentId, 'registrations'] as const,
+  /** Préfixe : invalide toutes les recherches de joueurs disponibles du tableau */
+  eligiblePlayersAll: (eventId: string) => ['events', eventId, 'eligible-players'] as const,
+  eligiblePlayers: (eventId: string, params: EligiblePlayersParams) =>
+    ['events', eventId, 'eligible-players', params] as const,
   clubs: ['clubs'] as const,
   club: (clubId: string) => ['clubs', clubId] as const,
   /** Préfixe commun : invalider playersAll rafraîchit listes et fiches */

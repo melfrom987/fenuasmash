@@ -21,9 +21,7 @@ const YOUTH_CATEGORIES = [
 
 type YouthCategory = (typeof YOUTH_CATEGORIES)[number][1];
 
-export type AgeCategory =
-  | { code: YouthCategory | 'SENIOR' }
-  | { code: 'VETERAN'; level: number };
+export type AgeCategory = { code: YouthCategory | 'SENIOR' } | { code: 'VETERAN'; level: number };
 
 export function seasonReferenceYear(date = new Date()): number {
   const year = date.getFullYear();
