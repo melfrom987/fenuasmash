@@ -33,7 +33,6 @@ export function useCreateTournament() {
   return useMutation({
     mutationFn: (input: CreateTournamentInput) =>
       api<Tournament>('/tournaments', { method: 'POST', body: JSON.stringify(input) }),
-    // La liste se recharge pour afficher le nouveau tournoi
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.tournaments }),
   });
 }

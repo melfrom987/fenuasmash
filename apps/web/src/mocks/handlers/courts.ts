@@ -11,7 +11,6 @@ export const courtHandlers = [
     return HttpResponse.json(courtsOf(String(params.tournamentId)));
   }),
 
-  // Ajoute un terrain avec le numéro suivant
   http.post('/api/tournaments/:tournamentId/courts', async ({ params }) => {
     await delay();
     const tournamentId = String(params.tournamentId);
@@ -28,7 +27,6 @@ export const courtHandlers = [
     return HttpResponse.json(court, { status: 201 });
   }),
 
-  // Active / désactive un terrain
   http.patch('/api/courts/:courtId', async ({ params, request }) => {
     await delay();
     const court = db.courts.find((c) => c.id === params.courtId);
@@ -43,7 +41,6 @@ export const courtHandlers = [
     return HttpResponse.json(court);
   }),
 
-  // Retire un terrain : seulement le dernier (et, côté back, seulement s'il n'a jamais servi)
   http.delete('/api/courts/:courtId', async ({ params }) => {
     await delay();
     const court = db.courts.find((c) => c.id === params.courtId);

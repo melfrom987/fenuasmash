@@ -1,0 +1,1455 @@
+openapi: 3.1.0
+
+info:
+  title: FenuaSmash API
+  version: 0.1.0
+  description: |
+    Badminton tournament management: tournaments and their rules, events, courts,
+    clubs, players and registrations.
+
+    This file is the single source of truth shared by the backend, the web app and the
+    mobile app (see `contracts/README.md`). It is updated **before** the code.
+
+    Conventions:
+    - All dates and times are UTC, ISO 8601 (`2026-11-21T18:00:00Z`). Clients display them
+      in Tahiti time (`Pacific/Tahiti`, UTC−10). Birth dates are plain dates (`2010-11-21`).
+    - Identifiers are UUIDs.
+    - `PATCH` updates only the fields present in the body. For nullable fields, a field sent
+      as `null` is cleared, an absent field is kept.
+    - Errors use the Problem Details format with a machine-readable `code`
+      (see `ProblemDetail`). Clients translate the `code`, not the `detail`.
+
+    Operations marked with `x-status: planned` are not implemented yet: they describe what
+    the backend will implement next, so that web and mobile can work in parallel (with mocks).
+
+servers:
+  - url: /api
+
+tags:
+  - name: Organizations
+  - name: Tournaments
+  - name: Events
+  - name: Courts
+  - name: Clubs
+  - name: Players
+  - name: Registrations
+  - name: Import
+
+paths:
+  # ---------------------------------------------------------------- Organizations
+  /organizations:
+    get:
+      tags: [Organizations]
+      operationId: listOrganizations
+      summary: List organizations
+      responses:
+        '200':
+          description: All organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Organization' }
+    post:
+      tags: [Organizations]
+      operationId: createOrganization
+      summary: Create an organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateOrganizationRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Organization' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /organizations/{organizationId}:
+    parameters:
+      - $ref: '#/components/parameters/OrganizationId'
+    get:
+      tags: [Organizations]
+      operationId: getOrganization
+      summary: Get an organization
+      responses:
+        '200':
+          description: The organization
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Organization' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Tournaments
+  /tournaments:
+    get:
+      tags: [Tournaments]
+      operationId: listTournaments
+      summary: List tournaments, most recent start first
+      responses:
+        '200':
+          description: All tournaments
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Tournament' }
+    post:
+      tags: [Tournaments]
+      operationId: createTournament
+      summary: Create a tournament with its rules and its courts
+      description: Courts numbered 1 to `courtCount` are created in the same transaction.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTournamentRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tournament' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED, INVALID_DATE_RANGE, INVALID_ORGANIZATION, INVALID_SCORING_RULES,
+          # INVALID_RELAY_SETTINGS, INVALID_FORBIDDEN_COMBINATION
+
+  /tournaments/{tournamentId}:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Tournaments]
+      operationId: getTournament
+      summary: Get a tournament
+      responses:
+        '200':
+          description: The tournament
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tournament' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Tournaments]
+      operationId: updateTournament
+      summary: Update a tournament and its rules
+      description: |
+        Only the fields present are changed. Removing a discipline that a forbidden
+        combination uses is rejected with `INVALID_FORBIDDEN_COMBINATION`.
+        Planned: `RULES_LOCKED` (409) once an event has started.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateTournamentRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tournament' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Tournaments]
+      operationId: deleteTournament
+      summary: Delete a tournament that has not started
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # TOURNAMENT_ALREADY_STARTED
+
+  # ---------------------------------------------------------------- Events
+  /tournaments/{tournamentId}/events:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Events]
+      operationId: listEvents
+      summary: List the events of a tournament
+      description: Sorted by discipline (MS, WS, MD, WD, XD, OD), then by name.
+      responses:
+        '200':
+          description: The events
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Event' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Events]
+      operationId: createEvent
+      summary: Create an event
+      description: |
+        Events are created before registrations open. Pool settings can stay empty until
+        the draw; if one is set, all three are required. They are rejected when the
+        tournament format has no pools.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateEventRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED (categoryLabel required unless OPEN), INVALID_FORMAT_SETTINGS
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # EVENT_NAME_ALREADY_EXISTS
+
+  /events/{eventId}:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Events]
+      operationId: getEvent
+      summary: Get an event
+      responses:
+        '200':
+          description: The event
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Events]
+      operationId: updateEvent
+      summary: Update an event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateEventRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Event' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Events]
+      operationId: deleteEvent
+      summary: Delete an event
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Courts
+  /tournaments/{tournamentId}/courts:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Courts]
+      operationId: listCourts
+      summary: List the courts of a tournament, by number
+      responses:
+        '200':
+          description: The courts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Court' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Courts]
+      operationId: addCourt
+      summary: Add a court with the next number
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Court' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # COURT_LIMIT_REACHED (50 courts)
+
+  /courts/{courtId}:
+    parameters:
+      - $ref: '#/components/parameters/CourtId'
+    get:
+      tags: [Courts]
+      operationId: getCourt
+      summary: Get a court
+      responses:
+        '200':
+          description: The court
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Court' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Courts]
+      operationId: updateCourt
+      summary: Enable or disable a court
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCourtRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Court' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Courts]
+      operationId: deleteCourt
+      summary: Remove the last court of a tournament
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # COURT_NOT_LAST; planned: COURT_IN_USE
+
+  # ---------------------------------------------------------------- Clubs (planned)
+  /clubs:
+    get:
+      tags: [Clubs]
+      operationId: listClubs
+      x-status: planned
+      summary: List clubs, by name
+      parameters:
+        - name: q
+          in: query
+          description: Filters on the name (case and accent insensitive)
+          schema: { type: string }
+      responses:
+        '200':
+          description: The clubs
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Club' }
+    post:
+      tags: [Clubs]
+      operationId: createClub
+      x-status: planned
+      summary: Create a club
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClubRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Club' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # CLUB_NAME_ALREADY_EXISTS
+
+  /clubs/{clubId}:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+    get:
+      tags: [Clubs]
+      operationId: getClub
+      x-status: planned
+      summary: Get a club
+      responses:
+        '200':
+          description: The club
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Club' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Clubs]
+      operationId: updateClub
+      x-status: planned
+      summary: Update a club
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateClubRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Club' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ---------------------------------------------------------------- Players (planned)
+  /players:
+    get:
+      tags: [Players]
+      operationId: listPlayers
+      x-status: planned
+      summary: Search players, paginated, by last name then first name
+      parameters:
+        - name: q
+          in: query
+          description: Matches last name, first name or license number (case and accent insensitive)
+          schema: { type: string }
+        - name: clubId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: gender
+          in: query
+          schema: { $ref: '#/components/schemas/Gender' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of players
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlayerPage' }
+    post:
+      tags: [Players]
+      operationId: createPlayer
+      x-status: planned
+      summary: Create a player
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePlayerRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Player' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED, INVALID_CLUB
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # PLAYER_LICENSE_ALREADY_EXISTS
+
+  /players/{playerId}:
+    parameters:
+      - $ref: '#/components/parameters/PlayerId'
+    get:
+      tags: [Players]
+      operationId: getPlayer
+      x-status: planned
+      summary: Get a player
+      responses:
+        '200':
+          description: The player
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Player' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Players]
+      operationId: updatePlayer
+      x-status: planned
+      summary: Update a player profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePlayerRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Player' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  # ---------------------------------------------------------------- Registrations (planned)
+  /tournaments/{tournamentId}/registrations:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Registrations]
+      operationId: listTournamentRegistrations
+      x-status: planned
+      summary: List the registrations of a tournament
+      parameters:
+        - name: eventId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/RegistrationStatus' }
+        - name: playerId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The registrations, by event then by registration date
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Registration' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /events/{eventId}/registrations:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Registrations]
+      operationId: listEventRegistrations
+      x-status: planned
+      summary: List the registrations of an event
+      responses:
+        '200':
+          description: The registrations, by registration date
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Registration' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Registrations]
+      operationId: createRegistration
+      x-status: planned
+      summary: Register a player (and a partner for doubles) in an event
+      description: |
+        Entered by the organizer in the MVP, so a pair is confirmed at once.
+        - Singles: `partnerId` must be absent.
+        - Doubles: with `partnerId` → `CONFIRMED`; without → `LOOKING_FOR_PARTNER`.
+        Checked rules: gender against the discipline, age category (birth year bounds),
+        maximum entries, forbidden combinations, not already registered in the event.
+        (`PENDING_PARTNER` only comes from imports, and later from player accounts.)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRegistrationRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Registration' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED (partnerId on singles), PLAYER_NOT_ELIGIBLE, PARTNER_NOT_ELIGIBLE,
+          # FORBIDDEN_COMBINATION
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL
+
+  /events/{eventId}/eligible-players:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Registrations]
+      operationId: listEligiblePlayers
+      x-status: planned
+      summary: Players who can register in this event (or partner someone in it)
+      description: |
+        Used for the player and partner pickers: right gender for the discipline (for a
+        partner, relative to `partnerOf`), right age category, not already registered in the
+        event. Paginated like `listPlayers`.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: partnerOf
+          in: query
+          description: Only players who can partner this player (e.g. a woman for a man in mixed doubles)
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: One page of eligible players
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlayerPage' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /registrations/{registrationId}:
+    parameters:
+      - $ref: '#/components/parameters/RegistrationId'
+    patch:
+      tags: [Registrations]
+      operationId: updateRegistration
+      x-status: planned
+      summary: Set or change the partner, or confirm a pending pair
+      description: |
+        - `partnerId` set → the pair is `CONFIRMED` (organizer action).
+        - `partnerId: null` → `LOOKING_FOR_PARTNER`.
+        - `confirm: true` on a `PENDING_PARTNER` registration → `CONFIRMED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateRegistrationRequest' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Registration' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      tags: [Registrations]
+      operationId: deleteRegistration
+      x-status: planned
+      summary: Withdraw a registration
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ---------------------------------------------------------------- Import (planned)
+  /tournaments/{tournamentId}/registrations/import:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    post:
+      tags: [Import]
+      operationId: importRegistrations
+      x-status: planned
+      summary: Import registrations from a registration form export
+      description: |
+        The web app reads the CSV or Excel file, lets the organizer map columns and values to
+        fields and events, and sends the rows already normalized.
+
+        The backend then, for each row:
+        1. matches the player against existing profiles (name, birth date, club) and classifies
+           the result (`EXACT`, `PROBABLE`, `AMBIGUOUS`, `NONE`);
+        2. matches each partner name against the other rows of the file, then existing profiles;
+        3. computes each registration status: A names B and B names A in the same event →
+           `CONFIRMED`; only A names B → `PENDING_PARTNER`; "looking for a partner" →
+           `LOOKING_FOR_PARTNER`;
+        4. checks the registration rules (gender, age, maximum entries, forbidden combinations).
+
+        With `dryRun=true` (preview), nothing is saved and the full report is returned,
+        including candidate profiles. The organizer then resolves doubts and sends the rows
+        again with `dryRun=false` and their decisions (`playerDecision`, `partnerDecision`).
+
+        With `dryRun=false`, every resolved row without error is imported in one transaction;
+        the other rows are skipped and reported. Importing the same file twice does not create
+        duplicates: already registered entries are reported as `ALREADY_REGISTERED`.
+      parameters:
+        - name: dryRun
+          in: query
+          required: true
+          schema: { type: boolean }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ImportRequest' }
+      responses:
+        '200':
+          description: Import report (also for `dryRun=false`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportReport' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  parameters:
+    OrganizationId:
+      name: organizationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TournamentId:
+      name: tournamentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CourtId:
+      name: courtId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ClubId:
+      name: clubId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PlayerId:
+      name: playerId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RegistrationId:
+      name: registrationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      description: Page number, starting at 0
+      schema: { type: integer, minimum: 0, default: 0 }
+    Size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    NotFound:
+      description: Resource not found (`<RESOURCE>_NOT_FOUND`)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Conflict:
+      description: Conflict with the current state
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+
+  schemas:
+    # ------------------------------------------------------------ Errors
+    ProblemDetail:
+      type: object
+      required: [status, title, code]
+      properties:
+        type: { type: string, example: about:blank }
+        title: { type: string, example: Bad Request }
+        status: { type: integer, example: 400 }
+        detail:
+          type: string
+          description: Technical message in English, for developers. Never shown as is.
+        instance: { type: string, example: /api/tournaments }
+        code: { $ref: '#/components/schemas/ErrorCode' }
+        errors:
+          type: array
+          description: Field errors, with `VALIDATION_FAILED`
+          items: { $ref: '#/components/schemas/FieldError' }
+
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: Request field path, e.g. `categoryLabel` or `scoring.pointCap`
+        message: { type: string }
+
+    ErrorCode:
+      type: string
+      description: |
+        Machine-readable error code, translated by clients. `x-status: planned` codes come
+        with planned operations.
+      enum:
+        # Generic
+        - VALIDATION_FAILED
+        - DATA_CONFLICT
+        - INTERNAL_ERROR
+        # Not found
+        - ORGANIZATION_NOT_FOUND
+        - TOURNAMENT_NOT_FOUND
+        - EVENT_NOT_FOUND
+        - COURT_NOT_FOUND
+        - CLUB_NOT_FOUND
+        - PLAYER_NOT_FOUND
+        - REGISTRATION_NOT_FOUND
+        # Tournaments
+        - INVALID_DATE_RANGE
+        - INVALID_ORGANIZATION
+        - INVALID_SCORING_RULES
+        - INVALID_RELAY_SETTINGS
+        - INVALID_FORBIDDEN_COMBINATION
+        - TOURNAMENT_ALREADY_STARTED
+        - RULES_LOCKED
+        # Events
+        - EVENT_NAME_ALREADY_EXISTS
+        - INVALID_FORMAT_SETTINGS
+        # Courts
+        - COURT_LIMIT_REACHED
+        - COURT_NOT_LAST
+        - COURT_INACTIVE
+        - COURT_IN_USE
+        # Clubs and players (planned)
+        - CLUB_NAME_ALREADY_EXISTS
+        - INVALID_CLUB
+        - PLAYER_LICENSE_ALREADY_EXISTS
+        # Registrations (planned)
+        - PLAYER_NOT_ELIGIBLE
+        - PARTNER_NOT_ELIGIBLE
+        - ALREADY_REGISTERED
+        - PARTNER_ALREADY_REGISTERED
+        - EVENT_FULL
+        - FORBIDDEN_COMBINATION
+        - NOT_PENDING
+        # Import (planned)
+        - PLAYER_UNRESOLVED
+        - PARTNER_UNRESOLVED
+        - UNKNOWN_EVENT
+
+    # ------------------------------------------------------------ Enums
+    Discipline:
+      type: string
+      description: MS men's singles, WS women's singles, MD men's doubles, WD women's doubles, XD mixed doubles, OD open doubles (any pair)
+      enum: [MS, WS, MD, WD, XD, OD]
+    CompetitionType:
+      type: string
+      description: TEAM is phase 2
+      enum: [INDIVIDUAL, TEAM]
+    DrawFormat:
+      type: string
+      description: SINGLE_POOL is a round robin (everyone plays everyone)
+      enum: [SINGLE_ELIMINATION, POOLS_THEN_ELIMINATION, SINGLE_POOL]
+    PlayMode:
+      type: string
+      description: RELAY (relay scoring with steps) is phase 2
+      enum: [SETS, RELAY]
+    CategoryType:
+      type: string
+      description: OPEN to all, AGE (youth or veterans, from the birth year), LEVEL (ranking level)
+      enum: [OPEN, AGE, LEVEL]
+    Gender:
+      type: string
+      enum: [MALE, FEMALE]
+    RegistrationStatus:
+      type: string
+      description: |
+        CONFIRMED: singles, or a pair confirmed by both players (or entered by the organizer).
+        PENDING_PARTNER: the partner has not confirmed yet.
+        LOOKING_FOR_PARTNER: doubles without a partner yet.
+      enum: [CONFIRMED, PENDING_PARTNER, LOOKING_FOR_PARTNER]
+
+    # ------------------------------------------------------------ Organizations
+    Organization:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+    CreateOrganizationRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+
+    # ------------------------------------------------------------ Tournaments
+    ScoringRules:
+      type: object
+      required: [gamesToWin, pointsToWin, twoPointLead, pointCap]
+      properties:
+        gamesToWin: { type: integer, minimum: 1, maximum: 3 }
+        pointsToWin:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Points to win a game (in relay mode, the target score)
+        twoPointLead:
+          type: boolean
+          description: false = the first to reach `pointsToWin` wins
+        pointCap:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 50
+          description: Required and ≥ `pointsToWin` when `twoPointLead`, otherwise null
+
+    DisciplinePair:
+      type: array
+      items: { $ref: '#/components/schemas/Discipline' }
+      minItems: 2
+      maxItems: 2
+      description: Two different disciplines, both offered by the tournament
+
+    Tournament:
+      type: object
+      required:
+        - id
+        - organizationId
+        - name
+        - startsAt
+        - endsAt
+        - minimumRestMinutes
+        - competitionType
+        - drawFormat
+        - playMode
+        - scoring
+        - relayStep
+        - disciplines
+        - forbiddenCombinations
+        - createdAt
+        - updatedAt
+      properties:
+        id: { type: string, format: uuid }
+        organizationId: { type: string, format: uuid }
+        name: { type: string }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        minimumRestMinutes: { type: integer, minimum: 0, maximum: 1440 }
+        competitionType: { $ref: '#/components/schemas/CompetitionType' }
+        drawFormat: { $ref: '#/components/schemas/DrawFormat' }
+        playMode: { $ref: '#/components/schemas/PlayMode' }
+        scoring: { $ref: '#/components/schemas/ScoringRules' }
+        relayStep:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 50
+          description: Only in RELAY mode
+        disciplines:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Discipline' }
+        forbiddenCombinations:
+          type: array
+          items: { $ref: '#/components/schemas/DisciplinePair' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateTournamentRequest:
+      type: object
+      required:
+        - organizationId
+        - name
+        - startsAt
+        - endsAt
+        - minimumRestMinutes
+        - courtCount
+        - competitionType
+        - drawFormat
+        - playMode
+        - scoring
+        - disciplines
+      properties:
+        organizationId: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        startsAt: { type: string, format: date-time }
+        endsAt:
+          type: string
+          format: date-time
+          description: After `startsAt` (INVALID_DATE_RANGE)
+        minimumRestMinutes: { type: integer, minimum: 0, maximum: 1440 }
+        courtCount: { type: integer, minimum: 1, maximum: 50 }
+        competitionType: { $ref: '#/components/schemas/CompetitionType' }
+        drawFormat: { $ref: '#/components/schemas/DrawFormat' }
+        playMode: { $ref: '#/components/schemas/PlayMode' }
+        scoring: { $ref: '#/components/schemas/ScoringRules' }
+        relayStep: { type: [integer, 'null'], minimum: 1, maximum: 50 }
+        disciplines:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Discipline' }
+        forbiddenCombinations:
+          type: array
+          default: []
+          items: { $ref: '#/components/schemas/DisciplinePair' }
+
+    UpdateTournamentRequest:
+      type: object
+      description: Every field is optional; only present fields change.
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        minimumRestMinutes: { type: integer, minimum: 0, maximum: 1440 }
+        competitionType: { $ref: '#/components/schemas/CompetitionType' }
+        drawFormat: { $ref: '#/components/schemas/DrawFormat' }
+        playMode: { $ref: '#/components/schemas/PlayMode' }
+        scoring:
+          type: object
+          description: Only present fields change
+          properties:
+            gamesToWin: { type: integer, minimum: 1, maximum: 3 }
+            pointsToWin: { type: integer, minimum: 1, maximum: 50 }
+            twoPointLead: { type: boolean }
+            pointCap: { type: [integer, 'null'], minimum: 1, maximum: 50 }
+        relayStep: { type: [integer, 'null'], minimum: 1, maximum: 50 }
+        disciplines:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Discipline' }
+        forbiddenCombinations:
+          type: array
+          items: { $ref: '#/components/schemas/DisciplinePair' }
+
+    # ------------------------------------------------------------ Events
+    Event:
+      type: object
+      required:
+        - id
+        - tournamentId
+        - name
+        - discipline
+        - categoryType
+        - categoryLabel
+        - plannedDate
+        - maxEntries
+        - minBirthYear
+        - maxBirthYear
+        - poolCount
+        - poolSize
+        - qualifiersPerPool
+      properties:
+        id: { type: string, format: uuid }
+        tournamentId: { type: string, format: uuid }
+        name: { type: string, maxLength: 100 }
+        discipline: { $ref: '#/components/schemas/Discipline' }
+        categoryType: { $ref: '#/components/schemas/CategoryType' }
+        categoryLabel:
+          type: [string, 'null']
+          maxLength: 50
+          description: Displayed label, e.g. "Cadet U17"; null for OPEN
+        plannedDate:
+          type: [string, 'null']
+          format: date-time
+          description: Planned day or slot, shown at registration
+        maxEntries:
+          type: [integer, 'null']
+          minimum: 2
+          maximum: 256
+          description: Maximum entries (players, pairs or teams); null = unlimited
+        minBirthYear:
+          type: [integer, 'null']
+          description: |
+            Planned. Oldest birth year allowed (youth categories: younger players may play up).
+            Only for AGE events.
+          x-status: planned
+        maxBirthYear:
+          type: [integer, 'null']
+          description: |
+            Planned. Most recent birth year allowed (veterans). Only for AGE events.
+          x-status: planned
+        poolCount: { type: [integer, 'null'], minimum: 1 }
+        poolSize: { type: [integer, 'null'], minimum: 3, maximum: 8 }
+        qualifiersPerPool:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 7
+          description: Less than `poolSize`
+
+    CreateEventRequest:
+      type: object
+      required: [name, discipline, categoryType]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        discipline: { $ref: '#/components/schemas/Discipline' }
+        categoryType: { $ref: '#/components/schemas/CategoryType' }
+        categoryLabel:
+          type: [string, 'null']
+          maxLength: 50
+          description: Required unless OPEN (VALIDATION_FAILED on `categoryLabel`)
+        plannedDate: { type: [string, 'null'], format: date-time }
+        maxEntries: { type: [integer, 'null'], minimum: 2, maximum: 256 }
+        minBirthYear: { type: [integer, 'null'], x-status: planned }
+        maxBirthYear: { type: [integer, 'null'], x-status: planned }
+        poolCount: { type: [integer, 'null'], minimum: 1 }
+        poolSize: { type: [integer, 'null'], minimum: 3, maximum: 8 }
+        qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
+
+    UpdateEventRequest:
+      type: object
+      description: |
+        Only present fields change. `plannedDate`, `maxEntries`, `minBirthYear` and
+        `maxBirthYear` sent as null are cleared.
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        discipline: { $ref: '#/components/schemas/Discipline' }
+        categoryType: { $ref: '#/components/schemas/CategoryType' }
+        categoryLabel: { type: [string, 'null'], maxLength: 50 }
+        plannedDate: { type: [string, 'null'], format: date-time }
+        maxEntries: { type: [integer, 'null'], minimum: 2, maximum: 256 }
+        minBirthYear: { type: [integer, 'null'], x-status: planned }
+        maxBirthYear: { type: [integer, 'null'], x-status: planned }
+        poolCount: { type: [integer, 'null'], minimum: 1 }
+        poolSize: { type: [integer, 'null'], minimum: 3, maximum: 8 }
+        qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
+
+    # ------------------------------------------------------------ Courts
+    Court:
+      type: object
+      required: [id, tournamentId, number, active]
+      properties:
+        id: { type: string, format: uuid }
+        tournamentId: { type: string, format: uuid }
+        number:
+          type: integer
+          minimum: 1
+          description: Unique in the tournament; displayed as "Court 3" by clients
+        active:
+          type: boolean
+          description: A disabled court receives no new match
+
+    UpdateCourtRequest:
+      type: object
+      required: [active]
+      properties:
+        active: { type: boolean }
+
+    # ------------------------------------------------------------ Clubs (planned)
+    Club:
+      type: object
+      required: [id, name, city]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 100 }
+        city: { type: [string, 'null'], maxLength: 100 }
+
+    ClubRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Unique, case and accent insensitive (CLUB_NAME_ALREADY_EXISTS)
+        city: { type: [string, 'null'], maxLength: 100 }
+
+    UpdateClubRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        city: { type: [string, 'null'], maxLength: 100 }
+
+    # ------------------------------------------------------------ Players (planned)
+    Player:
+      type: object
+      required:
+        - id
+        - firstName
+        - lastName
+        - gender
+        - birthDate
+        - club
+        - licenseNumber
+        - email
+        - phone
+        - rankingPoints
+        - rankingPosition
+      properties:
+        id: { type: string, format: uuid }
+        firstName: { type: string, maxLength: 100 }
+        lastName: { type: string, maxLength: 100 }
+        gender: { $ref: '#/components/schemas/Gender' }
+        birthDate: { type: string, format: date }
+        club: { $ref: '#/components/schemas/ClubSummary' }
+        licenseNumber:
+          type: [string, 'null']
+          maxLength: 30
+          description: Unique when set; optional in the MVP (the registration form does not ask for it)
+        email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'], maxLength: 30 }
+        rankingPoints:
+          type: [integer, 'null']
+          description: French Polynesia ranking points; optional for now
+        rankingPosition:
+          type: [integer, 'null']
+          minimum: 1
+          description: French Polynesia ranking position; optional for now
+
+    PlayerSummary:
+      type: object
+      description: Short form used inside registrations and import reports
+      required: [id, firstName, lastName, gender, birthDate, clubName, licenseNumber]
+      properties:
+        id: { type: string, format: uuid }
+        firstName: { type: string }
+        lastName: { type: string }
+        gender: { $ref: '#/components/schemas/Gender' }
+        birthDate: { type: string, format: date }
+        clubName: { type: string }
+        licenseNumber: { type: [string, 'null'] }
+
+    ClubSummary:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    PlayerPage:
+      type: object
+      required: [items, page, size, totalItems]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Player' }
+        page: { type: integer, minimum: 0 }
+        size: { type: integer, minimum: 1 }
+        totalItems: { type: integer, minimum: 0 }
+
+    CreatePlayerRequest:
+      type: object
+      required: [firstName, lastName, gender, birthDate, clubId]
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 100 }
+        lastName: { type: string, minLength: 1, maxLength: 100 }
+        gender: { $ref: '#/components/schemas/Gender' }
+        birthDate: { type: string, format: date }
+        clubId:
+          type: string
+          format: uuid
+          description: Unknown club → INVALID_CLUB
+        licenseNumber: { type: [string, 'null'], maxLength: 30 }
+        email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'], maxLength: 30 }
+        rankingPoints: { type: [integer, 'null'] }
+        rankingPosition: { type: [integer, 'null'], minimum: 1 }
+
+    UpdatePlayerRequest:
+      type: object
+      description: Only present fields change; nullable fields sent as null are cleared.
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 100 }
+        lastName: { type: string, minLength: 1, maxLength: 100 }
+        gender: { $ref: '#/components/schemas/Gender' }
+        birthDate: { type: string, format: date }
+        clubId: { type: string, format: uuid }
+        licenseNumber: { type: [string, 'null'], maxLength: 30 }
+        email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'], maxLength: 30 }
+        rankingPoints: { type: [integer, 'null'] }
+        rankingPosition: { type: [integer, 'null'], minimum: 1 }
+
+    # ------------------------------------------------------------ Registrations (planned)
+    Registration:
+      type: object
+      required: [id, tournamentId, eventId, status, player, partner, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        tournamentId: { type: string, format: uuid }
+        eventId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/RegistrationStatus' }
+        player: { $ref: '#/components/schemas/PlayerSummary' }
+        partner:
+          oneOf:
+            - $ref: '#/components/schemas/PlayerSummary'
+            - type: 'null'
+          description: Null for singles and for LOOKING_FOR_PARTNER
+        createdAt: { type: string, format: date-time }
+
+    CreateRegistrationRequest:
+      type: object
+      required: [playerId]
+      properties:
+        playerId: { type: string, format: uuid }
+        partnerId:
+          type: [string, 'null']
+          format: uuid
+          description: Doubles only; absent or null = looking for a partner
+
+    UpdateRegistrationRequest:
+      type: object
+      properties:
+        partnerId: { type: [string, 'null'], format: uuid }
+        confirm:
+          type: boolean
+          description: true confirms a PENDING_PARTNER pair (otherwise NOT_PENDING)
+
+    # ------------------------------------------------------------ Import (planned)
+    ImportRequest:
+      type: object
+      required: [rows]
+      properties:
+        rows:
+          type: array
+          minItems: 1
+          maxItems: 2000
+          items: { $ref: '#/components/schemas/ImportRow' }
+
+    ImportRow:
+      type: object
+      description: One line of the registration form, normalized by the web app
+      required: [rowNumber, firstName, lastName, birthDate, gender, clubName, entries]
+      properties:
+        rowNumber:
+          type: integer
+          minimum: 1
+          description: Line number in the file, to report errors
+        firstName: { type: string, minLength: 1 }
+        lastName: { type: string, minLength: 1 }
+        birthDate: { type: string, format: date }
+        gender: { $ref: '#/components/schemas/Gender' }
+        clubName:
+          type: string
+          minLength: 1
+          description: Matched to an existing club (case and accent insensitive), otherwise created
+        email: { type: [string, 'null'] }
+        playerDecision: { $ref: '#/components/schemas/PlayerDecision' }
+        entries:
+          type: array
+          description: One per event the player registers in
+          items: { $ref: '#/components/schemas/ImportEntry' }
+
+    ImportEntry:
+      type: object
+      required: [eventId, partner]
+      properties:
+        eventId: { type: string, format: uuid }
+        partner: { $ref: '#/components/schemas/ImportPartner' }
+        partnerDecision: { $ref: '#/components/schemas/PlayerDecision' }
+
+    ImportPartner:
+      type: object
+      description: What the form said about the partner
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [NONE, LOOKING, NAMED]
+          description: NONE = singles; LOOKING = "looking for a partner"; NAMED = a name was given
+        name:
+          type: string
+          description: Full name as typed in the form, when NAMED
+
+    PlayerDecision:
+      type: object
+      description: |
+        The organizer's choice after a preview, for a row whose match was not EXACT.
+        Absent = let the backend decide (EXACT match, or a new profile when NONE).
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [USE_EXISTING, CREATE_NEW]
+        playerId:
+          type: string
+          format: uuid
+          description: Required with USE_EXISTING
+
+    PlayerMatch:
+      type: object
+      required: [result, selectedPlayerId, candidates]
+      properties:
+        result:
+          type: string
+          description: |
+            EXACT: same name and birth date, associated automatically (shown for checking).
+            PROBABLE: close name and same birth date, to confirm.
+            AMBIGUOUS: several possible profiles, or same name with another birth date: the
+            organizer chooses.
+            NONE: no close profile, a new profile will be created.
+          enum: [EXACT, PROBABLE, AMBIGUOUS, NONE]
+        selectedPlayerId:
+          type: [string, 'null']
+          format: uuid
+          description: Profile used if the import is confirmed as is (null = new profile, or undecided)
+        candidates:
+          type: array
+          description: Best candidates first (at most 5)
+          items: { $ref: '#/components/schemas/PlayerCandidate' }
+
+    PlayerCandidate:
+      type: object
+      required: [player, score, reasons]
+      properties:
+        player: { $ref: '#/components/schemas/PlayerSummary' }
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+        reasons:
+          type: array
+          items:
+            type: string
+            enum: [SAME_NAME, SIMILAR_NAME, SAME_BIRTH_DATE, DIFFERENT_BIRTH_DATE, SAME_CLUB, OTHER_ROW_OF_FILE]
+
+    ImportIssue:
+      type: object
+      required: [code, message]
+      properties:
+        code: { $ref: '#/components/schemas/ErrorCode' }
+        message: { type: string }
+
+    ImportRowReport:
+      type: object
+      required: [rowNumber, imported, playerMatch, entries, issues]
+      properties:
+        rowNumber: { type: integer }
+        imported:
+          type: boolean
+          description: Always false with dryRun
+        playerMatch: { $ref: '#/components/schemas/PlayerMatch' }
+        entries:
+          type: array
+          items:
+            type: object
+            required: [eventId, status, partnerMatch, issues]
+            properties:
+              eventId: { type: string, format: uuid }
+              status:
+                oneOf:
+                  - $ref: '#/components/schemas/RegistrationStatus'
+                  - type: 'null'
+                description: Status the registration gets (null when it cannot be imported)
+              partnerMatch:
+                oneOf:
+                  - $ref: '#/components/schemas/PlayerMatch'
+                  - type: 'null'
+                description: Null when there is no named partner
+              issues:
+                type: array
+                description: |
+                  E.g. PLAYER_NOT_ELIGIBLE, EVENT_FULL, FORBIDDEN_COMBINATION, PARTNER_UNRESOLVED,
+                  ALREADY_REGISTERED (not blocking: the entry is skipped)
+                items: { $ref: '#/components/schemas/ImportIssue' }
+        issues:
+          type: array
+          description: Row-level issues, e.g. PLAYER_UNRESOLVED (AMBIGUOUS match without decision)
+          items: { $ref: '#/components/schemas/ImportIssue' }
+
+    ImportReport:
+      type: object
+      required: [dryRun, summary, rows]
+      properties:
+        dryRun: { type: boolean }
+        summary:
+          type: object
+          required:
+            - rows
+            - rowsWithIssues
+            - playersMatched
+            - playersToCreate
+            - playersToConfirm
+            - confirmed
+            - pendingPartner
+            - lookingForPartner
+          properties:
+            rows: { type: integer }
+            rowsWithIssues: { type: integer }
+            playersMatched: { type: integer, description: EXACT matches }
+            playersToCreate: { type: integer, description: NONE matches }
+            playersToConfirm: { type: integer, description: PROBABLE and AMBIGUOUS matches without decision }
+            confirmed: { type: integer }
+            pendingPartner: { type: integer }
+            lookingForPartner: { type: integer }
+        rows:
+          type: array
+          items: { $ref: '#/components/schemas/ImportRowReport' }

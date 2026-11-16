@@ -70,7 +70,6 @@ export const tournamentHandlers = [
     };
     db.tournaments.push(tournament);
 
-    // Terrains numérotés de 1 à N, créés avec le tournoi
     for (let number = 1; number <= courtCount; number++) {
       db.courts.push({
         id: crypto.randomUUID(),

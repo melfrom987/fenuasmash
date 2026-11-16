@@ -37,7 +37,6 @@ export function EditEventPage() {
       {event.data && (
         <>
           <div className="rounded-lg bg-white p-6 shadow-sm">
-            {/* key : réinitialise le formulaire si on passe d'un tableau à un autre */}
             <EventForm
               key={event.data.id}
               defaultValues={toEventFormValues(event.data)}

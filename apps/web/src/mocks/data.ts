@@ -1,4 +1,6 @@
 import type { Court, Organization, Tournament, Event } from '@/api/models';
+import { clubs, players } from './people';
+import { seedRegistrations } from './registrations';
 
 const now = '2026-10-28T00:00:00.000Z';
 
@@ -15,7 +17,7 @@ const tournaments: Tournament[] = [
     id: '10000000-0000-4000-8000-000000000001',
     organizationId: organizations[0].id,
     name: 'Open de Papeete',
-    startsAt: '2026-11-14T18:00:00.000Z', // 8h à Tahiti
+    startsAt: '2026-11-14T18:00:00.000Z',
     endsAt: '2026-11-16T04:00:00.000Z',
     minimumRestMinutes: 20,
     createdAt: now,
@@ -60,7 +62,7 @@ const events: Event[] = [
     discipline: 'MS',
     categoryType: 'OPEN',
     categoryLabel: null,
-    plannedDate: '2026-11-14T18:00:00.000Z', // samedi 8h à Tahiti
+    plannedDate: '2026-11-14T18:00:00.000Z',
     maxEntries: 24,
     poolCount: null,
     poolSize: null,
@@ -86,7 +88,7 @@ const events: Event[] = [
     discipline: 'XD',
     categoryType: 'OPEN',
     categoryLabel: null,
-    plannedDate: '2026-11-16T00:00:00.000Z', // dimanche 14h à Tahiti
+    plannedDate: '2026-11-16T00:00:00.000Z',
     maxEntries: 16,
     poolCount: null,
     poolSize: null,
@@ -94,4 +96,6 @@ const events: Event[] = [
   },
 ];
 
-export const db = { organizations, tournaments, courts, events };
+const registrations = seedRegistrations(events, players);
+
+export const db = { organizations, tournaments, courts, events, clubs, players, registrations };
