@@ -1,0 +1,38 @@
+# Static analysis run by `flutter analyze`, in the editor and in CI.
+# https://dart.dev/tools/analysis
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - android/**
+  language:
+    # No implicit dynamic: every type is known at compile time
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # A forgotten await on a score sent to the backend is a bug, not a style issue
+    unawaited_futures: error
+    missing_required_param: error
+    missing_return: error
+
+linter:
+  rules:
+    - always_declare_return_types
+    - avoid_dynamic_calls
+    - avoid_print
+    - avoid_redundant_argument_values
+    - cancel_subscriptions
+    - close_sinks
+    - directives_ordering
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_final_fields
+    - prefer_final_locals
+    - prefer_single_quotes
+    - sort_child_properties_last
+    - unawaited_futures
+    - unnecessary_lambdas
+    - use_super_parameters
