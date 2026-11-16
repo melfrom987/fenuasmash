@@ -43,4 +43,14 @@ public class AuthService {
 		return new LoginResponse(token.value(), "Bearer", token.expiresAt());
 	}
 
+	/**
+	 * Reads the account from the database rather than from the token, so that the
+	 * answer is up to date.
+	 */
+	public CurrentUserResponse currentUser(TokenClaims claims) {
+		return repository.findById(claims.userId())
+			.map(CurrentUserResponse::from)
+			.orElseThrow(UnknownAccountException::new);
+	}
+
 }
