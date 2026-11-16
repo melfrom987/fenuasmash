@@ -20,5 +20,6 @@ public record UpdateTournamentRequest(
 		PlayMode playMode,
 		@Valid UpdateScoringRulesRequest scoring,
 		@Min(1) @Max(50) Integer relayStep,
-		@Size(min = 1) List<@NotNull Discipline> disciplines) {
+		@Size(min = 1) List<@NotNull Discipline> disciplines,
+		List<List<Discipline>> forbiddenCombinations) {
 }

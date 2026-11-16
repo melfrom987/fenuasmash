@@ -17,6 +17,7 @@ public record TournamentResponse(
 		ScoringRules scoring,
 		Integer relayStep,
 		List<Discipline> disciplines,
+		List<List<Discipline>> forbiddenCombinations,
 		Instant createdAt,
 		Instant updatedAt) {
 
@@ -25,7 +26,8 @@ public record TournamentResponse(
 		return new TournamentResponse(tournament.getId(), tournament.getOrganizationId(), tournament.getName(),
 				tournament.getStartsAt(), tournament.getEndsAt(), tournament.getMinimumRestMinutes(),
 				rules.competitionType(), rules.drawFormat(), rules.playMode(), rules.scoring(), rules.relayStep(),
-				rules.disciplines(), tournament.getCreatedAt(), tournament.getUpdatedAt());
+				rules.disciplines(), rules.forbiddenCombinations(), tournament.getCreatedAt(),
+				tournament.getUpdatedAt());
 	}
 
 }

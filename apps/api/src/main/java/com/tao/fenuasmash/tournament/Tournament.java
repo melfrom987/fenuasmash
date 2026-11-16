@@ -68,6 +68,12 @@ public class Tournament {
 	@BatchSize(size = 50)
 	private List<Discipline> disciplines = new ArrayList<>();
 
+	@ElementCollection
+	@CollectionTable(name = "tournament_forbidden_combination", joinColumns = @JoinColumn(name = "tournament_id"))
+	@OrderColumn(name = "sort_order")
+	@BatchSize(size = 50)
+	private List<ForbiddenCombination> forbiddenCombinations = new ArrayList<>();
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -108,6 +114,9 @@ public class Tournament {
 		this.relayStep = rules.relayStep();
 		this.disciplines.clear();
 		this.disciplines.addAll(rules.disciplines());
+		this.forbiddenCombinations.clear();
+		rules.forbiddenCombinations()
+			.forEach(pair -> this.forbiddenCombinations.add(new ForbiddenCombination(pair.get(0), pair.get(1))));
 	}
 
 	boolean hasStarted(Instant now) {
@@ -139,7 +148,11 @@ public class Tournament {
 	}
 
 	TournamentRules getRules() {
-		return new TournamentRules(competitionType, drawFormat, playMode, scoring, relayStep, List.copyOf(disciplines));
+		List<List<Discipline>> combinations = forbiddenCombinations.stream()
+			.map(combination -> List.of(combination.first(), combination.second()))
+			.toList();
+		return new TournamentRules(competitionType, drawFormat, playMode, scoring, relayStep, List.copyOf(disciplines),
+				combinations);
 	}
 
 	public Instant getCreatedAt() {

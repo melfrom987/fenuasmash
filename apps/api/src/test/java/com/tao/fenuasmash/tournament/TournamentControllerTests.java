@@ -435,6 +435,138 @@ class TournamentControllerTests {
 			.andExpect(jsonPath("$.disciplines[1]").value("OD"));
 	}
 
+	@Test
+	void createStoresAndReturnsForbiddenCombinations() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"], [\"WS\", \"XD\"]]"));
+
+		mvc.perform(get(URL + "/" + tournamentId))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.forbiddenCombinations", hasSize(2)))
+			.andExpect(jsonPath("$.forbiddenCombinations[0][0]").value("MS"))
+			.andExpect(jsonPath("$.forbiddenCombinations[0][1]").value("XD"))
+			.andExpect(jsonPath("$.forbiddenCombinations[1][0]").value("WS"))
+			.andExpect(jsonPath("$.forbiddenCombinations[1][1]").value("XD"));
+	}
+
+	@Test
+	void createUsesEmptyForbiddenCombinationsWhenAbsent() throws Exception {
+		create(body("Open de Papeete", "2026-11-14T18:00:00Z", "2026-11-16T04:00:00Z", 20, 2))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.forbiddenCombinations", hasSize(0)));
+	}
+
+	@Test
+	void createAcceptsEmptyForbiddenCombinations() throws Exception {
+		create(bodyWithCombinations("[]")).andExpect(status().isCreated())
+			.andExpect(jsonPath("$.forbiddenCombinations", hasSize(0)));
+	}
+
+	@Test
+	void findAllReturnsForbiddenCombinations() throws Exception {
+		create(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		mvc.perform(get(URL))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].forbiddenCombinations", hasSize(1)))
+			.andExpect(jsonPath("$[0].forbiddenCombinations[0][1]").value("XD"));
+	}
+
+	@Test
+	void createRejectsCombinationWithOneDiscipline() throws Exception {
+		assertBadRequest(create(bodyWithCombinations("[[\"MS\"]]")), "INVALID_FORBIDDEN_COMBINATION");
+	}
+
+	@Test
+	void createRejectsCombinationWithThreeDisciplines() throws Exception {
+		assertBadRequest(create(bodyWithCombinations("[[\"MS\", \"WS\", \"XD\"]]")), "INVALID_FORBIDDEN_COMBINATION");
+	}
+
+	@Test
+	void createRejectsCombinationWithNullDiscipline() throws Exception {
+		assertBadRequest(create(bodyWithCombinations("[[\"MS\", null]]")), "INVALID_FORBIDDEN_COMBINATION");
+	}
+
+	@Test
+	void createRejectsCombinationWithSameDisciplineTwice() throws Exception {
+		assertBadRequest(create(bodyWithCombinations("[[\"MS\", \"MS\"]]")), "INVALID_FORBIDDEN_COMBINATION");
+		assertNoTournamentCreated();
+	}
+
+	@Test
+	void createRejectsCombinationWithDisciplineNotOffered() throws Exception {
+		assertBadRequest(create(bodyWithCombinations("[[\"MS\", \"MD\"]]")), "INVALID_FORBIDDEN_COMBINATION");
+		assertNoTournamentCreated();
+	}
+
+	@Test
+	void updateRejectsCombinationWithSameDisciplineTwice() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		assertBadRequest(update(tournamentId, "{\"forbiddenCombinations\": [[\"XD\", \"XD\"]]}"),
+				"INVALID_FORBIDDEN_COMBINATION");
+	}
+
+	@Test
+	void updateRejectsCombinationWithDisciplineNotOffered() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		assertBadRequest(update(tournamentId, "{\"forbiddenCombinations\": [[\"MS\", \"OD\"]]}"),
+				"INVALID_FORBIDDEN_COMBINATION");
+		mvc.perform(get(URL + "/" + tournamentId))
+			.andExpect(jsonPath("$.forbiddenCombinations[0][1]").value("XD"));
+	}
+
+	@Test
+	void updateRejectsRemovingDisciplineUsedByCombination() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		assertBadRequest(update(tournamentId, "{\"disciplines\": [\"WS\", \"XD\"]}"), "INVALID_FORBIDDEN_COMBINATION");
+		mvc.perform(get(URL + "/" + tournamentId)).andExpect(jsonPath("$.disciplines", hasSize(3)));
+	}
+
+	@Test
+	void updateAcceptsNewDisciplinesWithMatchingCombinations() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		update(tournamentId, """
+				{"disciplines": ["WS", "OD"], "forbiddenCombinations": [["WS", "OD"]]}
+				""").andExpect(status().isOk())
+			.andExpect(jsonPath("$.disciplines", hasSize(2)))
+			.andExpect(jsonPath("$.forbiddenCombinations[0][1]").value("OD"));
+	}
+
+	@Test
+	void updateReplacesForbiddenCombinations() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		update(tournamentId, "{\"forbiddenCombinations\": [[\"WS\", \"XD\"]]}").andExpect(status().isOk());
+
+		mvc.perform(get(URL + "/" + tournamentId))
+			.andExpect(jsonPath("$.forbiddenCombinations", hasSize(1)))
+			.andExpect(jsonPath("$.forbiddenCombinations[0][0]").value("WS"));
+	}
+
+	@Test
+	void updateKeepsForbiddenCombinationsWhenAbsent() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		update(tournamentId, "{\"minimumRestMinutes\": 30}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.forbiddenCombinations", hasSize(1)));
+	}
+
+	@Test
+	void updateClearsForbiddenCombinationsWithEmptyList() throws Exception {
+		UUID tournamentId = createAndGetId(bodyWithCombinations("[[\"MS\", \"XD\"]]"));
+
+		update(tournamentId, "{\"forbiddenCombinations\": []}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.forbiddenCombinations", hasSize(0)));
+	}
+
+	private String bodyWithCombinations(String combinations) {
+		return body("Open de Papeete", "2026-11-14T18:00:00Z", "2026-11-16T04:00:00Z", 20, 2)
+			.replace("\"disciplines\":", "\"forbiddenCombinations\": " + combinations + ", \"disciplines\":");
+	}
+
 	private static String inDays(int days) {
 		return Instant.now().plus(days, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS).toString();
 	}

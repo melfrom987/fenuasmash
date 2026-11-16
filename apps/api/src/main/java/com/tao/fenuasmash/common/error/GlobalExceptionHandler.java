@@ -31,6 +31,14 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.status(ex.getStatus()).body(problem);
 	}
 
+	@ExceptionHandler(FieldValidationException.class)
+	ResponseEntity<ProblemDetail> handleFieldValidation(FieldValidationException ex) {
+		ResponseEntity<ProblemDetail> response = handleApiException(ex);
+		response.getBody()
+			.setProperty("errors", List.of(Map.of("field", ex.getField(), "message", ex.getFieldMessage())));
+		return response;
+	}
+
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
 		log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
