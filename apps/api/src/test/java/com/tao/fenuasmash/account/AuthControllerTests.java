@@ -22,6 +22,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 
 import com.jayway.jsonpath.JsonPath;
 import com.tao.fenuasmash.DatabaseCleaner;
@@ -55,6 +57,9 @@ class AuthControllerTests {
 	private JwtService jwtService;
 
 	@Autowired
+	private LoginAttemptLimiter loginAttemptLimiter;
+
+	@Autowired
 	private JdbcTemplate jdbc;
 
 	private UUID organizationId;
@@ -64,6 +69,7 @@ class AuthControllerTests {
 	@BeforeEach
 	void setUp() {
 		DatabaseCleaner.clean(jdbc);
+		loginAttemptLimiter.reset();
 		organizationId = UUID.randomUUID();
 		jdbc.update("INSERT INTO organization (id, name, created_at) VALUES (?, ?, ?)", organizationId,
 				"Fédération Tahitienne de Badminton", Timestamp.from(Instant.now()));
@@ -148,6 +154,54 @@ class AuthControllerTests {
 	@Test
 	void missingBodyIsRejected() throws Exception {
 		mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void repeatedFailuresBlockTheEmailEvenWithTheRightPassword() throws Exception {
+		for (int i = 0; i < LoginAttemptLimiter.MAX_FAILURES_PER_EMAIL; i++) {
+			expectInvalidCredentials(login("orga@example.com", "wrong password"));
+		}
+
+		login("orga@example.com", PASSWORD).andExpect(status().isTooManyRequests())
+			.andExpect(header().string("Retry-After", "900"))
+			.andExpect(jsonPath("$.code").value("TOO_MANY_LOGIN_ATTEMPTS"))
+			.andExpect(jsonPath("$.accessToken").doesNotExist());
+	}
+
+	@Test
+	void blockedEmailDoesNotBlockOtherAccounts() throws Exception {
+		repository.saveAndFlush(new UserAccount("other@example.com", passwordEncoder.encode(PASSWORD),
+				UserRole.ORGANIZER, organizationId));
+		for (int i = 0; i < LoginAttemptLimiter.MAX_FAILURES_PER_EMAIL; i++) {
+			login("orga@example.com", "wrong password");
+		}
+
+		login("other@example.com", PASSWORD).andExpect(status().isOk());
+	}
+
+	@Test
+	void repeatedFailuresFromOneIpBlockThatIp() throws Exception {
+		for (int i = 0; i < LoginAttemptLimiter.MAX_FAILURES_PER_IP; i++) {
+			mvc.perform(loginRequest("user" + i + "@example.com", PASSWORD).with(fromIp("203.0.113.7")))
+				.andExpect(status().isUnauthorized());
+		}
+
+		mvc.perform(loginRequest("orga@example.com", PASSWORD).with(fromIp("203.0.113.7")))
+			.andExpect(status().isTooManyRequests());
+		mvc.perform(loginRequest("orga@example.com", PASSWORD).with(fromIp("198.51.100.1")))
+			.andExpect(status().isOk());
+	}
+
+	private static RequestPostProcessor fromIp(String ip) {
+		return request -> {
+			request.setRemoteAddr(ip);
+			return request;
+		};
+	}
+
+	private static MockHttpServletRequestBuilder loginRequest(String email, String password) {
+		String json = "{\"email\": \"" + email + "\", \"password\": \"" + password + "\"}";
+		return post(URL).contentType(MediaType.APPLICATION_JSON).content(json);
 	}
 
 	private ResultActions login(String email, String password) throws Exception {

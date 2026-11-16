@@ -37,6 +37,8 @@ fenuasmash:
 server:
   # Finish in-flight requests before stopping (deployments, restarts)
   shutdown: graceful
+  # Read the client IP from X-Forwarded-For, set by the web proxy (nginx) on a private network
+  forward-headers-strategy: native
   error:
     include-stacktrace: never
     include-message: never

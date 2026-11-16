@@ -18,8 +18,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * Security setup for a stateless JSON API: no session, no CSRF token, no login
  * form and no HTTP Basic. Clients authenticate with a bearer token.
  * <p>
- * Reads are public. Organizers manage tournaments, events and courts; the admin
- * manages accounts and organizations.
+ * Reads are public, except player records and registrations, which only
+ * organizers and clubs can read. Organizers manage tournaments, events, courts,
+ * clubs, players and registrations; the admin manages accounts and
+ * organizations. Routes added later are closed until a rule lets them in.
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -53,10 +55,16 @@ class SecurityConfig {
 				.hasRole("ADMIN")
 				.requestMatchers(HttpMethod.POST, "/api/organizations")
 				.hasRole("ADMIN")
-				// Tournaments, events, courts and organizations are public to read
+				// Player records hold birth dates and contact details: only organizers and clubs read them
+				.requestMatchers(HttpMethod.GET, "/api/players", "/api/players/**", "/api/registrations/**",
+						"/api/tournaments/*/registrations", "/api/tournaments/*/registrations/**",
+						"/api/events/*/registrations", "/api/events/*/eligible-players")
+				.hasAnyRole("ORGANIZER", "CLUB")
+				// Tournaments, events, courts, clubs and organizations are public to read
 				.requestMatchers(HttpMethod.GET, "/api/**")
 				.permitAll()
-				.requestMatchers("/api/tournaments", "/api/tournaments/**", "/api/events/**", "/api/courts/**")
+				.requestMatchers("/api/tournaments", "/api/tournaments/**", "/api/events/**", "/api/courts/**",
+						"/api/clubs", "/api/clubs/**", "/api/players", "/api/players/**", "/api/registrations/**")
 				.hasRole("ORGANIZER")
 				// Anything not listed above is closed by default
 				.anyRequest()

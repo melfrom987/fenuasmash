@@ -16,8 +16,11 @@ import com.tao.fenuasmash.organization.OrganizationService;
 @Transactional(readOnly = true)
 public class AccountService {
 
-	/** Player accounts will come with the player records. */
-	private static final Set<UserRole> CREATABLE_ROLES = Set.of(UserRole.ORGANIZER, UserRole.CLUB);
+	/**
+	 * Club accounts will come with the club records, as each one is linked to its
+	 * club; player accounts come with online registration.
+	 */
+	private static final Set<UserRole> CREATABLE_ROLES = Set.of(UserRole.ORGANIZER);
 
 	/** bcrypt ignores everything after 72 bytes, so longer passwords are refused. */
 	private static final int MAX_PASSWORD_BYTES = 72;
@@ -38,7 +41,7 @@ public class AccountService {
 	@Transactional
 	public AccountResponse create(CreateAccountRequest request) {
 		if (!CREATABLE_ROLES.contains(request.role())) {
-			throw new InvalidRequestException("INVALID_ROLE", "Only ORGANIZER and CLUB accounts can be created");
+			throw new InvalidRequestException("INVALID_ROLE", "Only ORGANIZER accounts can be created for now");
 		}
 		if (request.password().getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
 			throw new FieldValidationException("password", "must be at most " + MAX_PASSWORD_BYTES + " bytes");

@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * @param organizationId required for an organizer, must be absent for a club
+ * @param organizationId the federation of the organizer
  */
 public record CreateAccountRequest(
 		@NotBlank @Email @Size(max = 254) String email,

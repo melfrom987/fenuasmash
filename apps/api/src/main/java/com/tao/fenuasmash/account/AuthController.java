@@ -1,5 +1,6 @@
 package com.tao.fenuasmash.account;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import org.springframework.http.CacheControl;
@@ -24,9 +25,11 @@ class AuthController {
 	}
 
 	@PostMapping("/login")
-	ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+	ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+		// Behind the web proxy, the client IP comes from X-Forwarded-For (server.forward-headers-strategy)
+		LoginResponse response = service.login(request, httpRequest.getRemoteAddr());
 		// The token is a credential: no cache may keep it
-		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(service.login(request));
+		return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(response);
 	}
 
 	@GetMapping("/me")

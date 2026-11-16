@@ -50,6 +50,9 @@ class CurrentUserControllerTests {
 	private PasswordEncoder passwordEncoder;
 
 	@Autowired
+	private LoginAttemptLimiter loginAttemptLimiter;
+
+	@Autowired
 	private JdbcTemplate jdbc;
 
 	private UUID organizationId;
@@ -59,6 +62,7 @@ class CurrentUserControllerTests {
 	@BeforeEach
 	void setUp() {
 		DatabaseCleaner.clean(jdbc);
+		loginAttemptLimiter.reset();
 		organizationId = UUID.randomUUID();
 		jdbc.update("INSERT INTO organization (id, name, created_at) VALUES (?, ?, ?)", organizationId,
 				"Fédération Tahitienne de Badminton", Timestamp.from(Instant.now()));

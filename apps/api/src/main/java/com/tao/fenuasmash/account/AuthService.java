@@ -24,20 +24,28 @@ public class AuthService {
 	 */
 	private final String unknownAccountHash;
 
-	AuthService(UserAccountRepository repository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+	private final LoginAttemptLimiter loginAttemptLimiter;
+
+	AuthService(UserAccountRepository repository, PasswordEncoder passwordEncoder, JwtService jwtService,
+			LoginAttemptLimiter loginAttemptLimiter) {
 		this.repository = repository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
+		this.loginAttemptLimiter = loginAttemptLimiter;
 		this.unknownAccountHash = passwordEncoder.encode("unknown-account-password");
 	}
 
-	public LoginResponse login(LoginRequest request) {
-		UserAccount account = repository.findByEmail(UserAccount.normalizeEmail(request.email())).orElse(null);
+	public LoginResponse login(LoginRequest request, String clientIp) {
+		String email = UserAccount.normalizeEmail(request.email());
+		loginAttemptLimiter.checkAllowed(email, clientIp);
+		UserAccount account = repository.findByEmail(email).orElse(null);
 		String hash = account != null ? account.getPasswordHash() : unknownAccountHash;
 		boolean passwordMatches = passwordEncoder.matches(request.password(), hash);
 		if (account == null || !passwordMatches) {
+			loginAttemptLimiter.recordFailure(email, clientIp);
 			throw new InvalidCredentialsException();
 		}
+		loginAttemptLimiter.recordSuccess(email);
 		IssuedToken token = jwtService
 			.issue(new TokenClaims(account.getId(), account.getRole(), account.getOrganizationId()));
 		return new LoginResponse(token.value(), "Bearer", token.expiresAt());

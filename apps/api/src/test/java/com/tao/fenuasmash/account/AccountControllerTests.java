@@ -48,6 +48,9 @@ class AccountControllerTests {
 	private PasswordEncoder passwordEncoder;
 
 	@Autowired
+	private LoginAttemptLimiter loginAttemptLimiter;
+
+	@Autowired
 	private JdbcTemplate jdbc;
 
 	private UUID organizationId;
@@ -57,6 +60,7 @@ class AccountControllerTests {
 	@BeforeEach
 	void setUp() throws Exception {
 		DatabaseCleaner.clean(jdbc);
+		loginAttemptLimiter.reset();
 		organizationId = UUID.randomUUID();
 		jdbc.update("INSERT INTO organization (id, name, created_at) VALUES (?, ?, ?)", organizationId,
 				"Fédération Tahitienne de Badminton", Timestamp.from(Instant.now()));
@@ -81,17 +85,10 @@ class AccountControllerTests {
 	}
 
 	@Test
-	void adminCreatesClubAccount() throws Exception {
-		create(adminToken, account("club@example.com", "CLUB", null)).andExpect(status().isCreated())
-			.andExpect(jsonPath("$.role").value("CLUB"))
-			.andExpect(jsonPath("$.organizationId").isEmpty());
-	}
-
-	@Test
 	void passwordIsStoredHashed() throws Exception {
-		create(adminToken, account("club@example.com", "CLUB", null)).andExpect(status().isCreated());
+		create(adminToken, account("orga@example.com", "ORGANIZER", organizationId)).andExpect(status().isCreated());
 
-		String stored = repository.findByEmail("club@example.com").orElseThrow().getPasswordHash();
+		String stored = repository.findByEmail("orga@example.com").orElseThrow().getPasswordHash();
 		assertThat(stored).isNotEqualTo(PASSWORD);
 		assertThat(passwordEncoder.matches(PASSWORD, stored)).isTrue();
 	}
@@ -99,7 +96,7 @@ class AccountControllerTests {
 	@Test
 	void creationWithoutTokenIsUnauthorized() throws Exception {
 		mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON)
-			.content(account("club@example.com", "CLUB", null)))
+			.content(account("orga@example.com", "ORGANIZER", organizationId)))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
 	}
@@ -112,7 +109,7 @@ class AccountControllerTests {
 				new UserAccount("club@example.com", passwordEncoder.encode(PASSWORD), UserRole.CLUB, null));
 
 		for (String email : new String[] { "orga@example.com", "club@example.com" }) {
-			create(login(email, PASSWORD), account("other@example.com", "CLUB", null))
+			create(login(email, PASSWORD), account("other@example.com", "ORGANIZER", organizationId))
 				.andExpect(status().isForbidden())
 				.andExpect(jsonPath("$.code").value("FORBIDDEN"));
 		}
@@ -120,8 +117,8 @@ class AccountControllerTests {
 	}
 
 	@Test
-	void adminAndPlayerAccountsCannotBeCreated() throws Exception {
-		for (String role : new String[] { "ADMIN", "PLAYER" }) {
+	void otherRolesCannotBeCreatedYet() throws Exception {
+		for (String role : new String[] { "ADMIN", "CLUB", "PLAYER" }) {
 			create(adminToken, account("user@example.com", role, null)).andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.code").value("INVALID_ROLE"));
 		}
@@ -135,12 +132,6 @@ class AccountControllerTests {
 	}
 
 	@Test
-	void clubWithOrganizationIsRejected() throws Exception {
-		create(adminToken, account("club@example.com", "CLUB", organizationId)).andExpect(status().isBadRequest())
-			.andExpect(jsonPath("$.errors[0].field").value("organizationId"));
-	}
-
-	@Test
 	void unknownOrganizationIsRejected() throws Exception {
 		create(adminToken, account("orga@example.com", "ORGANIZER", UUID.randomUUID()))
 			.andExpect(status().isBadRequest())
@@ -149,7 +140,7 @@ class AccountControllerTests {
 
 	@Test
 	void emailAlreadyUsedIsRejectedWhateverItsCase() throws Exception {
-		create(adminToken, account("ADMIN@example.com", "CLUB", null)).andExpect(status().isConflict())
+		create(adminToken, account("ADMIN@example.com", "ORGANIZER", organizationId)).andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("EMAIL_ALREADY_USED"));
 	}
 
@@ -163,8 +154,8 @@ class AccountControllerTests {
 
 	@Test
 	void passwordOver72BytesIsRejected() throws Exception {
-		String json = "{\"email\": \"club@example.com\", \"password\": \"" + "é".repeat(40)
-				+ "\", \"role\": \"CLUB\"}";
+		String json = "{\"email\": \"orga@example.com\", \"password\": \"" + "é".repeat(40)
+				+ "\", \"role\": \"ORGANIZER\", \"organizationId\": \"" + organizationId + "\"}";
 
 		create(adminToken, json).andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.errors[0].field").value("password"));
