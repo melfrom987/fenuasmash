@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
@@ -30,6 +32,15 @@ class SecurityConfig {
 			// Every route stays open until the access rules are added
 			.authorizeHttpRequests(requests -> requests.anyRequest().permitAll());
 		return http.build();
+	}
+
+	/**
+	 * Hashes passwords with bcrypt. The {@code {bcrypt}} prefix stored with each
+	 * hash lets a stronger algorithm be adopted later without resetting them.
+	 */
+	@Bean
+	PasswordEncoder passwordEncoder() {
+		return PasswordEncoderFactories.createDelegatingPasswordEncoder();
 	}
 
 }
