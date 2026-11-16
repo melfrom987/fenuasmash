@@ -52,6 +52,15 @@ Inside a feature, files are grouped by kind:
 
 A feature never imports another feature: shared code moves to `core/`.
 
+## Design
+
+The app follows the [design system](../../docs/design-system.md):
+
+- Colors are in `lib/app/theme/app_colors.dart` (`AppColors.lagon.shade600`…), the same values as the web app. Use the theme (`Theme.of(context).colorScheme`) rather than raw colors when possible.
+- Fonts (Outfit for headings, Inter for the rest, weights 400 and 600) are bundled in `assets/fonts` with their licenses, so the app works offline.
+- Scores use `AppTextStyles.score(fontSize: …)`, with tabular figures.
+- Icons use `AppIcon(HugeIcons.strokeRounded…)`, which applies the design system size and stroke width.
+
 ## Further Reading
 
 - [Design system](../../docs/design-system.md)

@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  hugeicons: ^4.4.0
 
 dev_dependencies:
   flutter_test:
@@ -17,3 +18,19 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Fonts of the design system, bundled so that the app works offline
+  assets:
+    - assets/fonts/OFL-Inter.txt
+    - assets/fonts/OFL-Outfit.txt
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit-Regular.ttf
+        - asset: assets/fonts/Outfit-SemiBold.ttf
+          weight: 600
