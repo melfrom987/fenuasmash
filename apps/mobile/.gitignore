@@ -44,8 +44,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Widget Preview related
-.widget_preview/
-
-# Translations generated from lib/l10n/*.arb by `flutter pub get`
-/lib/l10n/app_localizations*.dart
+build_apk.sh
+release

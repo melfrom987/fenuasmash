@@ -1,92 +1,96 @@
-# FenuaSmash Mobile
+# Badminton Umpire
 
-Umpire app, built with Flutter for Android tablets and phones. Each tablet is linked to a court and is used to enter the scores of the matches played on it.
+Badminton Umpire is a Flutter application designed to assist an umpire during a badminton match. It centralizes match setup, on-court configuration, scoring, service/receiver tracking, intervals, announcements, shuttle tracking, match history, and recovery of an interrupted match.
 
-## Getting Started
+This repository currently represents the **umpire-side application** of a larger badminton tournament management system. The long-term architecture is expected to let an administration/backend system assign a match to a court, after which the umpire completes the on-court setup and runs the match from the tablet or phone.
+
+## Main features
+
+- Singles and doubles match setup.
+- Administrative match information: tournament, court, category, umpire, optional service judge, phase and pool information.
+- On-court setup before warm-up: side assignment, initial server and receiver.
+- Responsive badminton court visualization.
+- Two-minute warm-up with countdown and haptic warnings.
+- Best-of-three match management using the configured 15-point rules.
+- Automatic service and receiving position management.
+- Mid-game and between-game intervals.
+- Change of ends, including the deciding-game change at 8 points.
+- Set point and match point indicators.
+- Undo based on match snapshots.
+- Match events and disciplinary actions.
+- Shuttle counter.
+- Optional umpire announcements.
+- French and English localization.
+- Local current-match recovery and match history.
+- Player color customization during the match.
+
+## Project structure
+
+```text
+lib/
+├── app/                    # MaterialApp and theme
+├── core/                   # Shared responsive, settings, haptics and utilities
+├── features/
+│   ├── home/
+│   ├── history/
+│   ├── match/
+│   │   ├── application/    # Match orchestration / controller
+│   │   ├── data/           # Local persistence
+│   │   ├── domain/         # Match models and badminton rules
+│   │   └── presentation/   # Match UI
+│   ├── match_setup/        # Administrative and on-court setup
+│   └── settings/
+├── l10n/                   # ARB translations and generated localization files
+└── main.dart
+```
+
+See [Architecture](docs/architecture.md) for the detailed responsibilities of each layer.
+
+## Match flow
+
+```mermaid
+flowchart LR
+    Home --> MatchSetup[Match setup]
+    MatchSetup --> Config[MatchConfig]
+    Config --> CourtSetup[Court setup]
+    CourtSetup --> Warmup[Warm-up]
+    Warmup --> Match[Active match]
+    Match --> Interval[Intervals / next game]
+    Interval --> Match
+    Match --> Finished[Match finished]
+    Finished --> History[Match history]
+```
+
+The current application manually creates `MatchConfig`. In the future, this configuration can be supplied by the tournament backend while keeping the on-court and match-running flow unchanged.
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Match engine](docs/match-engine.md)
+- [Match flow](docs/match-flow.md)
+- [Data models](docs/data-models.md)
+- [Persistence and recovery](docs/persistence.md)
+- [Localization and settings](docs/localization.md)
+- [Development guide](docs/development.md)
+- [Code documentation conventions](docs/code-documentation.md)
+
+## Development commands
+
+From the Flutter project root:
 
 ```bash
 flutter pub get
-flutter run
-```
-
-The app calls the API started by `make api` at the repository root. It reaches it at `http://10.0.2.2:8081`, the address of your computer from the Android emulator.
-
-To use another server, pass its root URL, **without `/api`** (the app adds it):
-
-```bash
-flutter run --dart-define=API_URL=http://192.168.1.20:8081   # real tablet on the same Wi-Fi
-flutter build apk --release --dart-define=API_URL=https://fenuasmash.example
-```
-
-Debug builds accept plain HTTP; release builds need HTTPS. The release APK built by CD uses the `MOBILE_API_URL` repository variable.
-
-Before pushing, run the same checks as CI:
-
-```bash
+flutter gen-l10n
 dart format .
 flutter analyze
 flutter test
-```
-
-### Phones and Tablets
-
-The app runs on Android phones and tablets, in portrait and landscape. Screens use `PageBody` (`lib/core/widgets/page_body.dart`): content centered with a maximum width, padding that grows with the screen (`WindowSize`: compact for phones, medium for tablets in portrait, expanded for tablets in landscape), and scrolling when the screen is too short.
-
-`test/app/screen_sizes_test.dart` opens every screen on phone and tablet sizes, in both orientations: any overflow fails the test. Add new screens to it.
-
-To try it on emulators, create a tablet in Android Studio (**Device Manager → Pixel Tablet**), then:
-
-```bash
-flutter emulators                      # list the emulators
-flutter emulators --launch <id>
 flutter run
 ```
 
-Run one emulator at a time: two at once need more than 16 GB of memory.
+`dart format .` and `flutter analyze` should be run before committing changes.
 
-## Project Structure
+## Current architectural direction
 
-```
-lib/
-├── main.dart          # Entry point
-├── app/               # App widget, navigation and theme
-├── core/              # Code shared by every feature: configuration, API client, common widgets
-└── features/          # One folder per feature
-    ├── pairing/       # Link the tablet to a court with a code
-    ├── matches/       # Matches assigned to the court
-    └── scoring/       # Score entry, point by point
-test/                  # Tests, mirroring lib/
-```
+The application deliberately keeps match rules inside `MatchController` rather than inside presentation widgets. The UI reads state and sends user actions to the controller. Persistent data is serialized through dedicated models and services.
 
-Inside a feature, files are grouped by kind:
-
-| Folder | Content |
-|---|---|
-| `screens/` | Full-page widgets, one per route |
-| `widgets/` | Widgets used only by this feature |
-| `data/` | API calls and local storage for this feature |
-
-A feature never imports another feature: shared code moves to `core/`. To open another screen, use its path from `core/routing/app_routes.dart` (`context.go(AppRoutes.matches)`); the routes themselves are declared in `app/router.dart`.
-
-## Translations
-
-The app is in French and English, following the device language, with French when the device uses another language (same as the web app). No text is written in the code:
-
-1. Add the key to `lib/l10n/app_fr.arb` (the reference, with a `description`), then to `lib/l10n/app_en.arb`.
-2. Run `flutter pub get` (or `flutter gen-l10n`) to regenerate `AppLocalizations`. The generated files are not committed.
-3. Use it with `context.l10n.myKey` (import `l10n/l10n.dart`).
-
-## Design
-
-The app follows the [design system](../../docs/design-system.md):
-
-- Colors are in `lib/app/theme/app_colors.dart` (`AppColors.lagon.shade600`…), the same values as the web app. Use the theme (`Theme.of(context).colorScheme`) rather than raw colors when possible.
-- Fonts (Outfit for headings, Inter for the rest, weights 400 and 600) are bundled in `assets/fonts` with their licenses, so the app works offline.
-- Scores use `AppTextStyles.score(fontSize: …)`, with tabular figures.
-- Icons use `AppIcon(HugeIcons.strokeRounded…)`, which applies the design system size and stroke width.
-
-## Further Reading
-
-- [Design system](../../docs/design-system.md)
-- [API contract](../../contracts/openapi.yaml)
-- [Contributing guidelines](../../CONTRIBUTING.md)
+The next major architectural step should be to use stable player identifiers instead of player names as technical identifiers before connecting the application to a backend.

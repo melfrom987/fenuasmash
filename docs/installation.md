@@ -38,7 +38,7 @@ Under **Settings → Environments**, create an environment named `production`:
 | Secret | `DEPLOY_SSH_KEY` | Private deployment key |
 | Secret | `DEPLOY_KNOWN_HOSTS` | Output of `ssh-keyscan <host>` |
 
-Under **Settings → Secrets and variables → Actions**, add the repository variable `MOBILE_API_URL`: the public HTTPS URL of the server, without `/api` (for example `https://fenuasmash.example`). It is embedded in the APK.
+Under **Settings → Secrets and variables → Actions**, add the repository variable `MOBILE_API_URL` (public API URL embedded in the APK).
 
 Under **Settings → Branches**, protect `main` and `dev`: require a pull request and the **`CI`** status check.
 

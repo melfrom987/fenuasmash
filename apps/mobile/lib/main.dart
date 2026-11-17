@@ -1,11 +1,12 @@
+import 'package:badminton_umpire/core/settings/settings.dart';
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
-import 'app/licenses.dart';
-import 'core/config/app_config.dart';
 
-void main() {
-  final config = AppConfig.fromEnvironment();
-  registerFontLicenses();
-  runApp(FenuaSmashApp(config: config));
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await appSettingsController.load();
+
+  runApp(const BadmintonUmpireApp());
 }
