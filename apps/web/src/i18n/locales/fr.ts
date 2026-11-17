@@ -384,8 +384,15 @@ export const fr = {
       choose: 'Choisir un fichier',
       reading: 'Lecture…',
       formats: 'CSV ou Excel (.xlsx)',
-      unreadable:
-        "Ce fichier n'a pas pu être lu. Vérifiez qu'il s'agit bien d'un CSV ou d'un .xlsx non vide.",
+      errors: {
+        EMPTY: 'Ce fichier est vide.',
+        NO_ROWS:
+          "Ce fichier ne contient que la ligne des questions : il n'y a encore aucune réponse à importer.",
+        UNSUPPORTED:
+          'Format non pris en charge (.xls, .ods, .numbers) : enregistrez le fichier en .xlsx ou en CSV.',
+        UNREADABLE:
+          "Ce fichier n'a pas pu être lu. Vérifiez qu'il s'agit bien d'un CSV ou d'un .xlsx, puis réessayez.",
+      },
     },
     fields: {
       fullName: 'Nom et prénom',

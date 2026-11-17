@@ -382,7 +382,13 @@ export const en: Translation = {
       choose: 'Choose a file',
       reading: 'Reading…',
       formats: 'CSV or Excel (.xlsx)',
-      unreadable: 'This file could not be read. Check that it is a non-empty CSV or .xlsx file.',
+      errors: {
+        EMPTY: 'This file is empty.',
+        NO_ROWS: 'This file only has the question row: there are no answers to import yet.',
+        UNSUPPORTED:
+          'Unsupported format (.xls, .ods, .numbers): save the file as .xlsx or CSV.',
+        UNREADABLE: 'This file could not be read. Check that it is a CSV or .xlsx file, then try again.',
+      },
     },
     fields: {
       fullName: 'Full name',
