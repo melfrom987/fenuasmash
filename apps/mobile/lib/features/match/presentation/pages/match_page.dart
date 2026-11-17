@@ -12,6 +12,7 @@ import 'package:badminton_umpire/features/match/domain/models/match_phase.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_snapshot.dart';
 import 'package:badminton_umpire/features/match/domain/models/score_event.dart';
 import 'package:badminton_umpire/features/match/data/services/match_draft_service.dart';
+import 'package:badminton_umpire/features/match/data/services/score_event_outbox.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/menus/actions_menu.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/dialogs/correct_positions_dialog.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/dialogs/disciplinary_event_dialog.dart';
@@ -86,6 +87,7 @@ class _MatchPageState extends State<MatchPage> {
   DateTime? _matchFinishedAt;
 
   final MatchDraftService _draftService = MatchDraftService();
+  final ScoreEventOutbox _scoreEventOutbox = ScoreEventOutbox();
 
   DateTime? _warmupEndsAt;
 

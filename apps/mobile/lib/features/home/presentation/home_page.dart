@@ -3,6 +3,7 @@ import 'package:badminton_umpire/features/history/presentation/pages/match_histo
 import 'package:badminton_umpire/features/match/domain/models/match_draft.dart';
 import 'package:badminton_umpire/features/match/presentation/pages/match_page.dart';
 import 'package:badminton_umpire/features/match/data/services/match_draft_service.dart';
+import 'package:badminton_umpire/features/match/data/services/score_event_outbox.dart';
 import 'package:badminton_umpire/features/match_setup/presentation/pages/match_setup_page.dart';
 import 'package:badminton_umpire/features/settings/presentation/pages/settings_page.dart';
 import 'package:badminton_umpire/l10n/app_localizations.dart';
@@ -18,6 +19,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final MatchDraftService _draftService = MatchDraftService();
+  final ScoreEventOutbox _scoreEventOutbox = ScoreEventOutbox();
 
   MatchDraft? _currentMatch;
   bool _isLoadingDraft = true;
@@ -49,6 +51,9 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
+      // The points already played still have to reach the backend.
+      final replaced = _currentMatch!;
+      await _scoreEventOutbox.enqueue(replaced.matchId, replaced.scoreEvents);
       await _draftService.clear();
 
       if (!mounted) {

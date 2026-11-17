@@ -4,6 +4,7 @@ extension _MatchPageNavigation on _MatchPageState {
   Future<void> _goBack() async {
     if (matchController.matchIsFinished) {
       await _saveMatchHistoryIfNeeded();
+      await _queueScoreEvents();
       await _draftService.clear();
     } else {
       await _saveTemporaryMatch();
@@ -66,6 +67,7 @@ extension _MatchPageNavigation on _MatchPageState {
 
   Future<void> _startNewMatch() async {
     await _saveMatchHistoryIfNeeded();
+    await _queueScoreEvents();
     await _draftService.clear();
 
     if (!mounted) {

@@ -58,9 +58,21 @@ extension _MatchPageDraft on _MatchPageState {
         );
 
         await _draftService.save(draft);
+        await _queueScoreEvents();
       } while (_draftSavePending);
     } finally {
       _savingDraft = false;
+    }
+  }
+
+  /// Puts the new points and undos in the queue of events to send. They stay
+  /// there after the current match is cleared, until the backend confirms
+  /// them. A failure is retried with the next save, as queuing is idempotent.
+  Future<void> _queueScoreEvents() async {
+    try {
+      await _scoreEventOutbox.enqueue(_matchId, matchController.scoreEvents);
+    } catch (error) {
+      debugPrint('Could not queue score events: $error');
     }
   }
 
