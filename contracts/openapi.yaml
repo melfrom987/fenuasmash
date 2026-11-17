@@ -722,7 +722,8 @@ paths:
         '409':
           description: |
             The batch cannot be applied: `SEQUENCE_GAP` (send again from
-            `expectedSequence`), `EVENT_ID_CONFLICT` or `MATCH_NOT_IN_PROGRESS`.
+            `expectedSequence`), `EVENT_ID_CONFLICT`, or `MATCH_NOT_IN_PROGRESS` (match not
+            started yet, or a `POINT` sent once the match is finished).
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/ScoreEventProblem' }
@@ -1529,7 +1530,8 @@ components:
       enum: [POINT, UNDO]
       description: |
         - `POINT`: a rally won by `side`.
-        - `UNDO`: cancels the last `POINT` that is not cancelled yet.
+        - `UNDO`: cancels the last `POINT` that is not cancelled yet. It is also accepted
+          after the last point of a finished match: the match is then in progress again.
 
         Game and match ends are computed by the server from the points and the scoring
         rules of the tournament. Other events (cards, retirement) will be added with the
