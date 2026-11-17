@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:badminton_umpire/features/match/domain/models/match_draft.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_event.dart';
+import 'package:badminton_umpire/core/utils/uuid.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_snapshot.dart';
+import 'package:badminton_umpire/features/match/domain/models/score_event.dart';
 import 'package:badminton_umpire/features/match/domain/rules/badminton_rules.dart';
 import 'package:flutter/foundation.dart';
 
@@ -52,9 +54,20 @@ class MatchController extends ChangeNotifier {
 
   final List<MatchEvent> _events = [];
 
+  /// Points and undos, in order, to send to the backend.
+  final List<ScoreEvent> _scoreEvents = [];
+
+  /// Creates the unique id of each score event.
+  final String Function() _newEventId;
+
+  /// Current time, replaceable in tests.
+  final DateTime Function() _clock;
+
   List<MatchSnapshot> get history => List.unmodifiable(_history);
 
   List<MatchEvent> get events => List.unmodifiable(_events);
+
+  List<ScoreEvent> get scoreEvents => List.unmodifiable(_scoreEvents);
 
   bool intervalTwentySecondsReached = false;
 
@@ -91,19 +104,27 @@ class MatchController extends ChangeNotifier {
     required this.serverName,
     required this.receiverName,
     required this.courtNumber,
-  }) {
+    String Function()? newEventId,
+    DateTime Function()? clock,
+  }) : _newEventId = newEventId ?? generateUuidV4,
+       _clock = clock ?? DateTime.now {
     _initializePositions();
   }
 
-  MatchController.fromDraft(MatchDraft draft)
-    : isDoubles = draft.config.isDoubles,
-      teamAPlayers = List<String>.from(draft.config.teamAPlayers),
-      teamBPlayers = List<String>.from(draft.config.teamBPlayers),
-      leftSideTeamId = draft.leftSideTeamId,
-      courtNumber = draft.config.courtNumber,
-      servingTeamId = draft.servingTeamId,
-      serverName = draft.serverName,
-      receiverName = draft.receiverName {
+  MatchController.fromDraft(
+    MatchDraft draft, {
+    String Function()? newEventId,
+    DateTime Function()? clock,
+  }) : _newEventId = newEventId ?? generateUuidV4,
+       _clock = clock ?? DateTime.now,
+       isDoubles = draft.config.isDoubles,
+       teamAPlayers = List<String>.from(draft.config.teamAPlayers),
+       teamBPlayers = List<String>.from(draft.config.teamBPlayers),
+       leftSideTeamId = draft.leftSideTeamId,
+       courtNumber = draft.config.courtNumber,
+       servingTeamId = draft.servingTeamId,
+       serverName = draft.serverName,
+       receiverName = draft.receiverName {
     teamAScore = draft.teamAScore;
     teamBScore = draft.teamBScore;
 
@@ -123,6 +144,7 @@ class MatchController extends ChangeNotifier {
 
     _history.addAll(draft.history);
     _events.addAll(draft.events);
+    _scoreEvents.addAll(draft.scoreEvents);
   }
 
   String get rightSideTeamId {
@@ -272,5 +294,18 @@ class MatchController extends ChangeNotifier {
 
   int scoreOf(String teamId) {
     return teamId == 'teamA' ? teamAScore : teamBScore;
+  }
+
+  /// Records a point or an undo, numbered after the previous events.
+  void _recordScoreEvent(ScoreEventType type, {MatchSide? side}) {
+    _scoreEvents.add(
+      ScoreEvent(
+        id: _newEventId(),
+        sequence: _scoreEvents.length + 1,
+        type: type,
+        side: side,
+        occurredAt: _clock(),
+      ),
+    );
   }
 }

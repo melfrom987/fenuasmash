@@ -42,6 +42,7 @@ extension _MatchPageDraft on _MatchPageState {
 
           history: List<MatchSnapshot>.from(matchController.history),
           events: List<MatchEvent>.from(matchController.events),
+          scoreEvents: List<ScoreEvent>.from(matchController.scoreEvents),
 
           matchStarted: _matchStarted,
           matchStartedAt: _matchStartedAt,

@@ -10,6 +10,7 @@ import 'package:badminton_umpire/features/match/domain/models/match_draft.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_event.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_phase.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_snapshot.dart';
+import 'package:badminton_umpire/features/match/domain/models/score_event.dart';
 import 'package:badminton_umpire/features/match/data/services/match_draft_service.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/menus/actions_menu.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/dialogs/correct_positions_dialog.dart';

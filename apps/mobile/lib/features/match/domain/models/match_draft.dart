@@ -2,6 +2,7 @@ import 'package:badminton_umpire/features/match/domain/models/match_config.dart'
 import 'package:badminton_umpire/features/match/domain/models/match_event.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_phase.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_snapshot.dart';
+import 'package:badminton_umpire/features/match/domain/models/score_event.dart';
 import 'package:badminton_umpire/features/match/domain/models/team_court_state.dart';
 import 'package:flutter/material.dart';
 
@@ -44,6 +45,9 @@ class MatchDraft {
   final List<MatchSnapshot> history;
   final List<MatchEvent> events;
 
+  /// Points and undos with their ids, kept until the backend confirms them.
+  final List<ScoreEvent> scoreEvents;
+
   /// Chronométrage du match.
   final bool matchStarted;
   final DateTime? matchStartedAt;
@@ -82,6 +86,7 @@ class MatchDraft {
     required this.intervalRemaining,
     required this.history,
     required this.events,
+    this.scoreEvents = const [],
     required this.matchStarted,
     required this.matchStartedAt,
     required this.matchFinishedAt,
@@ -158,6 +163,7 @@ class MatchDraft {
       'history': history.map((snapshot) => snapshot.toJson()).toList(),
 
       'events': events.map((event) => event.toJson()).toList(),
+      'scoreEvents': scoreEvents.map((event) => event.toJson()).toList(),
 
       'matchStarted': matchStarted,
 
@@ -279,6 +285,14 @@ class MatchDraft {
           .map(
             (event) =>
                 MatchEvent.fromJson(Map<String, dynamic>.from(event as Map)),
+          )
+          .toList(),
+
+      // Absent from drafts saved before score events existed.
+      scoreEvents: (json['scoreEvents'] as List? ?? [])
+          .map(
+            (event) =>
+                ScoreEvent.fromJson(Map<String, dynamic>.from(event as Map)),
           )
           .toList(),
 

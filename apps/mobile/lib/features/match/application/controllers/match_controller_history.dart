@@ -33,6 +33,7 @@ extension MatchControllerHistory on MatchController {
     _intervalTimer = null;
 
     final snapshot = _history.removeLast();
+    _recordScoreEvent(ScoreEventType.undo);
 
     // Score
     teamAScore = snapshot.teamAScore;

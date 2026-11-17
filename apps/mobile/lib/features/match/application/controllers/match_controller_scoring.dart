@@ -18,6 +18,10 @@ extension MatchControllerScoring on MatchController {
     }
 
     _saveSnapshot();
+    _recordScoreEvent(
+      ScoreEventType.point,
+      side: MatchSide.fromTeamId(winningTeamId),
+    );
 
     final servingTeamWon = winningTeamId == servingTeamId;
 
