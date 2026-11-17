@@ -173,6 +173,8 @@ jobs:
         if: steps.exists.outputs.ok == 'true'
         with:
           channel: stable
+          # À garder identique à FLUTTER_VERSION dans ci.yml
+          flutter-version: "3.47.9"
           cache: true
 
       - name: Build APK
