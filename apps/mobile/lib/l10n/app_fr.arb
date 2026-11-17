@@ -1,23 +1,298 @@
 {
   "@@locale": "fr",
-  "appTitle": "FenuaSmash",
-  "@appTitle": {
-    "description": "Name of the app, never translated"
+
+  "appTitle": "Arbitre Badminton",
+
+  "language": "Langue",
+  "french": "Français",
+  "english": "Anglais",
+
+  "newMatch": "Nouveau match",
+  "matchSetupDescription": "Configure les joueurs et le service initial.",
+  "startMatch": "Commencer le match",
+  "tournamentName": "Nom du tournoi",
+  "defaultTournamentName": "Tournoi",
+  "courtNumber": "Numéro du terrain",
+  "court": "Terrain",
+  "category": "Catégorie",
+  "umpireName": "Nom de l’arbitre",
+  "umpire": "Arbitre",
+  "serviceJudge": "Juge de Service",
+  "serviceJudgeName": "Nom du juge de service",
+  "umpireInformation": "Arbitrage",
+
+  "newMatch": "Nouveau match",
+  "newMatchDescription": "Configurer et démarrer un nouveau match.",
+  "matchSetupDescription": "Configure les joueurs et le service initial.",
+  "startMatch": "Commencer le match",
+
+  "history": "Historique",
+  "historyDescription": "Consulter les matchs enregistrés.",
+  "matchHistory": "Historique des matchs",
+  "matchDetails": "Détails du match",
+  "noMatchHistory": "Aucun match enregistré.",
+
+  "menSingles": "Simple Homme",
+  "womenSingles": "Simple Dame",
+  "menDoubles": "Double Homme",
+  "womenDoubles": "Double Dame",
+  "mixedDoubles": "Double Mixte",
+
+  "team": "l’équipe",
+  "teamA": "Équipe A",
+  "teamB": "Équipe B",
+  "leftTeam": "Équipe gauche",
+  "rightTeam": "Équipe droite",
+  "left": "Gauche",
+  "right": "Droite",
+  "leftSide": "Côté gauche",
+  "rightSide": "Côté droit",
+  "startingSide": "Position des équipes",
+  "chooseLeftTeam": "Choisis l’équipe située à droite.",
+  "switchSides": "Changer de demi-terrain",
+
+  "player": "Joueur",
+  "playerOne": "Joueur 1",
+  "playerTwo": "Joueur 2",
+  "server": "Serveur",
+  "receiver": "Receveur",
+  "chooseServerReceiver": "Choisis le serveur et le receveur",
+  "positionsOnlyAtZero": "La correction des positions est possible uniquement à 0–0. Annule d’abord les points joués pour revenir à 0–0.",
+
+  "set": "Set",
+  "sets": "Sets",
+  "setPoint": "POINT DE SET",
+  "matchPoint": "POINT DE MATCH",
+  "undoLastPoint": "Annuler le dernier point",
+  "noPointToUndo": "Aucun point à annuler.",
+  "nextSet": "Set suivant",
+  "startSet": "Commencer le set",
+
+  "shuttlesUsed": "Volants utilisés",
+  "shuttles": "Volants",
+
+  "midSetInterval": "Pause à 8 points",
+  "endOfSet": "Fin du set",
+  "finishInterval": "Terminer la pause",
+  "resumeMatch": "Reprendre le match",
+
+  "umpireAnnouncement": "Annonce de l’arbitre",
+
+  "firstSetAnnouncement": "Set! Premier set remporté par {winner}, {score}. Changez de demi-terrain.",
+  "@firstSetAnnouncement": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      },
+      "score": {
+        "type": "String"
+      }
+    }
   },
-  "pairingContinue": "Continuer",
-  "@pairingContinue": {
-    "description": "Pairing screen button, temporary until the court code entry"
+  "secondSetAnnouncement": "Set! Deuxième set remporté par {winner}, {score}. Changez de demi-terrain.",
+  "@secondSetAnnouncement": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      },
+      "score": {
+        "type": "String"
+      }
+    }
   },
-  "matchesTitle": "Matchs",
-  "@matchesTitle": {
-    "description": "Title of the screen listing the matches of the court"
+  "oneGameAll": "Un set égalité.",
+  "twentySecondsAnnouncement": "Terrain {courtNumber}, 20 secondes.",
+  "@twentySecondsAnnouncement": {
+    "placeholders": {
+      "courtNumber": {
+        "type": "String"
+      }
+    }
   },
-  "matchesExample": "Match exemple",
-  "@matchesExample": {
-    "description": "Example match shown until the real match list"
+  "matchAnnouncement": "Jeu! Match remporté par {winner}, {scores}.",
+  "@matchAnnouncement": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      },
+      "scores": {
+        "type": "String"
+      }
+    }
   },
-  "scoreTitle": "Score",
-  "@scoreTitle": {
-    "description": "Title of the score entry screen"
-  }
+
+  "readyToPlayAnnouncement": "Prêt à jouer.",
+
+  "firstGameSinglesStartAnnouncement": "Mesdames et Messieurs à ma droite, {right} et à ma gauche, {left}. {server} au service zéro égalité jouez.",
+  "@firstGameSinglesStartAnnouncement": {
+    "placeholders": {
+      "right": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+
+  "firstGameDoublesStartAnnouncement": "Mesdames et Messieurs à ma droite, {right} et à ma gauche, {left}. {server} au service sur {receiver} zéro égalité jouez.",
+  "@firstGameDoublesStartAnnouncement": {
+    "placeholders": {
+      "right": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      },
+      "receiver": {
+        "type": "String"
+      }
+    }
+  },
+
+  "secondGameStartAnnouncement": "Second set zéro égalité jouez.",
+  "finalGameStartAnnouncement": "Dernier set zéro égalité jouez.",
+
+  "matchFinished": "Match terminé",
+  "winner": "Vainqueur",
+  "duration": "Durée :",
+  "finishMatch": "Terminer le match",
+
+  "matchActions": "Actions du match",
+  "actions": "Actions",
+  "matchInterruption": "Interruption du match",
+  "callMedicalService": "Appeler le service médical",
+  "callScoringTable": "Appeler la table de marque",
+  "callReferee": "Appeler le juge-arbitre",
+  "correctPlayerPositions": "Corriger les positions",
+
+  "assistance": "Assistance",
+  "incidents": "Incidents",
+  "corrections": "Corrections",
+  "match": "Match",
+  "injury": "Blessure",
+
+  "warningOrCard": "Avertissement ou carton",
+  "sanction": "Sanction",
+  "warning": "Avertissement",
+  "yellowCard": "Carton jaune",
+  "redCard": "Carton rouge",
+  "blackCard": "Carton noir",
+  "confirmSanction": "Confirmer la sanction",
+  "irreversibleAction": "Cette action est irréversible. Vérifiez les informations avant de confirmer.",
+
+  "retirement": "Abandon",
+  "selectRetiringPlayer": "Sélectionnez le joueur qui abandonne.",
+  "confirmRetirement": "Confirmer l’abandon",
+  "retirementConfirmationMessage": "Cet abandon terminera immédiatement le match. {winner} sera déclaré vainqueur. Cette action est irréversible.",
+  "@retirementConfirmationMessage": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      }
+    }
+  },
+
+  "playerColors": "Couleurs des joueurs",
+  "colorsOf": "Couleur de",
+  "editPlayerColors": "Modifier les couleurs",
+  "sameColor": "Même couleur",
+  "apply": "Appliquer",
+
+  "back": "Retour",
+  "home": "Accueil",
+  "cancel": "Annuler",
+  "confirm": "Confirmer",
+  "continueLabel": "Continuer",
+  "start": "Démarrer",
+  "finish": "Terminer",
+  "optional": "Facultatif",
+  "requiredField": "Champ obligatoire",
+  "notProvided": "Non renseigné",
+  "startTime": "Début",
+  "endTime": "Fin",
+
+  "actionNotImplemented": "Action « {title} » à implémenter.",
+  "@actionNotImplemented": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+
+  "checkServerReceiver": "Vérifiez le serveur et le receveur avant de commencer le set.",
+  "confirmAndStartSet": "Valider et commencer le set",
+
+  "selected": "sélectionné(s)",
+  "selectMatches": "Sélectionner des matchs",
+  "clearHistory": "Supprimer l’historique",
+  "clearHistoryConfirmation": "Êtes-vous sûr de vouloir supprimer tous les matchs enregistrés ?",
+  "delete": "Supprimer",
+  "deleteSelectedMatches": "Supprimer les matchs",
+  "deleteSelectedMatchesConfirmation": "Supprimer les {count} matchs sélectionnés ?",
+  "@deleteSelectedMatchesConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "warmup": "Échauffement",
+  "startWarmup": "Démarrer l’échauffement",
+  "skipWarmup": "Passer l’échauffement",
+
+  "matchClassification": "Classification du match",
+  "matchClassificationDescription": "Définissez la catégorie et les informations de compétition.",
+
+  "ageCategory": "Catégorie d’âge",
+  "ageCategoryHint": "Ex. Minime Fille",
+
+  "poolGroup": "Poule / Groupe",
+  "poolGroupHint": "Ex. Poule B",
+
+  "tournamentPhase": "Phase",
+  "tournamentPhaseHint": "Ex. Quart de finale",
+
+  "agePoussin": "Poussin",
+  "agePoussine": "Poussine",
+  "ageBenjamin": "Benjamin",
+  "ageBenjamine": "Benjamine",
+  "ageMinimeBoy": "Minime Garçon",
+  "ageMinimeGirl": "Minime Fille",
+  "ageCadet": "Cadet",
+  "ageCadette": "Cadette",
+  "ageJuniorBoy": "Junior Garçon",
+  "ageJuniorGirl": "Junior Fille",
+  "ageSeniorSeries1": "Senior Série 1",
+  "ageSeniorSeries2": "Senior Série 2",
+  "ageSeniorSeries3": "Senior Série 3",
+
+  "poolUnique": "Poule unique",
+  "poolA": "Poule A",
+  "poolB": "Poule B",
+  "poolC": "Poule C",
+  "poolD": "Poule D",
+
+  "phasePoolMatch": "Match de poule",
+  "phaseRoundOf16": "Huitième de finale",
+  "phaseQuarterFinal": "Quart de finale",
+  "phaseSemiFinal": "Demi-finale",
+  "phaseFinal": "Finale",
+  "phaseClassification": "Match de classement",
+
+  "settings": "Paramètres",
+  "language": "Langue",
+  "french": "Français",
+  "english": "Anglais",
+  "matchSettings": "Match",
+  "umpireAnnouncements": "Annonces de l'arbitre",
+  "umpireAnnouncementsDescription": "Afficher les annonces à prononcer par l'arbitre pendant le match"
 }
