@@ -22,6 +22,10 @@ permissions:
 env:
   # À garder identique à JAVA_VERSION dans apps/api/Dockerfile
   JAVA_VERSION: "25"
+  # Version de Flutter avec laquelle l'app mobile est développée et testée.
+  # Fixée pour que la CI ne casse pas à chaque nouvelle version stable ;
+  # à garder identique à flutter-version dans cd.yml.
+  FLUTTER_VERSION: "3.47.9"
 
 jobs:
   changes:
@@ -235,6 +239,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
       - run: flutter pub get
       - run: dart format --output=none --set-exit-if-changed .
