@@ -22,9 +22,23 @@ spring:
     problemdetails:
       enabled: true
 
+  autoconfigure:
+    # No default in-memory user with a generated password: accounts live in the database
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+
+fenuasmash:
+  security:
+    jwt:
+      # Local default only: every deployment must set FENUASMASH_SECURITY_JWT_SECRET (32 bytes minimum)
+      secret: local-dev-secret-change-me-0123456789
+      # Covers a full tournament day
+      ttl: 12h
+
 server:
   # Finish in-flight requests before stopping (deployments, restarts)
   shutdown: graceful
+  # Read the client IP from X-Forwarded-For, set by the web proxy (nginx) on a private network
+  forward-headers-strategy: native
   error:
     include-stacktrace: never
     include-message: never

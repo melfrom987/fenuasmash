@@ -1,0 +1,7 @@
+# Production profile (SPRING_PROFILES_ACTIVE=prod, set in docker-compose.prod.yml).
+
+fenuasmash:
+  security:
+    jwt:
+      # No default in production: startup fails if the variable is missing
+      secret: ${FENUASMASH_SECURITY_JWT_SECRET}

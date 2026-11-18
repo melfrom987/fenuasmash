@@ -39,6 +39,16 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		return response;
 	}
 
+	@ExceptionHandler(TooManyRequestsException.class)
+	ResponseEntity<ProblemDetail> handleTooManyRequests(TooManyRequestsException ex) {
+		ResponseEntity<ProblemDetail> response = handleApiException(ex);
+		// Whole seconds, rounded up so that the client never retries too early
+		long seconds = Math.max(1, (ex.getRetryAfter().toMillis() + 999) / 1000);
+		return ResponseEntity.status(response.getStatusCode())
+			.header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
+			.body(response.getBody());
+	}
+
 	@ExceptionHandler(DataIntegrityViolationException.class)
 	ProblemDetail handleDataIntegrityViolation(DataIntegrityViolationException ex) {
 		log.warn("Data integrity violation: {}", ex.getMostSpecificCause().getMessage());
