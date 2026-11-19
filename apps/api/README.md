@@ -103,6 +103,9 @@ Use the `organization` package as the template. For a new feature (for example, 
 - Access rules live in `common/security/SecurityConfig`. **A new route is closed until a rule lets it in**: add one when adding an endpoint.
 - Missing or invalid tokens return **401** (`UNAUTHORIZED`), a wrong role returns **403** (`FORBIDDEN`).
 - After 5 failed logins for one email, or 20 from one IP, logins are refused for 15 minutes (**429**, `TOO_MANY_LOGIN_ATTEMPTS`, with `Retry-After`).
+- Umpire tablets do not log in. An organizer creates a one-time code for a court (`POST /api/courts/{id}/pairing-code`, valid 10 minutes), and the tablet exchanges it for a tablet token (`POST /api/tablets/pair`). The token starts with `fst_`, has no expiry and is sent as a bearer token too, with the `TABLET` role.
+- Pairing codes and tablet tokens are stored as SHA-256 hashes only. Each request with a tablet token is checked in the database and updates the tablet's last activity; a revoked tablet gets **401** (`TABLET_REVOKED`). A court has one paired tablet at most: pairing a new one revokes the previous one.
+- After 10 wrong pairing codes from one IP, pairing is refused for 15 minutes (**429**, `TOO_MANY_PAIRING_ATTEMPTS`).
 - In tests, `TestTokens` adds a signed token to a MockMvc request: `post(url).with(organizer(jwtService))`.
 
 ### Code Style

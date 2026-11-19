@@ -22,8 +22,14 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Reads {@code Authorization: Bearer <token>} and, when the token is valid,
- * authenticates the request with its {@link TokenClaims} as principal and
- * {@code ROLE_<role>} as authority.
+ * authenticates the request:
+ * <ul>
+ * <li>a JWT, issued at login, with its {@link TokenClaims} as principal and
+ * {@code ROLE_<role>} as authority;</li>
+ * <li>a tablet token (prefix {@code fst_}), checked in the database on every
+ * request, with its {@link TabletPrincipal} as principal and
+ * {@code ROLE_TABLET} as authority.</li>
+ * </ul>
  * <p>
  * A request without a bearer token goes on anonymously and the access rules
  * decide. A request with an invalid or expired token is rejected with a 401,
@@ -40,13 +46,17 @@ class BearerTokenFilter extends OncePerRequestFilter {
 
 	private final JwtService jwtService;
 
+	private final TabletAuthenticator tabletAuthenticator;
+
 	private final AuthenticationEntryPoint entryPoint;
 
 	private final SecurityContextHolderStrategy contextHolder = SecurityContextHolder
 		.getContextHolderStrategy();
 
-	BearerTokenFilter(JwtService jwtService, AuthenticationEntryPoint entryPoint) {
+	BearerTokenFilter(JwtService jwtService, TabletAuthenticator tabletAuthenticator,
+			AuthenticationEntryPoint entryPoint) {
 		this.jwtService = jwtService;
+		this.tabletAuthenticator = tabletAuthenticator;
 		this.entryPoint = entryPoint;
 	}
 
@@ -59,9 +69,10 @@ class BearerTokenFilter extends OncePerRequestFilter {
 			chain.doFilter(request, response);
 			return;
 		}
-		TokenClaims claims;
+		String token = header.substring(BEARER_PREFIX.length()).strip();
+		UsernamePasswordAuthenticationToken authentication;
 		try {
-			claims = jwtService.verify(header.substring(BEARER_PREFIX.length()).strip());
+			authentication = authenticate(token);
 		}
 		catch (InvalidTokenException ex) {
 			log.debug("Rejected access token: {}", ex.getMessage());
@@ -69,12 +80,21 @@ class BearerTokenFilter extends OncePerRequestFilter {
 			entryPoint.commence(request, response, new BadCredentialsException("Invalid access token", ex));
 			return;
 		}
-		var authentication = UsernamePasswordAuthenticationToken.authenticated(claims, null,
-				List.of(new SimpleGrantedAuthority("ROLE_" + claims.role().name())));
 		SecurityContext context = contextHolder.createEmptyContext();
 		context.setAuthentication(authentication);
 		contextHolder.setContext(context);
 		chain.doFilter(request, response);
+	}
+
+	private UsernamePasswordAuthenticationToken authenticate(String token) {
+		if (token.startsWith(TabletPrincipal.TOKEN_PREFIX)) {
+			TabletPrincipal tablet = tabletAuthenticator.authenticate(token);
+			return UsernamePasswordAuthenticationToken.authenticated(tablet, null,
+					List.of(new SimpleGrantedAuthority("ROLE_" + TabletPrincipal.ROLE)));
+		}
+		TokenClaims claims = jwtService.verify(token);
+		return UsernamePasswordAuthenticationToken.authenticated(claims, null,
+				List.of(new SimpleGrantedAuthority("ROLE_" + claims.role().name())));
 	}
 
 }
