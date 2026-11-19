@@ -1,9 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import { getAgeCategory } from '../age-category';
+import { getAgeCategory, seasonReferenceYear } from '../age-category';
 
-export function AgeCategoryBadge({ birthDate }: { birthDate: string }) {
+export function AgeCategoryBadge({
+  birthDate,
+  referenceYear = seasonReferenceYear(),
+}: {
+  birthDate: string;
+  referenceYear?: number;
+}) {
   const { t } = useTranslation();
-  const category = getAgeCategory(birthDate);
+  const category = getAgeCategory(birthDate, referenceYear);
   const isYouth = category.code !== 'SENIOR' && category.code !== 'VETERAN';
 
   return (

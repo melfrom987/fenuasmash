@@ -1,7 +1,7 @@
-import type { Club, Event } from '@/api/models';
+import type { Club, Event, Gender } from '@/api/models';
 import { isDoubles } from '@/features/registrations/constants';
 import { normalizeText } from '@/lib/text';
-import { parseDate } from './dates';
+import { parseDate, parseDateTime } from './dates';
 import { cellText } from './mapping';
 import { splitFullName } from './names';
 import {
@@ -14,13 +14,35 @@ import {
   type ValueMapping,
 } from './types';
 
-export type RowProblem = {
-  rowNumber: number;
-  code: 'NAME_MISSING' | 'DATE_UNREADABLE' | 'GENDER_UNKNOWN' | 'CLUB_MISSING';
-  value: string;
+export type MissingField = 'NAME' | 'BIRTH_DATE' | 'GENDER' | 'CLUB';
+
+export type RowFix = {
+  lastName?: string;
+  firstName?: string;
+  birthDate?: string;
+  gender?: Gender;
+  clubName?: string;
+  playerId?: string;
+  skip?: boolean;
 };
 
-export type NameOverrides = Record<number, { firstName: string; lastName: string }>;
+export type RowFixes = Record<number, RowFix>;
+
+export type RowProblem = {
+  rowNumber: number;
+  missing: MissingField[];
+  skipped: boolean;
+  fullName: string;
+  rawBirthDate: string;
+  draft: {
+    lastName: string;
+    firstName: string;
+    birthDate: string | null;
+    gender: Gender | null;
+    clubName: string;
+  };
+  entryCount: number;
+};
 
 const LOOKING_HINT = /recherch|looking|cherche/;
 const NO_PARTNER = new Set(['', 'non', 'no', '-']);
@@ -38,14 +60,14 @@ export function buildImportRows({
   values,
   events,
   clubs,
-  nameOverrides,
+  fixes,
 }: {
   table: Table;
   mapping: ColumnMapping;
   values: ValueMapping;
   events: Event[];
   clubs: Club[];
-  nameOverrides: NameOverrides;
+  fixes: RowFixes;
 }): { rows: ImportRow[]; problems: RowProblem[] } {
   const { fields } = mapping;
   const knownClubs = new Set(clubs.map((c) => normalizeText(c.name)));
@@ -54,25 +76,18 @@ export function buildImportRows({
 
   table.rows.forEach((cells, index) => {
     const rowNumber = index + 2;
+    const fix = fixes[rowNumber] ?? {};
     const text = (column: number | null) => (column === null ? '' : cellText(cells[column]));
-    const fail = (code: RowProblem['code'], value: string) =>
-      problems.push({ rowNumber, code, value });
 
     const fullName = text(fields.fullName);
-    const name = nameOverrides[rowNumber] ?? splitFullName(fullName, mapping.nameOrder);
-    if (!name.lastName || !name.firstName) return fail('NAME_MISSING', fullName);
+    const split = splitFullName(fullName, mapping.nameOrder);
+    const lastName = (fix.lastName ?? split.lastName).trim();
+    const firstName = (fix.firstName ?? split.firstName).trim();
 
     const birthCell = fields.birthDate === null ? '' : (cells[fields.birthDate] ?? '');
-    const birthDate = parseDate(birthCell, mapping.dateOrder);
-    if (!birthDate) return fail('DATE_UNREADABLE', cellText(birthCell));
-
-    const genderValue = text(fields.gender);
-    const gender = values.genders[genderValue];
-    if (!gender) return fail('GENDER_UNKNOWN', genderValue);
-
-    const clubName = text(fields.club);
-    if (!clubName) return fail('CLUB_MISSING', '');
-    const clubKey = normalizeText(clubName);
+    const birthDate = fix.birthDate ?? parseDate(birthCell, mapping.dateOrder);
+    const gender = fix.gender ?? values.genders[text(fields.gender)] ?? null;
+    const clubName = (fix.clubName ?? text(fields.club)).trim();
 
     const entries: ImportEntry[] = [];
     for (const { column, partnerColumn } of mapping.events) {
@@ -82,16 +97,41 @@ export function buildImportRows({
       entries.push({ eventId: event.id, partner: partnerOf(event, text(partnerColumn)) });
     }
 
+    const missing: MissingField[] = [];
+    if (!lastName || !firstName) missing.push('NAME');
+    if (!birthDate) missing.push('BIRTH_DATE');
+    if (!gender) missing.push('GENDER');
+    if (!clubName) missing.push('CLUB');
+
+    if (fix.skip || missing.length > 0 || !birthDate || !gender) {
+      problems.push({
+        rowNumber,
+        missing,
+        skipped: fix.skip === true,
+        fullName,
+        rawBirthDate: cellText(birthCell),
+        draft: { lastName, firstName, birthDate, gender, clubName },
+        entryCount: entries.length,
+      });
+      return;
+    }
+
+    const clubKey = normalizeText(clubName);
     rows.push({
       rowNumber,
-      firstName: name.firstName,
-      lastName: name.lastName,
+      firstName,
+      lastName,
       birthDate,
       gender,
       clubName,
       clubCity: knownClubs.has(clubKey) ? null : (values.clubCities[clubKey]?.trim() ?? null),
       email: text(fields.email) || null,
       phone: text(fields.phone) || null,
+      registeredAt:
+        fields.registeredAt === null
+          ? null
+          : parseDateTime(cells[fields.registeredAt] ?? '', mapping.dateOrder),
+      playerDecision: fix.playerId ? { action: 'USE_EXISTING', playerId: fix.playerId } : undefined,
       entries,
     });
   });

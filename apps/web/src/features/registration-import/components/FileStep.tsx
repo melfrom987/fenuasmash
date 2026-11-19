@@ -26,7 +26,9 @@ export function FileStep({ onLoaded }: { onLoaded: (table: Table) => void }) {
   return (
     <section className="space-y-4 rounded-lg bg-white p-6 shadow-sm">
       <div>
-        <h2 className="font-display text-base font-semibold">{t('registrationImport.file.title')}</h2>
+        <h2 className="font-display text-base font-semibold">
+          {t('registrationImport.file.title')}
+        </h2>
         <p className="text-sable-600 mt-1 text-sm">{t('registrationImport.file.hint')}</p>
       </div>
       {failure && <ErrorMessage>{t(`registrationImport.file.errors.${failure}`)}</ErrorMessage>}
