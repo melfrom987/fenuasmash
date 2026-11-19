@@ -1,5 +1,4 @@
 import 'package:badminton_umpire/features/match/application/controllers/match_controller.dart';
-import 'package:badminton_umpire/features/match/domain/models/match_config.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_draft.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_phase.dart';
 import 'package:badminton_umpire/features/match/domain/models/score_event.dart';
@@ -25,50 +24,6 @@ void main() {
       courtNumber: '1',
       newEventId: newId,
       clock: () => now,
-    );
-  }
-
-  /// Saves the controller the way the match page does.
-  MatchDraft draftOf(MatchController controller) {
-    return MatchDraft(
-      matchId: 'match-1',
-      config: const MatchConfig(
-        isDoubles: false,
-        teamAPlayers: ['Alice'],
-        teamBPlayers: ['Bob'],
-        tournamentName: 'Open',
-        courtNumber: '1',
-        category: 'Singles',
-        umpireName: 'Umpire',
-      ),
-      teamAScore: controller.teamAScore,
-      teamBScore: controller.teamBScore,
-      teamASets: controller.teamASets,
-      teamBSets: controller.teamBSets,
-      servingTeamId: controller.servingTeamId,
-      serverName: controller.serverName,
-      receiverName: controller.receiverName,
-      leftSideTeamId: controller.leftSideTeamId,
-      teamA: controller.teamA.copy(),
-      teamB: controller.teamB.copy(),
-      midSetIntervalTaken: controller.midSetIntervalTaken,
-      lastSetWinnerTeamId: controller.lastSetWinnerTeamId,
-      previousSets: controller.previousSets
-          .map((set) => List<int>.from(set))
-          .toList(),
-      phase: controller.phase,
-      intervalRemaining: controller.intervalRemaining,
-      history: controller.history,
-      events: controller.events,
-      scoreEvents: controller.scoreEvents,
-      matchStarted: true,
-      matchStartedAt: now,
-      matchFinishedAt: null,
-      warmupStarted: false,
-      warmupEndsAt: null,
-      shuttleCount: 1,
-      playerColors: const {},
-      savedAt: now,
     );
   }
 
@@ -185,7 +140,9 @@ void main() {
     controller.addPoint('teamA');
     controller.addPoint('teamB');
 
-    final saved = MatchDraft.fromJson(draftOf(controller).toJson());
+    final saved = MatchDraft.fromJson(
+      draftOf(controller, savedAt: now).toJson(),
+    );
     final restored = MatchController.fromDraft(
       saved,
       newEventId: newId,
@@ -202,7 +159,8 @@ void main() {
   });
 
   test('reads drafts saved before score events existed', () {
-    final json = draftOf(createController()).toJson()..remove('scoreEvents');
+    final json = draftOf(createController(), savedAt: now).toJson()
+      ..remove('scoreEvents');
 
     expect(MatchDraft.fromJson(json).scoreEvents, isEmpty);
   });

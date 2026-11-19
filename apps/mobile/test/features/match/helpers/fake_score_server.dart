@@ -12,6 +12,10 @@ class FakeScoreServer implements ScoreEventApi {
   /// The next request is applied, but its answer is lost on the way back.
   bool loseNextAnswer = false;
 
+  /// When set, the network cuts once this many more requests have reached
+  /// the server, for example in the middle of a sync sent in several batches.
+  int? requestsBeforeCut;
+
   /// The next request fails with a server error, without being applied.
   bool failNextWithServerError = false;
 
@@ -34,10 +38,17 @@ class FakeScoreServer implements ScoreEventApi {
   ) async {
     await Future<void>.delayed(Duration.zero);
     attemptCount++;
+    if (requestsBeforeCut == 0) {
+      online = false;
+      requestsBeforeCut = null;
+    }
     if (!online) {
       return const ScoreEventsUnreachable(reason: 'offline');
     }
     requestCount++;
+    if (requestsBeforeCut != null) {
+      requestsBeforeCut = requestsBeforeCut! - 1;
+    }
     if (events.isEmpty || events.length > maxBatchSize) {
       return const ScoreEventsRejected(code: 'VALIDATION_FAILED');
     }

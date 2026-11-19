@@ -1,4 +1,6 @@
 import 'package:badminton_umpire/features/match/application/controllers/match_controller.dart';
+import 'package:badminton_umpire/features/match/domain/models/match_config.dart';
+import 'package:badminton_umpire/features/match/domain/models/match_draft.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_phase.dart';
 
 MatchController createSinglesController({
@@ -87,5 +89,53 @@ void expectPhase(MatchController controller, MatchPhase phase) {
   assert(
     controller.phase == phase,
     'Expected $phase but got ${controller.phase}',
+  );
+}
+
+/// Saves a singles match between Alice and Bob the way the match page does.
+MatchDraft draftOf(
+  MatchController controller, {
+  String matchId = 'match-1',
+  required DateTime savedAt,
+}) {
+  return MatchDraft(
+    matchId: matchId,
+    config: const MatchConfig(
+      isDoubles: false,
+      teamAPlayers: ['Alice'],
+      teamBPlayers: ['Bob'],
+      tournamentName: 'Open',
+      courtNumber: '1',
+      category: 'Singles',
+      umpireName: 'Umpire',
+    ),
+    teamAScore: controller.teamAScore,
+    teamBScore: controller.teamBScore,
+    teamASets: controller.teamASets,
+    teamBSets: controller.teamBSets,
+    servingTeamId: controller.servingTeamId,
+    serverName: controller.serverName,
+    receiverName: controller.receiverName,
+    leftSideTeamId: controller.leftSideTeamId,
+    teamA: controller.teamA.copy(),
+    teamB: controller.teamB.copy(),
+    midSetIntervalTaken: controller.midSetIntervalTaken,
+    lastSetWinnerTeamId: controller.lastSetWinnerTeamId,
+    previousSets: controller.previousSets
+        .map((set) => List<int>.from(set))
+        .toList(),
+    phase: controller.phase,
+    intervalRemaining: controller.intervalRemaining,
+    history: controller.history,
+    events: controller.events,
+    scoreEvents: controller.scoreEvents,
+    matchStarted: true,
+    matchStartedAt: savedAt,
+    matchFinishedAt: null,
+    warmupStarted: false,
+    warmupEndsAt: null,
+    shuttleCount: 1,
+    playerColors: const {},
+    savedAt: savedAt,
   );
 }
