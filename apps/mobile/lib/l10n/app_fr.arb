@@ -294,5 +294,36 @@
   "english": "Anglais",
   "matchSettings": "Match",
   "umpireAnnouncements": "Annonces de l'arbitre",
-  "umpireAnnouncementsDescription": "Afficher les annonces à prononcer par l'arbitre pendant le match"
+  "umpireAnnouncementsDescription": "Afficher les annonces à prononcer par l'arbitre pendant le match",
+
+  "scoreSyncUpToDate": "À jour",
+  "@scoreSyncUpToDate": {
+    "description": "Sync indicator: every point is confirmed by the server"
+  },
+  "scoreSyncPending": "{count} en attente",
+  "@scoreSyncPending": {
+    "description": "Sync indicator: points waiting to be sent, server reachable",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scoreSyncOffline": "Hors ligne · {count} en attente",
+  "@scoreSyncOffline": {
+    "description": "Sync indicator: server unreachable, points kept on the tablet",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scoreSyncBlocked": "Envoi bloqué",
+  "@scoreSyncBlocked": {
+    "description": "Sync indicator: the server refused the points of a match"
+  },
+  "scoreSyncUpToDateTooltip": "Tous les points sont enregistrés sur le serveur.",
+  "scoreSyncPendingTooltip": "Les points sont gardés sur la tablette et envoyés au serveur.",
+  "scoreSyncOfflineTooltip": "Le serveur est injoignable. Les points sont gardés sur la tablette et seront envoyés au retour du réseau.",
+  "scoreSyncBlockedTooltip": "Le serveur refuse les points d'un match. Ils sont gardés sur la tablette : prévenez l'organisateur."
 }

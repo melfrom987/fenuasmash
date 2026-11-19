@@ -49,6 +49,9 @@ class MatchLayout extends StatelessWidget {
 
   final VoidCallback onOpenActions;
 
+  /// Shows whether the points reached the server; hidden when null.
+  final Widget? syncIndicator;
+
   final bool leftIsServing;
   final bool rightIsServing;
 
@@ -90,6 +93,7 @@ class MatchLayout extends StatelessWidget {
     required this.onIncrementShuttle,
     required this.onDecrementShuttle,
     required this.onOpenActions,
+    this.syncIndicator,
     required this.onPlayerTap,
     required this.leftIsServing,
     required this.rightIsServing,
@@ -126,6 +130,7 @@ class MatchLayout extends StatelessWidget {
             tournamentPhase: tournamentPhase,
             matchDuration: matchDuration,
             onOpenActions: onOpenActions,
+            syncIndicator: syncIndicator,
           ),
 
           SizedBox(height: responsive.spaceXS),

@@ -13,11 +13,13 @@ import 'package:badminton_umpire/features/match/domain/models/match_snapshot.dar
 import 'package:badminton_umpire/features/match/domain/models/score_event.dart';
 import 'package:badminton_umpire/features/match/data/services/match_draft_service.dart';
 import 'package:badminton_umpire/features/match/data/services/score_event_outbox.dart';
+import 'package:badminton_umpire/features/match/data/services/score_event_sync.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/menus/actions_menu.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/dialogs/correct_positions_dialog.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/dialogs/disciplinary_event_dialog.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/dialogs/retirement_dialog.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/dialogs/umpire_announcement_dialog.dart';
+import 'package:badminton_umpire/features/match/presentation/widgets/header/score_sync_indicator.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/layouts/match_layout.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/overlays/match_finished_overlay.dart';
 import 'package:badminton_umpire/features/match/presentation/widgets/dialogs/player_colors_dialog.dart';
@@ -88,6 +90,10 @@ class _MatchPageState extends State<MatchPage> {
 
   final MatchDraftService _draftService = MatchDraftService();
   final ScoreEventOutbox _scoreEventOutbox = ScoreEventOutbox();
+
+  /// Sends the queued points to the server. Null while the app has no server
+  /// to send to: the points then stay in the queue and no indicator is shown.
+  ScoreEventSyncScheduler? _scoreSync;
 
   DateTime? _warmupEndsAt;
 
@@ -228,6 +234,7 @@ class _MatchPageState extends State<MatchPage> {
     _warmupTimer?.cancel();
     _matchTimer?.cancel();
     _draftDebounceTimer?.cancel();
+    _scoreSync?.dispose();
 
     matchController.removeListener(_refreshMatchPage);
     matchController.removeListener(_handleMatchControllerChanged);
@@ -302,6 +309,7 @@ class _MatchPageState extends State<MatchPage> {
             children: [
               Positioned.fill(
                 child: MatchLayout(
+                  syncIndicator: _buildSyncIndicator(),
                   teamAIsOnLeft: matchController.teamAIsOnLeft,
                   courtNumber: widget.config.courtNumber,
                   tournamentName: widget.config.tournamentName,

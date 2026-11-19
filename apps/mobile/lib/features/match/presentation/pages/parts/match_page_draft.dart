@@ -73,7 +73,30 @@ extension _MatchPageDraft on _MatchPageState {
       await _scoreEventOutbox.enqueue(_matchId, matchController.scoreEvents);
     } catch (error) {
       debugPrint('Could not queue score events: $error');
+      return;
     }
+    final scoreSync = _scoreSync;
+    if (scoreSync != null) {
+      unawaited(scoreSync.syncNow());
+    }
+  }
+
+  /// Badge showing whether the points reached the server, or null when the
+  /// app has no server to send to.
+  Widget? _buildSyncIndicator() {
+    final scoreSync = _scoreSync;
+    if (scoreSync == null) {
+      return null;
+    }
+    return ValueListenableBuilder<ScoreSyncReport?>(
+      valueListenable: scoreSync.lastReport,
+      builder: (context, report, _) {
+        if (report == null) {
+          return const SizedBox.shrink();
+        }
+        return ScoreSyncIndicator.fromReport(report);
+      },
+    );
   }
 
   void _scheduleTemporarySave() {

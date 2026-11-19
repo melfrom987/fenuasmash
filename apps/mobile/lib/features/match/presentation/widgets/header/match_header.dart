@@ -18,6 +18,9 @@ class MatchHeader extends StatelessWidget {
 
   final VoidCallback onOpenActions;
 
+  /// Shows whether the points reached the server; hidden when null.
+  final Widget? syncIndicator;
+
   const MatchHeader({
     super.key,
     required this.tournamentName,
@@ -28,6 +31,7 @@ class MatchHeader extends StatelessWidget {
     this.ageCategory,
     this.tournamentPhase,
     this.poolGroup,
+    this.syncIndicator,
   });
 
   @override
@@ -86,6 +90,11 @@ class MatchHeader extends StatelessWidget {
             label: l10n.duration,
             value: AppFormatters.durationClock(matchDuration),
           ),
+
+          if (syncIndicator case final indicator?) ...[
+            const _HeaderDivider(),
+            indicator,
+          ],
 
           SizedBox(width: responsive.spaceS),
 
