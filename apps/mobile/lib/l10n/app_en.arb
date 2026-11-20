@@ -293,6 +293,14 @@
   "english": "English",
   "matchSettings": "Match",
   "umpireAnnouncements": "Umpire announcements",
-  "umpireAnnouncementsDescription": "Display announcements to be spoken by the umpire during the match"
+  "umpireAnnouncementsDescription": "Display announcements to be spoken by the umpire during the match",
 
+  "scoreSyncUpToDate": "Up to date",
+  "scoreSyncPending": "{count} pending",
+  "scoreSyncOffline": "Offline · {count} pending",
+  "scoreSyncBlocked": "Sending blocked",
+  "scoreSyncUpToDateTooltip": "Every point is saved on the server.",
+  "scoreSyncPendingTooltip": "Points are kept on the tablet and sent to the server.",
+  "scoreSyncOfflineTooltip": "The server cannot be reached. Points are kept on the tablet and will be sent when the network is back.",
+  "scoreSyncBlockedTooltip": "The server refuses the points of a match. They are kept on the tablet: tell the organizer."
 }

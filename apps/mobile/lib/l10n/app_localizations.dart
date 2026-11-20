@@ -1102,6 +1102,54 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Afficher les annonces à prononcer par l\'arbitre pendant le match'**
   String get umpireAnnouncementsDescription;
+
+  /// Sync indicator: every point is confirmed by the server
+  ///
+  /// In fr, this message translates to:
+  /// **'À jour'**
+  String get scoreSyncUpToDate;
+
+  /// Sync indicator: points waiting to be sent, server reachable
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} en attente'**
+  String scoreSyncPending(int count);
+
+  /// Sync indicator: server unreachable, points kept on the tablet
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne · {count} en attente'**
+  String scoreSyncOffline(int count);
+
+  /// Sync indicator: the server refused the points of a match
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi bloqué'**
+  String get scoreSyncBlocked;
+
+  /// No description provided for @scoreSyncUpToDateTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les points sont enregistrés sur le serveur.'**
+  String get scoreSyncUpToDateTooltip;
+
+  /// No description provided for @scoreSyncPendingTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les points sont gardés sur la tablette et envoyés au serveur.'**
+  String get scoreSyncPendingTooltip;
+
+  /// No description provided for @scoreSyncOfflineTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur est injoignable. Les points sont gardés sur la tablette et seront envoyés au retour du réseau.'**
+  String get scoreSyncOfflineTooltip;
+
+  /// No description provided for @scoreSyncBlockedTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur refuse les points d\'un match. Ils sont gardés sur la tablette : prévenez l\'organisateur.'**
+  String get scoreSyncBlockedTooltip;
 }
 
 class _AppLocalizationsDelegate
