@@ -99,11 +99,24 @@ Use the `organization` package as the template. For a new feature (for example, 
 ### Security
 
 - Clients log in with `POST /api/auth/login` and send the token as `Authorization: Bearer <token>`. Tokens are valid for 12 hours.
-- Reads are public, except player records and registrations (organizers and clubs only). Organizers manage tournaments, events, courts, clubs, players and registrations. The admin creates accounts and organizations.
+- Reads are public, except player records and registrations (organizers and clubs only). Organizers manage tournaments, events, courts, matches, clubs, players and registrations. The admin creates accounts and organizations. A paired umpire tablet only moves the match on its own court: warm-up, start, finish and reopen.
 - Access rules live in `common/security/SecurityConfig`. **A new route is closed until a rule lets it in**: add one when adding an endpoint.
 - Missing or invalid tokens return **401** (`UNAUTHORIZED`), a wrong role returns **403** (`FORBIDDEN`).
 - After 5 failed logins for one email, or 20 from one IP, logins are refused for 15 minutes (**429**, `TOO_MANY_LOGIN_ATTEMPTS`, with `Retry-After`).
+- Umpire tablets do not log in. An organizer creates a one-time code for a court (`POST /api/courts/{id}/pairing-code`, valid 10 minutes), and the tablet exchanges it for a tablet token (`POST /api/tablets/pair`). The token starts with `fst_`, has no expiry and is sent as a bearer token too, with the `TABLET` role.
+- Pairing codes and tablet tokens are stored as SHA-256 hashes only. Each request with a tablet token is checked in the database and updates the tablet's last activity; a revoked tablet gets **401** (`TABLET_REVOKED`). A court has one paired tablet at most: pairing a new one revokes the previous one.
+- After 10 wrong pairing codes from one IP, pairing is refused for 15 minutes (**429**, `TOO_MANY_PAIRING_ATTEMPTS`).
 - In tests, `TestTokens` adds a signed token to a MockMvc request: `post(url).with(organizer(jwtService))`.
+
+### Concurrent Changes
+
+- A resource that several people may change at the same time carries a JPA `@Version` (for a match, `stateVersion`). The client sends back the version it read: a different version is rejected with **409** (`STATE_VERSION_CONFLICT`) before anything changes, and a change saved by another request in the meantime gets the same answer.
+
+### Matches on Courts
+
+- A match is on its court while `CALLED`, `WARMUP` or `IN_PROGRESS`. A partial unique index keeps one match per court.
+- Calls to a court lock the tournament row (`SELECT ... FOR UPDATE`) until the commit, so two calls made at the same moment cannot put one side on two courts.
+- A court keeps the matches it received as history: it cannot be deleted afterwards (`COURT_IN_USE`), only disabled.
 
 ### Code Style
 

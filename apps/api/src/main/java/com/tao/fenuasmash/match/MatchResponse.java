@@ -1,0 +1,17 @@
+package com.tao.fenuasmash.match;
+
+import java.time.Instant;
+import java.util.UUID;
+
+public record MatchResponse(UUID id, UUID tournamentId, UUID eventId, Integer round, UUID sideA, UUID sideB,
+		UUID courtId, MatchStatus status, MatchSide winner, MatchOutcome outcome, int stateVersion,
+		Instant startedAt, Instant endedAt, Instant createdAt, Instant updatedAt) {
+
+	static MatchResponse from(Match match) {
+		return new MatchResponse(match.getId(), match.getTournamentId(), match.getEventId(), match.getRound(),
+				match.getSideA(), match.getSideB(), match.getCourtId(), match.getStatus(), match.getWinner(),
+				match.getOutcome(), match.getStateVersion(), match.getStartedAt(), match.getEndedAt(),
+				match.getCreatedAt(), match.getUpdatedAt());
+	}
+
+}
