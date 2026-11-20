@@ -40,8 +40,10 @@ class SecurityProblemHandler implements AuthenticationEntryPoint, AccessDeniedHa
 	public void commence(HttpServletRequest request, HttpServletResponse response,
 			AuthenticationException authException) throws IOException {
 		response.setHeader(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
-		write(request, response, HttpStatus.UNAUTHORIZED, UNAUTHORIZED_CODE,
-				"A valid access token is required");
+		// A revoked tablet gets its own code, so that it asks for a new pairing
+		String code = authException.getCause() instanceof InvalidTokenException invalidToken ? invalidToken.getCode()
+				: UNAUTHORIZED_CODE;
+		write(request, response, HttpStatus.UNAUTHORIZED, code, "A valid access token is required");
 	}
 
 	@Override
