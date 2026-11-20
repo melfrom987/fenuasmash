@@ -20,7 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * <p>
  * Reads are public, except player records and registrations, which only
  * organizers and clubs can read. Organizers manage tournaments, events, courts,
- * clubs, players and registrations; the admin manages accounts and
+ * matches, clubs, players and registrations; the admin manages accounts and
  * organizations. Routes added later are closed until a rule lets them in.
  */
 @Configuration
@@ -64,6 +64,7 @@ class SecurityConfig {
 				.requestMatchers(HttpMethod.GET, "/api/**")
 				.permitAll()
 				.requestMatchers("/api/tournaments", "/api/tournaments/**", "/api/events/**", "/api/courts/**",
+						"/api/matches/**",
 						"/api/clubs", "/api/clubs/**", "/api/players", "/api/players/**", "/api/registrations/**")
 				.hasRole("ORGANIZER")
 				// Anything not listed above is closed by default
