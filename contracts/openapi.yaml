@@ -5,7 +5,7 @@ info:
   version: 0.1.0
   description: |
     Badminton tournament management: tournaments and their rules, events, courts,
-    matches, clubs, players and registrations.
+    matches, umpire tablets, clubs, players and registrations.
 
     This file is the single source of truth shared by the backend, the web app and the
     mobile app (see `contracts/README.md`). It is updated **before** the code.
@@ -30,6 +30,10 @@ info:
     - No token, or an invalid or expired one, returns **401** `UNAUTHORIZED`, even on a public
       operation: the client should then log in again. A role that is not allowed returns
       **403** `FORBIDDEN`.
+    - Umpire tablets do not log in: they are paired with a court with a one-time code
+      (`POST /tablets/pair`) and send the tablet token they get the same way, as
+      `Authorization: Bearer <accessToken>`. A tablet token has no expiry, but stops working
+      as soon as the tablet is revoked: requests then return **401** `TABLET_REVOKED`.
 
     | Role | Can |
     |---|---|
@@ -38,6 +42,7 @@ info:
     | `ORGANIZER` | Manage tournaments, events, courts, matches, clubs, players and registrations |
     | `CLUB` | Read players and registrations (planned: only the players of its club) |
     | `PLAYER` | Planned with online registration (phase 3) |
+    | `TABLET` | A paired umpire tablet: reads its court (planned: sends the scores of its court) |
 
 servers:
   - url: /api
@@ -53,6 +58,7 @@ tags:
   - name: Events
   - name: Courts
   - name: Matches
+  - name: Tablets
   - name: Clubs
   - name: Players
   - name: Registrations
@@ -602,6 +608,124 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # INVALID_STATUS_TRANSITION, MATCH_SIDES_INCOMPLETE, STATE_VERSION_CONFLICT
+
+  # ---------------------------------------------------------------- Tablets
+  /courts/{courtId}/pairing-code:
+    parameters:
+      - $ref: '#/components/parameters/CourtId'
+    post:
+      tags: [Tablets]
+      operationId: createPairingCode
+      x-roles: [ORGANIZER]
+      summary: Create a one-time code to pair an umpire tablet with a court
+      description: |
+        The organizer shows the code to the umpire, who types it on the tablet. The code is
+        valid for 10 minutes and for one pairing only. Creating a new code for the court
+        replaces the previous one. The code is stored hashed: it cannot be read again.
+      responses:
+        '201':
+          description: 'Created. The response is never cached (`Cache-Control: no-store`).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PairingCode' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # COURT_INACTIVE
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tablets/pair:
+    post:
+      tags: [Tablets]
+      operationId: pairTablet
+      security: []
+      summary: Pair the tablet with a court, using the code given by the organizer
+      description: |
+        Returns the tablet token, to send as `Authorization: Bearer <accessToken>` on every
+        request. The tablet keeps it until it is revoked; the server only stores its hash.
+
+        A court has one paired tablet at most: pairing a new tablet revokes the previous one.
+
+        The code is case insensitive, and spaces and dashes are ignored. A wrong, expired or
+        used code gets `INVALID_PAIRING_CODE`. After 10 wrong codes from one IP address, every
+        pairing from that address is refused for 15 minutes with `TOO_MANY_PAIRING_ATTEMPTS`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PairTabletRequest' }
+      responses:
+        '200':
+          description: 'Paired. The response is never cached (`Cache-Control: no-store`).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PairTabletResponse' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED, INVALID_PAIRING_CODE
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # COURT_INACTIVE
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /tablets/me:
+    get:
+      tags: [Tablets]
+      operationId: getCurrentTablet
+      x-roles: [TABLET]
+      summary: Get the tablet and its court
+      description: |
+        Lets the tablet check at startup that it is still paired: a revoked tablet gets
+        **401** `TABLET_REVOKED`, and should then ask for a new code.
+      responses:
+        '200':
+          description: The tablet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CurrentTablet' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tournaments/{tournamentId}/tablets:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Tablets]
+      operationId: listTablets
+      x-roles: [ORGANIZER]
+      summary: List the tablets paired with the courts of a tournament
+      description: By court number, then the most recent pairing first. Revoked tablets are included.
+      responses:
+        '200':
+          description: The tablets
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Tablet' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tablets/{tabletId}/revoke:
+    parameters:
+      - $ref: '#/components/parameters/TabletId'
+    post:
+      tags: [Tablets]
+      operationId: revokeTablet
+      x-roles: [ORGANIZER]
+      summary: Revoke a tablet
+      description: |
+        The tablet token stops working at once. Revoking a tablet already revoked changes
+        nothing and keeps the first `revokedAt`.
+      responses:
+        '200':
+          description: Revoked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tablet' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -1002,8 +1126,9 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      bearerFormat: JWT
-      description: Access token returned by `POST /auth/login`
+      description: |
+        Access token returned by `POST /auth/login` (a JWT), or tablet token returned by
+        `POST /tablets/pair` (an opaque string starting with `fst_`)
 
   parameters:
     OrganizationId:
@@ -1028,6 +1153,11 @@ components:
       schema: { type: string, format: uuid }
     MatchId:
       name: matchId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TabletId:
+      name: tabletId
       in: path
       required: true
       schema: { type: string, format: uuid }
@@ -1073,7 +1203,9 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
     Unauthorized:
-      description: Missing, invalid or expired token (`UNAUTHORIZED`). Log in again.
+      description: |
+        Missing, invalid or expired token (`UNAUTHORIZED`): log in again. With a tablet token,
+        `TABLET_REVOKED` when the tablet was revoked: pair it again.
       headers:
         WWW-Authenticate:
           schema: { type: string, example: Bearer }
@@ -1086,7 +1218,7 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
     TooManyRequests:
-      description: Too many failed logins (`TOO_MANY_LOGIN_ATTEMPTS`)
+      description: Too many failed logins (`TOO_MANY_LOGIN_ATTEMPTS`) or pairings (`TOO_MANY_PAIRING_ATTEMPTS`)
       headers:
         Retry-After:
           description: Seconds to wait before trying again
@@ -1140,12 +1272,17 @@ components:
         - TOO_MANY_LOGIN_ATTEMPTS
         - INVALID_ROLE
         - EMAIL_ALREADY_USED
+        # Tablets
+        - INVALID_PAIRING_CODE
+        - TOO_MANY_PAIRING_ATTEMPTS
+        - TABLET_REVOKED
         # Not found
         - ORGANIZATION_NOT_FOUND
         - TOURNAMENT_NOT_FOUND
         - EVENT_NOT_FOUND
         - COURT_NOT_FOUND
         - MATCH_NOT_FOUND
+        - TABLET_NOT_FOUND
         - CLUB_NOT_FOUND
         - PLAYER_NOT_FOUND
         - REGISTRATION_NOT_FOUND
@@ -1646,6 +1783,71 @@ components:
           type: [string, 'null']
           enum: [NORMAL, RETIRED, null]
           description: Required for `FINISHED`
+
+    # ------------------------------------------------------------ Tablets
+    PairingCode:
+      type: object
+      required: [code, courtId, expiresAt]
+      properties:
+        code:
+          type: string
+          pattern: '^[A-HJKMNP-Z2-9]{6}$'
+          description: 6 characters, without the ones easy to confuse (0, O, 1, I, L)
+          example: K7MP4X
+        courtId: { type: string, format: uuid }
+        expiresAt: { type: string, format: date-time }
+
+    PairTabletRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Case insensitive; spaces and dashes are ignored
+        deviceName:
+          type: [string, 'null']
+          maxLength: 100
+          description: Shown to the organizer to recognize the tablet, e.g. "Galaxy Tab A8"
+
+    PairTabletResponse:
+      type: object
+      required: [tabletId, accessToken, tokenType, court]
+      properties:
+        tabletId: { type: string, format: uuid }
+        accessToken:
+          type: string
+          description: 'To keep on the tablet and send as `Authorization: Bearer <accessToken>`'
+        tokenType: { type: string, enum: [Bearer] }
+        court: { $ref: '#/components/schemas/Court' }
+
+    CurrentTablet:
+      type: object
+      required: [id, deviceName, pairedAt, court]
+      properties:
+        id: { type: string, format: uuid }
+        deviceName: { type: [string, 'null'] }
+        pairedAt: { type: string, format: date-time }
+        court: { $ref: '#/components/schemas/Court' }
+
+    Tablet:
+      type: object
+      required: [id, courtId, courtNumber, deviceName, pairedAt, lastSeenAt, revokedAt]
+      properties:
+        id: { type: string, format: uuid }
+        courtId: { type: string, format: uuid }
+        courtNumber: { type: integer, minimum: 1 }
+        deviceName: { type: [string, 'null'] }
+        pairedAt: { type: string, format: date-time }
+        lastSeenAt:
+          type: string
+          format: date-time
+          description: Last request made with the tablet token
+        revokedAt:
+          type: [string, 'null']
+          format: date-time
+          description: null while the tablet is paired
 
     # ------------------------------------------------------------ Clubs (planned)
     Club:
