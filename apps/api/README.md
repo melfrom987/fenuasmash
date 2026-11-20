@@ -99,11 +99,15 @@ Use the `organization` package as the template. For a new feature (for example, 
 ### Security
 
 - Clients log in with `POST /api/auth/login` and send the token as `Authorization: Bearer <token>`. Tokens are valid for 12 hours.
-- Reads are public, except player records and registrations (organizers and clubs only). Organizers manage tournaments, events, courts, clubs, players and registrations. The admin creates accounts and organizations.
+- Reads are public, except player records and registrations (organizers and clubs only). Organizers manage tournaments, events, courts, matches, clubs, players and registrations. The admin creates accounts and organizations.
 - Access rules live in `common/security/SecurityConfig`. **A new route is closed until a rule lets it in**: add one when adding an endpoint.
 - Missing or invalid tokens return **401** (`UNAUTHORIZED`), a wrong role returns **403** (`FORBIDDEN`).
 - After 5 failed logins for one email, or 20 from one IP, logins are refused for 15 minutes (**429**, `TOO_MANY_LOGIN_ATTEMPTS`, with `Retry-After`).
 - In tests, `TestTokens` adds a signed token to a MockMvc request: `post(url).with(organizer(jwtService))`.
+
+### Concurrent Changes
+
+- A resource that several people may change at the same time carries a JPA `@Version` (for a match, `stateVersion`). The client sends back the version it read: a different version is rejected with **409** (`STATE_VERSION_CONFLICT`) before anything changes, and a change saved by another request in the meantime gets the same answer.
 
 ### Code Style
 

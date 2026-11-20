@@ -7,6 +7,7 @@ import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -47,6 +48,20 @@ class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		return ResponseEntity.status(response.getStatusCode())
 			.header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
 			.body(response.getBody());
+	}
+
+	/**
+	 * Another request changed the same row between the read and the save (JPA
+	 * {@code @Version}, e.g. the {@code stateVersion} of a match).
+	 */
+	@ExceptionHandler(OptimisticLockingFailureException.class)
+	ProblemDetail handleOptimisticLockingFailure(OptimisticLockingFailureException ex) {
+		log.info("Concurrent change rejected: {}", ex.getMessage());
+		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+				"The resource was changed by another request, read it again");
+		problem.setTitle(HttpStatus.CONFLICT.getReasonPhrase());
+		problem.setProperty("code", "STATE_VERSION_CONFLICT");
+		return problem;
 	}
 
 	@ExceptionHandler(DataIntegrityViolationException.class)

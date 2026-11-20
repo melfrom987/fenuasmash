@@ -5,7 +5,7 @@ info:
   version: 0.1.0
   description: |
     Badminton tournament management: tournaments and their rules, events, courts,
-    clubs, players and registrations.
+    matches, clubs, players and registrations.
 
     This file is the single source of truth shared by the backend, the web app and the
     mobile app (see `contracts/README.md`). It is updated **before** the code.
@@ -33,9 +33,9 @@ info:
 
     | Role | Can |
     |---|---|
-    | (public) | Read organizations, tournaments, events, courts and clubs |
+    | (public) | Read organizations, tournaments, events, courts, matches and clubs |
     | `ADMIN` | Create accounts and organizations |
-    | `ORGANIZER` | Manage tournaments, events, courts, clubs, players and registrations |
+    | `ORGANIZER` | Manage tournaments, events, courts, matches, clubs, players and registrations |
     | `CLUB` | Read players and registrations (planned: only the players of its club) |
     | `PLAYER` | Planned with online registration (phase 3) |
 
@@ -52,6 +52,7 @@ tags:
   - name: Tournaments
   - name: Events
   - name: Courts
+  - name: Matches
   - name: Clubs
   - name: Players
   - name: Registrations
@@ -455,6 +456,152 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # COURT_NOT_LAST; planned: COURT_IN_USE
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------------------------------------------------------------- Matches
+  /events/{eventId}/matches:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Matches]
+      operationId: listEventMatches
+      security: []
+      summary: List the matches of an event
+      description: By round (matches without a round last), then creation order.
+      responses:
+        '200':
+          description: The matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Match' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Matches]
+      operationId: createMatch
+      x-roles: [ORGANIZER]
+      summary: Create a match in an event
+      description: |
+        Matches will mostly be created by the draws (#92, #93). This operation creates one by
+        hand, for example for a demonstration or a match added on the day. A side can stay
+        empty until it is known, e.g. the winner of a previous round.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateMatchRequest' }
+      responses:
+        '201':
+          description: Created, with status `SCHEDULED`
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED, INVALID_MATCH_SIDES (same registration on both sides)
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tournaments/{tournamentId}/matches:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Matches]
+      operationId: listTournamentMatches
+      security: []
+      summary: List the matches of a tournament, all events together
+      description: By round (matches without a round last), then creation order.
+      parameters:
+        - name: status
+          in: query
+          description: Only the matches in these statuses; repeat it for several (`?status=READY&status=CALLED`)
+          schema:
+            type: array
+            items: { $ref: '#/components/schemas/MatchStatus' }
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: The matches
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Match' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /matches/{matchId}:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    get:
+      tags: [Matches]
+      operationId: getMatch
+      security: []
+      summary: Get a match
+      responses:
+        '200':
+          description: The match
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /matches/{matchId}/status:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [Matches]
+      operationId: changeMatchStatus
+      x-roles: [ORGANIZER]
+      summary: Move a match to another status
+      description: |
+        Only these transitions are allowed:
+
+        | From | To |
+        |---|---|
+        | `SCHEDULED` | `READY`, `CANCELLED`, `WALKOVER` |
+        | `READY` | `SCHEDULED`, `CALLED`, `CANCELLED`, `WALKOVER` |
+        | `CALLED` | `READY`, `WARMUP`, `CANCELLED`, `WALKOVER` |
+        | `WARMUP` | `CALLED`, `IN_PROGRESS`, `CANCELLED`, `WALKOVER` |
+        | `IN_PROGRESS` | `FINISHED` |
+        | `FINISHED` | `IN_PROGRESS` (reopened, e.g. to undo the last point) |
+        | `CANCELLED`, `WALKOVER` | none: final |
+
+        Any other transition gets `INVALID_STATUS_TRANSITION`. Every status except
+        `SCHEDULED` and `CANCELLED` needs both sides (`MATCH_SIDES_INCOMPLETE`).
+
+        **Result:** `FINISHED` needs `winner` and `outcome` (`NORMAL`, or `RETIRED` when the
+        loser retired). `WALKOVER` needs `winner` (the side that did not forfeit); its
+        outcome is `WALKOVER`. Other statuses take neither (`INVALID_MATCH_RESULT`). Leaving
+        `FINISHED` clears the result.
+
+        **Concurrent changes:** send the `stateVersion` read with the match. If the match
+        changed since, nothing is applied and the answer is `STATE_VERSION_CONFLICT`: read
+        the match again, then decide. Every change increments `stateVersion`.
+
+        Planned: the umpire tablet of the court will also move its match (warm-up, start,
+        retirement), once matches are assigned to courts (#99).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ChangeMatchStatusRequest' }
+      responses:
+        '200':
+          description: Changed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED, INVALID_MATCH_RESULT
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # INVALID_STATUS_TRANSITION, MATCH_SIDES_INCOMPLETE, STATE_VERSION_CONFLICT
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -879,6 +1026,11 @@ components:
       in: path
       required: true
       schema: { type: string, format: uuid }
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     ClubId:
       name: clubId
       in: path
@@ -993,6 +1145,7 @@ components:
         - TOURNAMENT_NOT_FOUND
         - EVENT_NOT_FOUND
         - COURT_NOT_FOUND
+        - MATCH_NOT_FOUND
         - CLUB_NOT_FOUND
         - PLAYER_NOT_FOUND
         - REGISTRATION_NOT_FOUND
@@ -1012,6 +1165,12 @@ components:
         - COURT_NOT_LAST
         - COURT_INACTIVE
         - COURT_IN_USE
+        # Matches
+        - INVALID_MATCH_SIDES
+        - INVALID_MATCH_RESULT
+        - INVALID_STATUS_TRANSITION
+        - MATCH_SIDES_INCOMPLETE
+        - STATE_VERSION_CONFLICT
         # Clubs and players (planned)
         - CLUB_NAME_ALREADY_EXISTS
         - INVALID_CLUB
@@ -1386,6 +1545,107 @@ components:
       required: [active]
       properties:
         active: { type: boolean }
+
+    # ------------------------------------------------------------ Matches
+    MatchStatus:
+      type: string
+      enum: [SCHEDULED, READY, CALLED, WARMUP, IN_PROGRESS, FINISHED, CANCELLED, WALKOVER]
+      description: |
+        - `SCHEDULED`: to be played; a side may still be unknown.
+        - `READY`: both sides are known and available, waiting for a court.
+        - `CALLED`: the players are called to the court.
+        - `WARMUP`: the players warm up on the court.
+        - `IN_PROGRESS`: being played.
+        - `FINISHED`: won on the court (`NORMAL`) or by retirement during the match (`RETIRED`).
+        - `CANCELLED`: will not be played, without a winner (e.g. event cancelled).
+        - `WALKOVER`: won by forfeit before the start: a side did not show up or withdrew.
+
+    MatchSide:
+      type: string
+      enum: [A, B]
+      description: One of the two players or pairs of a match, as listed in the match
+
+    MatchOutcome:
+      type: string
+      enum: [NORMAL, RETIRED, WALKOVER]
+      description: |
+        How the match was won: played to the end, retirement of the loser during the match,
+        or forfeit before the start.
+
+    Match:
+      type: object
+      required: [id, tournamentId, eventId, round, sideA, sideB, status, winner, outcome,
+        stateVersion, startedAt, endedAt, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        tournamentId: { type: string, format: uuid }
+        eventId: { type: string, format: uuid }
+        round:
+          type: [integer, 'null']
+          minimum: 1
+          description: Round in the draw, from 1; null when the match is not part of a draw
+        sideA:
+          type: [string, 'null']
+          format: uuid
+          description: Registration (player, or pair in doubles) of side A; null while unknown
+        sideB:
+          type: [string, 'null']
+          format: uuid
+          description: Registration of side B; null while unknown
+        status: { $ref: '#/components/schemas/MatchStatus' }
+        winner:
+          oneOf:
+            - $ref: '#/components/schemas/MatchSide'
+            - type: 'null'
+          description: Set with `FINISHED` and `WALKOVER`
+        outcome:
+          oneOf:
+            - $ref: '#/components/schemas/MatchOutcome'
+            - type: 'null'
+          description: Set with `FINISHED` and `WALKOVER`
+        stateVersion:
+          type: integer
+          minimum: 0
+          description: Incremented on every change; send it back to change the status
+        startedAt:
+          type: [string, 'null']
+          format: date-time
+          description: When the match went `IN_PROGRESS` for the first time
+        endedAt:
+          type: [string, 'null']
+          format: date-time
+          description: When the match became `FINISHED`, `CANCELLED` or `WALKOVER`
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateMatchRequest:
+      type: object
+      properties:
+        round: { type: [integer, 'null'], minimum: 1, maximum: 20 }
+        sideA:
+          type: [string, 'null']
+          format: uuid
+          description: Registration id; not checked until registrations are stored by the API
+        sideB: { type: [string, 'null'], format: uuid }
+
+    ChangeMatchStatusRequest:
+      type: object
+      required: [status, stateVersion]
+      properties:
+        status: { $ref: '#/components/schemas/MatchStatus' }
+        stateVersion:
+          type: integer
+          minimum: 0
+          description: The `stateVersion` of the match as read by the client
+        winner:
+          oneOf:
+            - $ref: '#/components/schemas/MatchSide'
+            - type: 'null'
+          description: Required for `FINISHED` and `WALKOVER`
+        outcome:
+          type: [string, 'null']
+          enum: [NORMAL, RETIRED, null]
+          description: Required for `FINISHED`
 
     # ------------------------------------------------------------ Clubs (planned)
     Club:
