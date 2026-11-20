@@ -42,7 +42,7 @@ info:
     | `ORGANIZER` | Manage tournaments, events, courts, matches, clubs, players and registrations |
     | `CLUB` | Read players and registrations (planned: only the players of its club) |
     | `PLAYER` | Planned with online registration (phase 3) |
-    | `TABLET` | A paired umpire tablet: reads its court (planned: sends the scores of its court) |
+    | `TABLET` | A paired umpire tablet: reads its court and moves the match on it (planned: sends its scores) |
 
 servers:
   - url: /api
@@ -461,7 +461,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           $ref: '#/components/responses/Conflict'
-          # COURT_NOT_LAST; planned: COURT_IN_USE
+          # COURT_NOT_LAST, COURT_IN_USE (a match was assigned to it: disable it instead)
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -539,6 +539,49 @@ paths:
                 items: { $ref: '#/components/schemas/Match' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /tournaments/{tournamentId}/match-queue:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Matches]
+      operationId: getMatchQueue
+      security: []
+      summary: List the matches waiting for a court
+      description: |
+        The `READY` matches, in the order they should be called: by round (matches without a
+        round last), then creation order. A match is `available` when none of its sides is
+        on a court: it can be assigned now.
+      responses:
+        '200':
+          description: The queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/QueuedMatch' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tournaments/{tournamentId}/court-assignments:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Matches]
+      operationId: listCourtAssignments
+      security: []
+      summary: List the courts of a tournament with the match on each
+      description: |
+        Every court, by number, with the match on it (`CALLED`, `WARMUP` or `IN_PROGRESS`), or
+        `null` when the court is free. A free court that is `active` can receive a match.
+      responses:
+        '200':
+          description: The courts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CourtAssignment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /matches/{matchId}:
     parameters:
       - $ref: '#/components/parameters/MatchId'
@@ -555,13 +598,62 @@ paths:
               schema: { $ref: '#/components/schemas/Match' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /matches/{matchId}/court:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [Matches]
+      operationId: assignMatchToCourt
+      x-roles: [ORGANIZER]
+      summary: Call a match to a court
+      description: |
+        Puts a `READY` match on a court: the match becomes `CALLED`. A `CALLED` match can be
+        moved to another court the same way. Sending the match back to `READY`
+        (`POST /matches/{matchId}/status`) frees the court.
+
+        - The court must belong to the tournament of the match (`INVALID_COURT`) and be
+          active (`COURT_INACTIVE`).
+        - **One match per court:** a court with a `CALLED`, `WARMUP` or `IN_PROGRESS` match
+          gets `COURT_OCCUPIED`.
+        - **A side is never on two courts:** when a side of the match is already on another
+          court, the answer is `SIDE_ON_ANOTHER_COURT`. Sides are registrations: until
+          registrations are stored by the API, a player entered in two events (e.g. singles
+          and doubles) is not detected.
+        - `stateVersion` works as for status changes (`STATE_VERSION_CONFLICT`).
+
+        Assignments of one tournament are made one at a time: two organizers calling matches
+        at the same moment cannot put two matches on one court.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignMatchToCourtRequest' }
+      responses:
+        '200':
+          description: Called to the court
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED, INVALID_COURT
+        '404':
+          $ref: '#/components/responses/NotFound'
+          # MATCH_NOT_FOUND, COURT_NOT_FOUND
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # INVALID_STATUS_TRANSITION (not READY or CALLED), COURT_INACTIVE, COURT_OCCUPIED,
+          # SIDE_ON_ANOTHER_COURT, STATE_VERSION_CONFLICT
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /matches/{matchId}/status:
     parameters:
       - $ref: '#/components/parameters/MatchId'
     post:
       tags: [Matches]
       operationId: changeMatchStatus
-      x-roles: [ORGANIZER]
+      x-roles: [ORGANIZER, TABLET]
       summary: Move a match to another status
       description: |
         Only these transitions are allowed:
@@ -579,6 +671,11 @@ paths:
         Any other transition gets `INVALID_STATUS_TRANSITION`. Every status except
         `SCHEDULED` and `CANCELLED` needs both sides (`MATCH_SIDES_INCOMPLETE`).
 
+        **Courts:** a match goes `CALLED` with `POST /matches/{matchId}/court`, not here
+        (`COURT_REQUIRED`). Back to `READY`, it leaves its court. A finished, cancelled or
+        walkover match keeps `courtId`, but frees the court. Reopening a finished match puts
+        it back on its court, which must be free (`COURT_OCCUPIED`, `SIDE_ON_ANOTHER_COURT`).
+
         **Result:** `FINISHED` needs `winner` and `outcome` (`NORMAL`, or `RETIRED` when the
         loser retired). `WALKOVER` needs `winner` (the side that did not forfeit); its
         outcome is `WALKOVER`. Other statuses take neither (`INVALID_MATCH_RESULT`). Leaving
@@ -588,8 +685,10 @@ paths:
         changed since, nothing is applied and the answer is `STATE_VERSION_CONFLICT`: read
         the match again, then decide. Every change increments `stateVersion`.
 
-        Planned: the umpire tablet of the court will also move its match (warm-up, start,
-        retirement), once matches are assigned to courts (#99).
+        **Umpire tablet:** a tablet only moves a match on its own court
+        (`MATCH_NOT_ON_TABLET_COURT`), and only to `WARMUP`, `IN_PROGRESS`, `FINISHED`, or
+        back to `CALLED` from `WARMUP` (`STATUS_NOT_ALLOWED_FOR_TABLET`). Sending a match back
+        to the queue, cancelling it and walkovers stay with the organizer.
       requestBody:
         required: true
         content:
@@ -607,7 +706,12 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           $ref: '#/components/responses/Conflict'
-          # INVALID_STATUS_TRANSITION, MATCH_SIDES_INCOMPLETE, STATE_VERSION_CONFLICT
+          # INVALID_STATUS_TRANSITION, MATCH_SIDES_INCOMPLETE, STATE_VERSION_CONFLICT,
+          # COURT_REQUIRED, COURT_OCCUPIED, SIDE_ON_ANOTHER_COURT
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+          # FORBIDDEN, MATCH_NOT_ON_TABLET_COURT, STATUS_NOT_ALLOWED_FOR_TABLET
 
   # ---------------------------------------------------------------- Tablets
   /courts/{courtId}/pairing-code:
@@ -684,6 +788,24 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CurrentTablet' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tablets/me/match:
+    get:
+      tags: [Tablets]
+      operationId: getCurrentTabletMatch
+      x-roles: [TABLET]
+      summary: Get the match on the court of the tablet
+      description: The match `CALLED`, `WARMUP` or `IN_PROGRESS` on the court; none when the court is free.
+      responses:
+        '200':
+          description: The match on the court
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '204':
+          description: The court is free
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -1213,7 +1335,7 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
     Forbidden:
-      description: The role of the account is not allowed (`FORBIDDEN`)
+      description: The role of the account is not allowed (`FORBIDDEN`), or a tablet acts outside its court
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -1308,6 +1430,13 @@ components:
         - INVALID_STATUS_TRANSITION
         - MATCH_SIDES_INCOMPLETE
         - STATE_VERSION_CONFLICT
+        # Courts and matches
+        - INVALID_COURT
+        - COURT_REQUIRED
+        - COURT_OCCUPIED
+        - SIDE_ON_ANOTHER_COURT
+        - MATCH_NOT_ON_TABLET_COURT
+        - STATUS_NOT_ALLOWED_FOR_TABLET
         # Clubs and players (planned)
         - CLUB_NAME_ALREADY_EXISTS
         - INVALID_CLUB
@@ -1711,8 +1840,8 @@ components:
 
     Match:
       type: object
-      required: [id, tournamentId, eventId, round, sideA, sideB, status, winner, outcome,
-        stateVersion, startedAt, endedAt, createdAt, updatedAt]
+      required: [id, tournamentId, eventId, round, sideA, sideB, courtId, status, winner,
+        outcome, stateVersion, startedAt, endedAt, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         tournamentId: { type: string, format: uuid }
@@ -1729,6 +1858,12 @@ components:
           type: [string, 'null']
           format: uuid
           description: Registration of side B; null while unknown
+        courtId:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The court of the match: set from `CALLED`, kept once the match is over; null
+            before, or when the match went back to the queue
         status: { $ref: '#/components/schemas/MatchStatus' }
         winner:
           oneOf:
@@ -1783,6 +1918,36 @@ components:
           type: [string, 'null']
           enum: [NORMAL, RETIRED, null]
           description: Required for `FINISHED`
+
+    AssignMatchToCourtRequest:
+      type: object
+      required: [courtId, stateVersion]
+      properties:
+        courtId: { type: string, format: uuid }
+        stateVersion:
+          type: integer
+          minimum: 0
+          description: The `stateVersion` of the match as read by the client
+
+    QueuedMatch:
+      type: object
+      required: [match, available]
+      properties:
+        match: { $ref: '#/components/schemas/Match' }
+        available:
+          type: boolean
+          description: No side of the match is on a court
+
+    CourtAssignment:
+      type: object
+      required: [court, match]
+      properties:
+        court: { $ref: '#/components/schemas/Court' }
+        match:
+          oneOf:
+            - $ref: '#/components/schemas/Match'
+            - type: 'null'
+          description: The match on the court; null when the court is free
 
     # ------------------------------------------------------------ Tablets
     PairingCode:
