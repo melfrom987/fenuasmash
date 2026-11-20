@@ -191,6 +191,40 @@ void main() {
       );
     });
 
+    test('reports a sequence used by another event', () async {
+      await outbox.enqueue('m1', points(2));
+      await sync.syncNow();
+      // Same position in the match, but another event: e.g. the app data was
+      // erased and the match scored again from the start
+      final other = ScoreEvent(
+        id: 'other-2',
+        sequence: 2,
+        type: ScoreEventType.point,
+        side: MatchSide.b,
+        occurredAt: DateTime.utc(2026),
+      );
+      final freshDirectory = await Directory.systemTemp.createTemp('fresh');
+      addTearDown(() => freshDirectory.delete(recursive: true));
+      final freshOutbox = ScoreEventOutbox(
+        directory: () async => freshDirectory,
+      );
+      await freshOutbox.enqueue('m1', [other]);
+
+      final report = await ScoreEventSync(
+        outbox: freshOutbox,
+        api: server,
+      ).syncNow();
+
+      expect(
+        report.problems['m1'],
+        const ScoreSyncProblem.rejected('SEQUENCE_ALREADY_USED'),
+      );
+      expect((await freshOutbox.pending('m1')).map((event) => event.id), [
+        'other-2',
+      ]);
+      expect(server.applied['m1'], hasLength(2));
+    });
+
     test('sends events queued during a sync in the same call', () async {
       await outbox.enqueue('m1', points(2));
 

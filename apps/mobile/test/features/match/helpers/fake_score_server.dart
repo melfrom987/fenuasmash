@@ -4,7 +4,8 @@ import 'package:badminton_umpire/features/match/data/services/score_event_api.da
 import 'package:badminton_umpire/features/match/domain/models/score_event.dart';
 
 /// In-memory backend following the rules of `sendScoreEvents` in
-/// `contracts/openapi.yaml`, with switches to simulate network problems.
+/// `contracts/openapi.yaml` (as `ScoreService` in the API), with switches to
+/// simulate network problems.
 class FakeScoreServer implements ScoreEventApi {
   /// When false, every request fails as if there were no network.
   bool online = true;
@@ -88,6 +89,9 @@ class FakeScoreServer implements ScoreEventApi {
         }
         duplicateIds.add(event.id);
         continue;
+      }
+      if (event.sequence <= lastSequence) {
+        return const ScoreEventsRejected(code: 'SEQUENCE_ALREADY_USED');
       }
       if (event.sequence != lastSequence + 1) {
         return ScoreEventsSequenceGap(expectedSequence: lastSequence + 1);

@@ -47,8 +47,9 @@ final class ScoreEventsSequenceGap extends ScoreEventSendResult {
 }
 
 /// The backend refused the batch and sending it again will not help, e.g.
-/// `EVENT_ID_CONFLICT`, `INVALID_SCORE_EVENT`, `MATCH_NOT_IN_PROGRESS`, an
-/// unknown match, or a tablet that is not allowed on this match.
+/// `EVENT_ID_CONFLICT`, `SEQUENCE_ALREADY_USED`, `INVALID_SCORE_EVENT`,
+/// `MATCH_NOT_IN_PROGRESS`, `TABLET_REVOKED`, an unknown match, or a tablet
+/// that is not allowed on this match.
 final class ScoreEventsRejected extends ScoreEventSendResult {
   const ScoreEventsRejected({required this.code});
 
