@@ -226,7 +226,8 @@ class AccessRulesTests {
 				post("/api/tournaments/" + ID + "/courts"), json(patch("/api/courts/" + ID), "{}"),
 				delete("/api/courts/" + ID), post("/api/courts/" + ID + "/pairing-code"),
 				post("/api/tablets/" + ID + "/revoke"), json(post("/api/events/" + ID + "/matches"), "{}"),
-				json(post("/api/matches/" + ID + "/status"), "{}"));
+				json(post("/api/matches/" + ID + "/status"), "{}"),
+				json(post("/api/matches/" + ID + "/court"), "{}"));
 	}
 
 	private static MockHttpServletRequestBuilder createOrganization() {

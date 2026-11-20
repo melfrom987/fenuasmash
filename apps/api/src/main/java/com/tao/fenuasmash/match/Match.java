@@ -16,6 +16,9 @@ import jakarta.persistence.Version;
  * A match of an event, between two registrations. Its status only changes
  * through {@link #moveTo}, which keeps the result consistent with the status.
  * <p>
+ * The match is on {@code courtId} while {@link MatchStatus#isOnCourt()}; it
+ * keeps the court once over, and leaves it when sent back to the queue.
+ * <p>
  * {@code stateVersion} is a JPA version: two changes made at the same time on
  * the same match cannot both be saved.
  */
@@ -39,6 +42,9 @@ class Match {
 
 	@Column(name = "side_b_id")
 	private UUID sideB;
+
+	@Column(name = "court_id")
+	private UUID courtId;
 
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
@@ -91,10 +97,23 @@ class Match {
 			this.startedAt = time;
 		}
 		this.endedAt = next.isEnded() ? time : null;
+		if (next == MatchStatus.SCHEDULED || next == MatchStatus.READY) {
+			this.courtId = null;
+		}
 		this.status = next;
 		this.winner = winner;
 		this.outcome = outcome;
 		this.updatedAt = time;
+	}
+
+	/**
+	 * Calls the match to a court, once the service has checked that the court is
+	 * free and that no side is on another court.
+	 */
+	void callTo(UUID court, Instant now) {
+		this.courtId = court;
+		this.status = MatchStatus.CALLED;
+		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
 	}
 
 	boolean hasBothSides() {
@@ -123,6 +142,10 @@ class Match {
 
 	UUID getSideB() {
 		return sideB;
+	}
+
+	UUID getCourtId() {
+		return courtId;
 	}
 
 	MatchStatus getStatus() {
