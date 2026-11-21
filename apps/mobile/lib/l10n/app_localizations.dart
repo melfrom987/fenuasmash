@@ -1102,6 +1102,204 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Afficher les annonces à prononcer par l\'arbitre pendant le match'**
   String get umpireAnnouncementsDescription;
+
+  /// Sync indicator: every point is confirmed by the server
+  ///
+  /// In fr, this message translates to:
+  /// **'À jour'**
+  String get scoreSyncUpToDate;
+
+  /// Sync indicator: points waiting to be sent, server reachable
+  ///
+  /// In fr, this message translates to:
+  /// **'{count} en attente'**
+  String scoreSyncPending(int count);
+
+  /// Sync indicator: server unreachable, points kept on the tablet
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne · {count} en attente'**
+  String scoreSyncOffline(int count);
+
+  /// Sync indicator: the server refused the points of a match
+  ///
+  /// In fr, this message translates to:
+  /// **'Envoi bloqué'**
+  String get scoreSyncBlocked;
+
+  /// No description provided for @scoreSyncUpToDateTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tous les points sont enregistrés sur le serveur.'**
+  String get scoreSyncUpToDateTooltip;
+
+  /// No description provided for @scoreSyncPendingTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les points sont gardés sur la tablette et envoyés au serveur.'**
+  String get scoreSyncPendingTooltip;
+
+  /// No description provided for @scoreSyncOfflineTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur est injoignable. Les points sont gardés sur la tablette et seront envoyés au retour du réseau.'**
+  String get scoreSyncOfflineTooltip;
+
+  /// No description provided for @scoreSyncBlockedTooltip.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur refuse les points d\'un match. Ils sont gardés sur la tablette : prévenez l\'organisateur.'**
+  String get scoreSyncBlockedTooltip;
+
+  /// No description provided for @pairingTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Associer la tablette'**
+  String get pairingTitle;
+
+  /// No description provided for @pairingDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Saisis le code à 6 caractères affiché par l’organisateur sur la page du terrain. Il est valable 10 minutes.'**
+  String get pairingDescription;
+
+  /// No description provided for @pairingCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code d’association'**
+  String get pairingCode;
+
+  /// No description provided for @pairingServer.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse du serveur'**
+  String get pairingServer;
+
+  /// No description provided for @pairingDeviceName.
+  ///
+  /// In fr, this message translates to:
+  /// **'Nom de la tablette (facultatif)'**
+  String get pairingDeviceName;
+
+  /// No description provided for @pairingSubmit.
+  ///
+  /// In fr, this message translates to:
+  /// **'Associer'**
+  String get pairingSubmit;
+
+  /// No description provided for @pairingCodeLength.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le code fait 6 caractères.'**
+  String get pairingCodeLength;
+
+  /// No description provided for @pairingServerInvalid.
+  ///
+  /// In fr, this message translates to:
+  /// **'Adresse invalide, par exemple http://192.168.1.10:8081.'**
+  String get pairingServerInvalid;
+
+  /// No description provided for @pairingInvalidCode.
+  ///
+  /// In fr, this message translates to:
+  /// **'Code incorrect, expiré ou déjà utilisé. Demande un nouveau code à l’organisateur.'**
+  String get pairingInvalidCode;
+
+  /// No description provided for @pairingTooManyAttempts.
+  ///
+  /// In fr, this message translates to:
+  /// **'Trop de codes incorrects. Réessaie dans {minutes} min.'**
+  String pairingTooManyAttempts(int minutes);
+
+  /// No description provided for @pairingCourtInactive.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce terrain est désactivé. Demande à l’organisateur de le réactiver.'**
+  String get pairingCourtInactive;
+
+  /// No description provided for @pairingUnreachable.
+  ///
+  /// In fr, this message translates to:
+  /// **'Serveur injoignable. Vérifie le Wi-Fi et l’adresse du serveur.'**
+  String get pairingUnreachable;
+
+  /// No description provided for @pairingFailed.
+  ///
+  /// In fr, this message translates to:
+  /// **'Association impossible ({code}).'**
+  String pairingFailed(String code);
+
+  /// No description provided for @pairingSuccess.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tablette associée au terrain {number}.'**
+  String pairingSuccess(int number);
+
+  /// No description provided for @tabletPairingLoading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tablette…'**
+  String get tabletPairingLoading;
+
+  /// No description provided for @tabletNotPairedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Associer à un terrain'**
+  String get tabletNotPairedTitle;
+
+  /// No description provided for @tabletNotPairedDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Relier la tablette à un terrain du tournoi pour envoyer les scores.'**
+  String get tabletNotPairedDescription;
+
+  /// No description provided for @tabletPairedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Terrain {number}'**
+  String tabletPairedTitle(int number);
+
+  /// No description provided for @tabletPairedDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tablette associée : les scores peuvent être envoyés au tournoi.'**
+  String get tabletPairedDescription;
+
+  /// No description provided for @tabletRevokedTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Association retirée'**
+  String get tabletRevokedTitle;
+
+  /// No description provided for @tabletRevokedDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'L’organisateur a retiré cette tablette. Saisis un nouveau code.'**
+  String get tabletRevokedDescription;
+
+  /// No description provided for @tabletPairAgain.
+  ///
+  /// In fr, this message translates to:
+  /// **'Associer à un autre terrain'**
+  String get tabletPairAgain;
+
+  /// No description provided for @tabletUnpair.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissocier'**
+  String get tabletUnpair;
+
+  /// No description provided for @tabletUnpairTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Dissocier la tablette ?'**
+  String get tabletUnpairTitle;
+
+  /// No description provided for @tabletUnpairMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code.'**
+  String get tabletUnpairMessage;
 }
 
 class _AppLocalizationsDelegate
