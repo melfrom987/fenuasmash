@@ -5,13 +5,18 @@ import 'package:badminton_umpire/features/match/presentation/pages/match_page.da
 import 'package:badminton_umpire/features/match/data/services/match_draft_service.dart';
 import 'package:badminton_umpire/features/match/data/services/score_event_outbox.dart';
 import 'package:badminton_umpire/features/match_setup/presentation/pages/match_setup_page.dart';
+import 'package:badminton_umpire/features/pairing/application/tablet_session_controller.dart';
+import 'package:badminton_umpire/features/pairing/presentation/tablet_pairing_card.dart';
 import 'package:badminton_umpire/features/settings/presentation/pages/settings_page.dart';
 import 'package:badminton_umpire/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.pairing});
+
+  /// The pairing of the tablet; the app-wide one when null.
+  final TabletSessionController? pairing;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -152,86 +157,102 @@ class _HomePageState extends State<HomePage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 700),
-            child: Padding(
-              padding: EdgeInsets.all(responsive.paddingXL),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          l10n.appTitle,
-                          style: TextStyle(
-                            fontSize: responsive.titleL,
-                            fontWeight: FontWeight.w900,
+            // Scrolls on short screens (a phone in landscape), keeps the
+            // content centered vertically on the others
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: EdgeInsets.all(responsive.paddingXL),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  l10n.appTitle,
+                                  style: TextStyle(
+                                    fontSize: responsive.titleL,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: l10n.settings,
+                                icon: Icon(
+                                  Icons.settings_outlined,
+                                  size: responsive.iconM,
+                                ),
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (context) {
+                                        return const SettingsPage();
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: l10n.settings,
-                        icon: Icon(
-                          Icons.settings_outlined,
-                          size: responsive.iconM,
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (context) {
-                                return const SettingsPage();
-                              },
+                          const Spacer(),
+                          Icon(
+                            Symbols.badminton,
+                            size: responsive.scale(min: 60, max: 90),
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          SizedBox(height: responsive.spaceL),
+                          Text(
+                            l10n.appTitle,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: responsive.titleXL,
+                              fontWeight: FontWeight.w900,
                             ),
-                          );
-                        },
+                          ),
+                          SizedBox(height: responsive.spaceXL),
+                          TabletPairingCard(
+                            controller:
+                                widget.pairing ?? tabletSessionController,
+                          ),
+                          SizedBox(height: responsive.spaceM),
+                          if (!_isLoadingDraft && _currentMatch != null) ...[
+                            _CurrentMatchCard(
+                              draft: _currentMatch!,
+                              onTap: _resumeMatch,
+                            ),
+                            SizedBox(height: responsive.spaceM),
+                          ],
+                          _HomeActionCard(
+                            icon: Icons.add_circle_outline,
+                            title: l10n.newMatch,
+                            description: l10n.newMatchDescription,
+                            onTap: _openMatchSetup,
+                          ),
+                          SizedBox(height: responsive.spaceM),
+                          _HomeActionCard(
+                            icon: Icons.history,
+                            title: l10n.history,
+                            description: l10n.historyDescription,
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (context) {
+                                    return const MatchHistoryPage();
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+                          const Spacer(),
+                        ],
                       ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Icon(
-                    Symbols.badminton,
-                    size: responsive.scale(min: 60, max: 90),
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  SizedBox(height: responsive.spaceL),
-                  Text(
-                    l10n.appTitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: responsive.titleXL,
-                      fontWeight: FontWeight.w900,
                     ),
                   ),
-                  SizedBox(height: responsive.spaceXL),
-                  if (!_isLoadingDraft && _currentMatch != null) ...[
-                    _CurrentMatchCard(
-                      draft: _currentMatch!,
-                      onTap: _resumeMatch,
-                    ),
-                    SizedBox(height: responsive.spaceM),
-                  ],
-                  _HomeActionCard(
-                    icon: Icons.add_circle_outline,
-                    title: l10n.newMatch,
-                    description: l10n.newMatchDescription,
-                    onTap: _openMatchSetup,
-                  ),
-                  SizedBox(height: responsive.spaceM),
-                  _HomeActionCard(
-                    icon: Icons.history,
-                    title: l10n.history,
-                    description: l10n.historyDescription,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (context) {
-                            return const MatchHistoryPage();
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                  const Spacer(),
-                ],
+                ),
               ),
             ),
           ),

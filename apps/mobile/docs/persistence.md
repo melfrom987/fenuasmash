@@ -126,5 +126,15 @@ flowchart LR
 - `HttpScoreEventApi` is the HTTP client: it sends the tablet token and turns every answer into a result. No answer, a timeout, 408, 429 or 5xx means "try again later"; `SEQUENCE_GAP` gives the sequence to send again from; any other refusal (`TABLET_REVOKED`, `MATCH_NOT_IN_PROGRESS`, `SEQUENCE_ALREADY_USED`...) blocks the match until someone looks at it.
 - The backend ignores an event it already received, so sending again after a lost answer or a crash never counts a point twice.
 
-The match page does not send anything yet (`_scoreSync` stays null and the indicator is hidden): it needs the tablet token from pairing (#85) and the backend id of the match (#101, #105). The events wait in the queue meanwhile.
+The match page does not send anything yet (`_scoreSync` stays null and the indicator is hidden): the tablet token comes from pairing (below), but the match still needs its backend id (#101, #105). The events wait in the queue meanwhile.
+
+## Tablet pairing
+
+The umpire pairs the tablet with a court by typing the one-time code shown by the organizer (`POST /tablets/pair`). The server answers with a tablet token, valid until the organizer revokes the tablet.
+
+- `TabletSessionController` (`tabletSessionController` for the whole app) holds the pairing: `loading`, `unpaired`, `paired` or `revoked`.
+- `SecureTabletSessionStore` keeps the session (API address, token, tablet and court) in the encrypted storage of the device (`flutter_secure_storage`: Android Keystore, iOS Keychain), since the token is a credential. Unreadable data counts as not paired.
+- At startup, `main.dart` loads the saved session without the network, so the tablet works offline at once, then checks it with `GET /tablets/me` in the background. Only a **401** (`TABLET_REVOKED`, or an unknown token) ends the session; no answer keeps it. The court number follows the server.
+- The API address comes from `--dart-define=API_URL=...` at build time and can be changed on the pairing page; `/api` is added when missing.
+- Android allows plain HTTP (`usesCleartextTraffic`), as the API is often served on the local network of the venue.
 
