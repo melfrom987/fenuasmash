@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Pairing and score sending reach the FenuaSmash API -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- usesCleartextTraffic: on site, the API is often served over plain HTTP
+         on the local network (e.g. http://192.168.1.10:8081) -->
     <application
         android:label="FenuaSmash"
+        android:usesCleartextTraffic="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

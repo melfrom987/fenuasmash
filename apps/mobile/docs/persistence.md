@@ -109,17 +109,41 @@ AppSettings        global user preferences
 
 Keeping these concepts separate prevents a single model from becoming responsible for every kind of state.
 
-## Future backend synchronization
+## Score events and backend synchronization
 
-When a backend is introduced, local persistence should remain useful for resilience. A possible model is:
+Each point and undo is also a score event (`ScoreEvent`): an id generated on the tablet, a sequence from 1 and the time it was entered. The rules are those of `sendScoreEvents` in `contracts/openapi.yaml`.
 
 ```mermaid
 flowchart LR
-    Controller --> Local[Local draft]
-    Controller --> Sync[Sync layer]
-    Sync --> API[Backend]
+    Controller --> Outbox[ScoreEventOutbox<br/>local queue]
+    Outbox --> Sync[ScoreEventSync<br/>+ scheduler]
+    Sync --> Api[HttpScoreEventApi]
+    Api --> Backend[POST /matches/id/events]
 ```
 
-Local recovery can protect an umpire from temporary connectivity loss while the backend remains the shared tournament source of truth.
+- `ScoreEventOutbox` keeps the events the backend has not confirmed yet, per match, in their own file. An event leaves it only once its id comes back in `acceptedIds` or `duplicateIds`.
+- `ScoreEventSync` sends them in sequence order, in batches of 100; `ScoreEventSyncScheduler` tries again after 2 s, 5 s, 15 s, 30 s, then every 60 s while the backend cannot be reached.
+- `HttpScoreEventApi` is the HTTP client: it sends the tablet token and turns every answer into a result. No answer, a timeout, 408, 429 or 5xx means "try again later"; `SEQUENCE_GAP` gives the sequence to send again from; any other refusal (`TABLET_REVOKED`, `MATCH_NOT_IN_PROGRESS`, `SEQUENCE_ALREADY_USED`...) blocks the match until someone looks at it.
+- The backend ignores an event it already received, so sending again after a lost answer or a crash never counts a point twice.
 
-Conflict and synchronization rules should be designed explicitly before live remote scoring is introduced.
+The match page does not send anything yet (`_scoreSync` stays null and the indicator is hidden): the tablet token comes from pairing (below), but the match still needs its backend id (#101, #105). The events wait in the queue meanwhile.
+
+## Tablet pairing
+
+The umpire pairs the tablet with a court by typing the one-time code shown by the organizer (`POST /tablets/pair`). The server answers with a tablet token, valid until the organizer revokes the tablet.
+
+- `TabletSessionController` (`tabletSessionController` for the whole app) holds the pairing: `loading`, `unpaired`, `paired` or `revoked`.
+- `SecureTabletSessionStore` keeps the session (API address, token, tablet and court) in the encrypted storage of the device (`flutter_secure_storage`: Android Keystore, iOS Keychain), since the token is a credential. Unreadable data counts as not paired.
+- At startup, `main.dart` loads the saved session without the network, so the tablet works offline at once, then checks it with `GET /tablets/me` in the background. Only a **401** (`TABLET_REVOKED`, or an unknown token) ends the session; no answer keeps it. The court number follows the server.
+- The API address comes from `--dart-define=API_URL=...` at build time and can be changed on the pairing page; `/api` is added when missing.
+- Android allows plain HTTP (`usesCleartextTraffic`), as the API is often served on the local network of the venue.
+
+
+## Match of the court
+
+Once paired, the home page shows the match the organizer called to the court of the tablet (`GET /tablets/me/match`: `CALLED`, `WARMUP` or `IN_PROGRESS`, or **204** when the court is free).
+
+- `CourtMatchController` (`courtMatchController` for the whole app) reads the court every 10 seconds while the app is in the foreground (the home page stays open under the match screen), until the server pushes the changes in real time (#108). It is not stored: it is read again at startup.
+- The names of the tournament and the event come from `GET /tournaments/{id}` and `GET /events/{id}`, read once per match. The tablet does not get the names of the players: the umpire types them in on the setup screen, which is filled in with the court, the tournament, the discipline, the category and the round.
+- Without network, the last match read stays shown, marked offline. A **401** asks the pairing to check the tablet, which ends the session if it was revoked.
+- A match opened from the court keeps its server id in `MatchConfig.serverMatchId`, saved with the draft, so its score events can be sent to that match (#105). Opening it again resumes the match already started on the tablet.

@@ -539,4 +539,178 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get umpireAnnouncementsDescription =>
       'Display announcements to be spoken by the umpire during the match';
+
+  @override
+  String get scoreSyncUpToDate => 'Up to date';
+
+  @override
+  String scoreSyncPending(int count) {
+    return '$count pending';
+  }
+
+  @override
+  String scoreSyncOffline(int count) {
+    return 'Offline · $count pending';
+  }
+
+  @override
+  String get scoreSyncBlocked => 'Sending blocked';
+
+  @override
+  String get scoreSyncUpToDateTooltip => 'Every point is saved on the server.';
+
+  @override
+  String get scoreSyncPendingTooltip =>
+      'Points are kept on the tablet and sent to the server.';
+
+  @override
+  String get scoreSyncOfflineTooltip =>
+      'The server cannot be reached. Points are kept on the tablet and will be sent when the network is back.';
+
+  @override
+  String get scoreSyncBlockedTooltip =>
+      'The server refuses the points of a match. They are kept on the tablet: tell the organizer.';
+
+  @override
+  String get pairingTitle => 'Pair the tablet';
+
+  @override
+  String get pairingDescription =>
+      'Type the 6-character code shown by the organizer on the court page. It is valid for 10 minutes.';
+
+  @override
+  String get pairingCode => 'Pairing code';
+
+  @override
+  String get pairingServer => 'Server address';
+
+  @override
+  String get pairingDeviceName => 'Tablet name (optional)';
+
+  @override
+  String get pairingSubmit => 'Pair';
+
+  @override
+  String get pairingCodeLength => 'The code has 6 characters.';
+
+  @override
+  String get pairingServerInvalid =>
+      'Invalid address, for example http://192.168.1.10:8081.';
+
+  @override
+  String get pairingInvalidCode =>
+      'Wrong, expired or already used code. Ask the organizer for a new one.';
+
+  @override
+  String pairingTooManyAttempts(int minutes) {
+    return 'Too many wrong codes. Try again in $minutes min.';
+  }
+
+  @override
+  String get pairingCourtInactive =>
+      'This court is disabled. Ask the organizer to enable it again.';
+
+  @override
+  String get pairingUnreachable =>
+      'Server unreachable. Check the Wi-Fi and the server address.';
+
+  @override
+  String pairingFailed(String code) {
+    return 'Pairing failed ($code).';
+  }
+
+  @override
+  String pairingSuccess(int number) {
+    return 'Tablet paired with court $number.';
+  }
+
+  @override
+  String get tabletPairingLoading => 'Tablet…';
+
+  @override
+  String get tabletNotPairedTitle => 'Pair with a court';
+
+  @override
+  String get tabletNotPairedDescription =>
+      'Link the tablet to a court of the tournament to send the scores.';
+
+  @override
+  String tabletPairedTitle(int number) {
+    return 'Court $number';
+  }
+
+  @override
+  String get tabletPairedDescription =>
+      'Tablet paired: scores can be sent to the tournament.';
+
+  @override
+  String get tabletRevokedTitle => 'Pairing removed';
+
+  @override
+  String get tabletRevokedDescription =>
+      'The organizer removed this tablet. Type a new code.';
+
+  @override
+  String get tabletPairAgain => 'Pair with another court';
+
+  @override
+  String get tabletUnpair => 'Unpair';
+
+  @override
+  String get tabletUnpairTitle => 'Unpair the tablet?';
+
+  @override
+  String get tabletUnpairMessage =>
+      'The tablet will not send scores until it gets a new code.';
+
+  @override
+  String get courtMatchLoading => 'Looking for the match of the court…';
+
+  @override
+  String get courtMatchFreeTitle => 'No match on the court';
+
+  @override
+  String get courtMatchFreeDescription =>
+      'The match called by the organizer will show up here by itself.';
+
+  @override
+  String get courtMatchCalled => 'Match called';
+
+  @override
+  String get courtMatchWarmup => 'Warm-up';
+
+  @override
+  String get courtMatchInProgress => 'Match in progress';
+
+  @override
+  String get courtMatchUnknownEvent => 'Tournament match';
+
+  @override
+  String courtMatchRound(int round) {
+    return 'Round $round';
+  }
+
+  @override
+  String get courtMatchOpenHint => 'Tap to type the players and start.';
+
+  @override
+  String get courtMatchResumeHint => 'Tap to resume the match.';
+
+  @override
+  String courtMatchOffline(String time) {
+    return 'Offline: shown as of $time.';
+  }
+
+  @override
+  String get courtMatchOfflineNever => 'Offline: the server does not answer.';
+
+  @override
+  String get courtMatchReplaceTitle => 'Another match is in progress';
+
+  @override
+  String get courtMatchReplaceMessage =>
+      'Opening the match of the court replaces the match in progress on the tablet. Its points already played will still be sent.';
+
+  @override
+  String get courtMatchReplace => 'Open';
 }
