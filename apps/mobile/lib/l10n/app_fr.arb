@@ -355,5 +355,23 @@
   "tabletPairAgain": "Associer à un autre terrain",
   "tabletUnpair": "Dissocier",
   "tabletUnpairTitle": "Dissocier la tablette ?",
-  "tabletUnpairMessage": "La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code."
+  "tabletUnpairMessage": "La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code.",
+
+  "courtMatchLoading": "Recherche du match du terrain…",
+  "courtMatchFreeTitle": "Aucun match sur le terrain",
+  "courtMatchFreeDescription": "Le match appelé par l’organisateur s’affichera ici tout seul.",
+  "courtMatchCalled": "Match appelé",
+  "courtMatchWarmup": "Échauffement",
+  "courtMatchInProgress": "Match en cours",
+  "courtMatchUnknownEvent": "Match du tournoi",
+  "courtMatchRound": "Tour {round}",
+  "@courtMatchRound": {"placeholders": {"round": {"type": "int"}}},
+  "courtMatchOpenHint": "Touche pour saisir les joueurs et commencer.",
+  "courtMatchResumeHint": "Touche pour reprendre le match.",
+  "courtMatchOffline": "Hors ligne : affiché tel qu’à {time}.",
+  "@courtMatchOffline": {"placeholders": {"time": {"type": "String"}}},
+  "courtMatchOfflineNever": "Hors ligne : le serveur ne répond pas.",
+  "courtMatchReplaceTitle": "Un autre match est en cours",
+  "courtMatchReplaceMessage": "Ouvrir le match du terrain remplace le match en cours sur la tablette. Ses points déjà joués seront quand même envoyés.",
+  "courtMatchReplace": "Ouvrir"
 }

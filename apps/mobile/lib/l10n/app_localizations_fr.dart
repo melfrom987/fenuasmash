@@ -663,4 +663,56 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get tabletUnpairMessage =>
       'La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code.';
+
+  @override
+  String get courtMatchLoading => 'Recherche du match du terrain…';
+
+  @override
+  String get courtMatchFreeTitle => 'Aucun match sur le terrain';
+
+  @override
+  String get courtMatchFreeDescription =>
+      'Le match appelé par l’organisateur s’affichera ici tout seul.';
+
+  @override
+  String get courtMatchCalled => 'Match appelé';
+
+  @override
+  String get courtMatchWarmup => 'Échauffement';
+
+  @override
+  String get courtMatchInProgress => 'Match en cours';
+
+  @override
+  String get courtMatchUnknownEvent => 'Match du tournoi';
+
+  @override
+  String courtMatchRound(int round) {
+    return 'Tour $round';
+  }
+
+  @override
+  String get courtMatchOpenHint =>
+      'Touche pour saisir les joueurs et commencer.';
+
+  @override
+  String get courtMatchResumeHint => 'Touche pour reprendre le match.';
+
+  @override
+  String courtMatchOffline(String time) {
+    return 'Hors ligne : affiché tel qu’à $time.';
+  }
+
+  @override
+  String get courtMatchOfflineNever => 'Hors ligne : le serveur ne répond pas.';
+
+  @override
+  String get courtMatchReplaceTitle => 'Un autre match est en cours';
+
+  @override
+  String get courtMatchReplaceMessage =>
+      'Ouvrir le match du terrain remplace le match en cours sur la tablette. Ses points déjà joués seront quand même envoyés.';
+
+  @override
+  String get courtMatchReplace => 'Ouvrir';
 }

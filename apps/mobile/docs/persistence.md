@@ -138,3 +138,12 @@ The umpire pairs the tablet with a court by typing the one-time code shown by th
 - The API address comes from `--dart-define=API_URL=...` at build time and can be changed on the pairing page; `/api` is added when missing.
 - Android allows plain HTTP (`usesCleartextTraffic`), as the API is often served on the local network of the venue.
 
+
+## Match of the court
+
+Once paired, the home page shows the match the organizer called to the court of the tablet (`GET /tablets/me/match`: `CALLED`, `WARMUP` or `IN_PROGRESS`, or **204** when the court is free).
+
+- `CourtMatchController` (`courtMatchController` for the whole app) reads the court every 10 seconds while the app is in the foreground (the home page stays open under the match screen), until the server pushes the changes in real time (#108). It is not stored: it is read again at startup.
+- The names of the tournament and the event come from `GET /tournaments/{id}` and `GET /events/{id}`, read once per match. The tablet does not get the names of the players: the umpire types them in on the setup screen, which is filled in with the court, the tournament, the discipline, the category and the round.
+- Without network, the last match read stays shown, marked offline. A **401** asks the pairing to check the tablet, which ends the session if it was revoked.
+- A match opened from the court keeps its server id in `MatchConfig.serverMatchId`, saved with the draft, so its score events can be sent to that match (#105). Opening it again resumes the match already started on the tablet.

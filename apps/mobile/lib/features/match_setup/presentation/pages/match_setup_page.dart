@@ -1,4 +1,5 @@
 import 'package:badminton_umpire/core/responsive/responsive.dart';
+import 'package:badminton_umpire/features/court_match/domain/court_match.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_config.dart';
 import 'package:badminton_umpire/features/match_setup/domain/models/match_category.dart';
 import 'package:badminton_umpire/features/match_setup/presentation/pages/court_setup_page.dart';
@@ -11,7 +12,14 @@ import 'package:badminton_umpire/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class MatchSetupPage extends StatefulWidget {
-  const MatchSetupPage({super.key});
+  const MatchSetupPage({super.key, this.courtMatch, this.courtNumber});
+
+  /// The match called to the court of the tablet, to fill in what the server
+  /// knows; null for a match created on the tablet.
+  final CourtMatch? courtMatch;
+
+  /// The court of the tablet, with [courtMatch].
+  final int? courtNumber;
 
   @override
   State<MatchSetupPage> createState() => _MatchSetupPageState();
@@ -118,6 +126,33 @@ class _MatchSetupPageState extends State<MatchSetupPage> {
     courtNumberController.addListener(_refreshPage);
     umpireNameController.addListener(_refreshPage);
     serviceJudgeNameController.addListener(_refreshPage);
+  }
+
+  bool _prefilled = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final match = widget.courtMatch;
+    if (_prefilled || match == null) {
+      return;
+    }
+    _prefilled = true;
+    final l10n = AppLocalizations.of(context)!;
+    tournamentController.text = match.tournamentName ?? '';
+    if (widget.courtNumber != null) {
+      courtNumberController.text = '${widget.courtNumber}';
+    }
+    // Open doubles has no category here: the doubles default stays
+    selectedCategory =
+        match.category ??
+        (match.isDoubles == false
+            ? MatchCategory.menSingles
+            : MatchCategory.mixedDoubles);
+    ageCategoryController.text = match.categoryLabel ?? '';
+    if (match.round != null) {
+      tournamentPhaseController.text = l10n.courtMatchRound(match.round!);
+    }
   }
 
   void _refreshPage() {
@@ -328,6 +363,8 @@ class _MatchSetupPageState extends State<MatchSetupPage> {
       serviceJudgeName: serviceJudgeNameController.text.trim().isEmpty
           ? null
           : serviceJudgeNameController.text.trim(),
+
+      serverMatchId: widget.courtMatch?.id,
     );
 
     await Navigator.of(context).push<void>(
