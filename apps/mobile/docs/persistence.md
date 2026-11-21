@@ -126,7 +126,10 @@ flowchart LR
 - `HttpScoreEventApi` is the HTTP client: it sends the tablet token and turns every answer into a result. No answer, a timeout, 408, 429 or 5xx means "try again later"; `SEQUENCE_GAP` gives the sequence to send again from; any other refusal (`TABLET_REVOKED`, `MATCH_NOT_IN_PROGRESS`, `SEQUENCE_ALREADY_USED`...) blocks the match until someone looks at it.
 - The backend ignores an event it already received, so sending again after a lost answer or a crash never counts a point twice.
 
-The match page does not send anything yet (`_scoreSync` stays null and the indicator is hidden): the tablet token comes from pairing (below), but the match still needs its backend id (#101, #105). The events wait in the queue meanwhile.
+Only a match called to the court (with `MatchConfig.serverMatchId`, see below) is sent: its events are queued under its server id. A match created on the tablet is unknown to the server, so its events are not queued and the indicator is hidden.
+
+- `scoreEventOutbox` and `scoreSync` (`lib/features/match/application/score_sync.dart`) are shared by the whole app, so that points left unsent keep being sent after the match page is closed. `startScoreSync()`, called at startup, sends what a previous run left, then again each time the tablet is paired.
+- `PairedScoreEventApi` reads the address and the token of the current pairing at each send. While the tablet is not paired, the events wait as when offline. A refused token (`TABLET_REVOKED`, 401) makes the pairing check the tablet, which ends the session if it was revoked.
 
 ## Tablet pairing
 
