@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static com.tao.fenuasmash.TestTokens.admin;
 
 import java.util.UUID;
 
@@ -25,6 +26,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.tao.fenuasmash.DatabaseCleaner;
 import com.tao.fenuasmash.TestcontainersConfiguration;
+import com.tao.fenuasmash.common.security.JwtService;
 
 /**
  * Integration tests for {@code /api/organizations}, running against a real
@@ -39,6 +41,9 @@ class OrganizationControllerTests {
 
 	@Autowired
 	private MockMvc mvc;
+
+	@Autowired
+	private JwtService jwtService;
 
 	@Autowired
 	private OrganizationRepository repository;
@@ -132,7 +137,7 @@ class OrganizationControllerTests {
 	}
 
 	private ResultActions create(String json) throws Exception {
-		return mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(json));
+		return mvc.perform(post(URL).with(admin(jwtService)).contentType(MediaType.APPLICATION_JSON).content(json));
 	}
 
 	private static void assertBadRequest(ResultActions result) throws Exception {

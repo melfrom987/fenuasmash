@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static com.tao.fenuasmash.TestTokens.organizer;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -33,6 +34,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.jayway.jsonpath.JsonPath;
 import com.tao.fenuasmash.DatabaseCleaner;
 import com.tao.fenuasmash.TestcontainersConfiguration;
+import com.tao.fenuasmash.common.security.JwtService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -46,6 +48,9 @@ class TournamentControllerTests {
 
 	@Autowired
 	private MockMvc mvc;
+
+	@Autowired
+	private JwtService jwtService;
 
 	@Autowired
 	private JdbcTemplate jdbc;
@@ -251,7 +256,7 @@ class TournamentControllerTests {
 	void deleteRemovesTournamentAndItsCourts() throws Exception {
 		UUID tournamentId = createAndGetId(body("Open de Papeete", inDays(30), inDays(32), 20, 3));
 
-		mvc.perform(delete(URL + "/" + tournamentId)).andExpect(status().isNoContent());
+		mvc.perform(delete(URL + "/" + tournamentId).with(organizer(jwtService))).andExpect(status().isNoContent());
 
 		mvc.perform(get(URL + "/" + tournamentId)).andExpect(status().isNotFound());
 		Integer courts = jdbc.queryForObject("SELECT count(*) FROM court WHERE tournament_id = ?", Integer.class,
@@ -263,7 +268,7 @@ class TournamentControllerTests {
 	void deleteRejectsStartedTournament() throws Exception {
 		UUID tournamentId = createAndGetId(body("Open de Papeete", inDays(-1), inDays(1), 20, 2));
 
-		mvc.perform(delete(URL + "/" + tournamentId))
+		mvc.perform(delete(URL + "/" + tournamentId).with(organizer(jwtService)))
 			.andExpect(status().isConflict())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
 			.andExpect(jsonPath("$.code").value("TOURNAMENT_ALREADY_STARTED"));
@@ -272,7 +277,7 @@ class TournamentControllerTests {
 
 	@Test
 	void deleteReturnsNotFoundForUnknownId() throws Exception {
-		mvc.perform(delete(URL + "/" + UUID.randomUUID()))
+		mvc.perform(delete(URL + "/" + UUID.randomUUID()).with(organizer(jwtService)))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("TOURNAMENT_NOT_FOUND"));
 	}
@@ -572,7 +577,7 @@ class TournamentControllerTests {
 	}
 
 	private ResultActions update(UUID tournamentId, String json) throws Exception {
-		return mvc.perform(patch(URL + "/" + tournamentId).contentType(MediaType.APPLICATION_JSON).content(json));
+		return mvc.perform(patch(URL + "/" + tournamentId).with(organizer(jwtService)).contentType(MediaType.APPLICATION_JSON).content(json));
 	}
 
 	private String body(String name, String startsAt, String endsAt, int minimumRestMinutes, int courtCount) {
@@ -612,7 +617,7 @@ class TournamentControllerTests {
 	}
 
 	private ResultActions create(String json) throws Exception {
-		return mvc.perform(post(URL).contentType(MediaType.APPLICATION_JSON).content(json));
+		return mvc.perform(post(URL).with(organizer(jwtService)).contentType(MediaType.APPLICATION_JSON).content(json));
 	}
 
 	private UUID createAndGetId(String json) throws Exception {

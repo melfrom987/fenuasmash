@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static com.tao.fenuasmash.TestTokens.organizer;
 
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -32,6 +33,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.tao.fenuasmash.DatabaseCleaner;
 import com.tao.fenuasmash.TestcontainersConfiguration;
+import com.tao.fenuasmash.common.security.JwtService;
 import com.tao.fenuasmash.common.error.ConflictException;
 import com.tao.fenuasmash.common.error.NotFoundException;
 
@@ -42,6 +44,9 @@ class CourtControllerTests {
 
 	@Autowired
 	private MockMvc mvc;
+
+	@Autowired
+	private JwtService jwtService;
 
 	@Autowired
 	private JdbcTemplate jdbc;
@@ -118,7 +123,7 @@ class CourtControllerTests {
 		insertCourt(tournamentId, 1, true);
 		insertCourt(tournamentId, 2, true);
 
-		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId).with(organizer(jwtService)))
 			.andExpect(status().isCreated())
 			.andExpect(header().string("Location", startsWith("/api/courts/")))
 			.andExpect(jsonPath("$.id").isNotEmpty())
@@ -131,7 +136,7 @@ class CourtControllerTests {
 
 	@Test
 	void addStartsAtOneWhenTournamentHasNoCourts() throws Exception {
-		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId).with(organizer(jwtService)))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.number").value(1));
 	}
@@ -141,7 +146,7 @@ class CourtControllerTests {
 		insertCourt(tournamentId, 1, true);
 		insertCourt(tournamentId, 3, true);
 
-		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId).with(organizer(jwtService)))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.number").value(4));
 	}
@@ -150,7 +155,7 @@ class CourtControllerTests {
 	void addIgnoresCourtsOfOtherTournaments() throws Exception {
 		insertCourt(insertTournament("Open de Moorea"), 1, true);
 
-		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId).with(organizer(jwtService)))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.number").value(1));
 	}
@@ -161,7 +166,7 @@ class CourtControllerTests {
 			insertCourt(tournamentId, number, true);
 		}
 
-		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId).with(organizer(jwtService)))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("COURT_LIMIT_REACHED"));
 
@@ -170,7 +175,7 @@ class CourtControllerTests {
 
 	@Test
 	void addReturnsNotFoundForUnknownTournament() throws Exception {
-		mvc.perform(post("/api/tournaments/{id}/courts", UUID.randomUUID()))
+		mvc.perform(post("/api/tournaments/{id}/courts", UUID.randomUUID()).with(organizer(jwtService)))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("TOURNAMENT_NOT_FOUND"));
 	}
@@ -236,7 +241,7 @@ class CourtControllerTests {
 		insertCourt(tournamentId, 1, true);
 		UUID last = insertCourt(tournamentId, 2, true);
 
-		mvc.perform(delete("/api/courts/{id}", last)).andExpect(status().isNoContent());
+		mvc.perform(delete("/api/courts/{id}", last).with(organizer(jwtService))).andExpect(status().isNoContent());
 
 		mvc.perform(get("/api/courts/{id}", last)).andExpect(status().isNotFound());
 		assertThat(countCourts(tournamentId)).isEqualTo(1);
@@ -247,9 +252,9 @@ class CourtControllerTests {
 		insertCourt(tournamentId, 1, true);
 		UUID last = insertCourt(tournamentId, 2, true);
 
-		mvc.perform(delete("/api/courts/{id}", last)).andExpect(status().isNoContent());
+		mvc.perform(delete("/api/courts/{id}", last).with(organizer(jwtService))).andExpect(status().isNoContent());
 
-		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId))
+		mvc.perform(post("/api/tournaments/{id}/courts", tournamentId).with(organizer(jwtService)))
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.number").value(2));
 	}
@@ -259,7 +264,7 @@ class CourtControllerTests {
 		UUID first = insertCourt(tournamentId, 1, true);
 		insertCourt(tournamentId, 2, true);
 
-		mvc.perform(delete("/api/courts/{id}", first))
+		mvc.perform(delete("/api/courts/{id}", first).with(organizer(jwtService)))
 			.andExpect(status().isConflict())
 			.andExpect(jsonPath("$.code").value("COURT_NOT_LAST"));
 
@@ -273,14 +278,14 @@ class CourtControllerTests {
 		insertCourt(other, 1, true);
 		insertCourt(other, 2, true);
 
-		mvc.perform(delete("/api/courts/{id}", last)).andExpect(status().isNoContent());
+		mvc.perform(delete("/api/courts/{id}", last).with(organizer(jwtService))).andExpect(status().isNoContent());
 
 		assertThat(countCourts(other)).isEqualTo(2);
 	}
 
 	@Test
 	void deleteReturnsNotFoundForUnknownCourt() throws Exception {
-		mvc.perform(delete("/api/courts/{id}", UUID.randomUUID()))
+		mvc.perform(delete("/api/courts/{id}", UUID.randomUUID()).with(organizer(jwtService)))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("COURT_NOT_FOUND"));
 	}
@@ -306,7 +311,7 @@ class CourtControllerTests {
 	}
 
 	private ResultActions patchJson(UUID id, String body) throws Exception {
-		return mvc.perform(patch("/api/courts/{id}", id).contentType(MediaType.APPLICATION_JSON).content(body));
+		return mvc.perform(patch("/api/courts/{id}", id).with(organizer(jwtService)).contentType(MediaType.APPLICATION_JSON).content(body));
 	}
 
 	private boolean isActive(UUID id) {

@@ -92,7 +92,18 @@ Use the `organization` package as the template. For a new feature (for example, 
 ### Configuration
 
 - Never hard-code credentials. Database settings come from `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD`, provided by Docker and CI.
+- The login token secret comes from `FENUASMASH_SECURITY_JWT_SECRET` (32 bytes minimum). `application.yaml` holds a value for local development only; the `prod` profile requires the variable.
+- The first admin account comes from `FENUASMASH_BOOTSTRAP_ADMIN_EMAIL` and `FENUASMASH_BOOTSTRAP_ADMIN_PASSWORD`. It is created at startup when no admin exists, and never changed afterwards.
 - Only `/actuator/health` is exposed.
+
+### Security
+
+- Clients log in with `POST /api/auth/login` and send the token as `Authorization: Bearer <token>`. Tokens are valid for 12 hours.
+- Reads are public, except player records and registrations (organizers and clubs only). Organizers manage tournaments, events, courts, clubs, players and registrations. The admin creates accounts and organizations.
+- Access rules live in `common/security/SecurityConfig`. **A new route is closed until a rule lets it in**: add one when adding an endpoint.
+- Missing or invalid tokens return **401** (`UNAUTHORIZED`), a wrong role returns **403** (`FORBIDDEN`).
+- After 5 failed logins for one email, or 20 from one IP, logins are refused for 15 minutes (**429**, `TOO_MANY_LOGIN_ATTEMPTS`, with `Retry-After`).
+- In tests, `TestTokens` adds a signed token to a MockMvc request: `post(url).with(organizer(jwtService))`.
 
 ### Code Style
 
