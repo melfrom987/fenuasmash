@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { RegistrationStatus } from '@/api/models';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { inputClass } from '@/components/ui/styles';
+import { useDraw } from '@/features/draw/api';
 import { useEvents } from '@/features/events/api';
 import { seasonReferenceYear } from '@/features/players/age-category';
 import { useTournamentRegistrations, useTransferRegistrations } from '@/features/registrations/api';
@@ -35,6 +36,8 @@ export function RegistrationsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('event') ?? events.data?.[0]?.id;
   const event = events.data?.find((e) => e.id === selectedId);
+  const draw = useDraw(event?.id ?? '');
+  const locked = draw.data?.status === 'PUBLISHED';
   const referenceYear = seasonReferenceYear(
     tournament.data ? new Date(tournament.data.startsAt) : new Date(),
   );
@@ -270,7 +273,9 @@ export function RegistrationsPage() {
 
             <section className="space-y-3 rounded-lg bg-white p-6 shadow-sm">
               <h3 className="font-display text-base font-semibold">{t('registrations.add')}</h3>
-              {full ? (
+              {locked ? (
+                <p className="text-sable-700 text-sm">{t('registrations.drawLocked')}</p>
+              ) : full ? (
                 <p className="text-sm text-red-700">{t('registrations.full')}</p>
               ) : (
                 <RegistrationForm key={event.id} tournamentId={tournamentId} event={event} />
