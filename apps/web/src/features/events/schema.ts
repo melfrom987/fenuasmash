@@ -16,6 +16,22 @@ export const eventFormSchema = z
     categoryLabel: z.string().trim().max(50, key('events.form.errors.categoryLabelTooLong')),
     plannedDate: z.string(),
     maxEntries: z.union([z.number(), z.nan()]),
+    minBirthYear: z.union([
+      z
+        .number()
+        .int(key('events.form.errors.birthYearRange'))
+        .min(1900, key('events.form.errors.birthYearRange'))
+        .max(2100, key('events.form.errors.birthYearRange')),
+      z.nan(),
+    ]),
+    maxBirthYear: z.union([
+      z
+        .number()
+        .int(key('events.form.errors.birthYearRange'))
+        .min(1900, key('events.form.errors.birthYearRange'))
+        .max(2100, key('events.form.errors.birthYearRange')),
+      z.nan(),
+    ]),
   })
   .superRefine((data, ctx) => {
     if (data.categoryType !== 'OPEN' && data.categoryLabel === '') {
@@ -23,6 +39,18 @@ export const eventFormSchema = z
         code: 'custom',
         path: ['categoryLabel'],
         message: key('events.form.errors.categoryLabelRequired'),
+      });
+    }
+    if (
+      data.categoryType === 'AGE' &&
+      !Number.isNaN(data.minBirthYear) &&
+      !Number.isNaN(data.maxBirthYear) &&
+      data.minBirthYear > data.maxBirthYear
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['maxBirthYear'],
+        message: key('events.form.errors.birthYearOrder'),
       });
     }
     const max = data.maxEntries;
@@ -44,6 +72,8 @@ export type EventInput = {
   categoryLabel: string | null;
   plannedDate: string | null;
   maxEntries: number | null;
+  minBirthYear: number | null;
+  maxBirthYear: number | null;
 };
 
 export function toEventInput(values: EventFormValues): EventInput {
@@ -54,6 +84,14 @@ export function toEventInput(values: EventFormValues): EventInput {
     categoryLabel: values.categoryType === 'OPEN' ? null : values.categoryLabel,
     plannedDate: values.plannedDate ? tahitiInputToIso(values.plannedDate) : null,
     maxEntries: Number.isNaN(values.maxEntries) ? null : values.maxEntries,
+    minBirthYear:
+      values.categoryType !== 'AGE' || Number.isNaN(values.minBirthYear)
+        ? null
+        : values.minBirthYear,
+    maxBirthYear:
+      values.categoryType !== 'AGE' || Number.isNaN(values.maxBirthYear)
+        ? null
+        : values.maxBirthYear,
   };
 }
 
@@ -65,5 +103,7 @@ export function toEventFormValues(event: Event): EventFormValues {
     categoryLabel: event.categoryLabel ?? '',
     plannedDate: event.plannedDate ? isoToTahitiInput(event.plannedDate) : '',
     maxEntries: event.maxEntries ?? Number.NaN,
+    minBirthYear: event.minBirthYear ?? Number.NaN,
+    maxBirthYear: event.maxBirthYear ?? Number.NaN,
   };
 }

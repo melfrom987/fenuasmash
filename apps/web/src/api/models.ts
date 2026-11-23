@@ -91,6 +91,8 @@ export type Event = {
   categoryLabel: string | null;
   plannedDate: IsoDate | null;
   maxEntries: number | null;
+  minBirthYear: number | null;
+  maxBirthYear: number | null;
   poolCount: number | null;
   poolSize: number | null;
   qualifiersPerPool: number | null;
@@ -161,7 +163,7 @@ export type RegistrationStatus = 'CONFIRMED' | 'PENDING_PARTNER' | 'LOOKING_FOR_
 
 export type PlayerSummary = Pick<
   Player,
-  'id' | 'firstName' | 'lastName' | 'gender' | 'birthDate' | 'licenseNumber'
+  'id' | 'firstName' | 'lastName' | 'gender' | 'birthDate' | 'licenseNumber' | 'rankings'
 > & { clubName: string };
 
 export type Registration = {
@@ -171,5 +173,6 @@ export type Registration = {
   status: RegistrationStatus;
   player: PlayerSummary;
   partner: PlayerSummary | null;
+  registeredAt: IsoDate;
   createdAt: IsoDate;
 };

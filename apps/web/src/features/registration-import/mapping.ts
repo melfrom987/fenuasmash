@@ -1,6 +1,7 @@
 import type { Club, Event, Gender } from '@/api/models';
 import { normalizeText } from '@/lib/text';
 import { detectDateOrder } from './dates';
+import { disciplineFamily, fitsFamily, fitsGender, valueGender } from './event-guess';
 import {
   FIELDS,
   IGNORE,
@@ -16,6 +17,7 @@ export const cellText = (cell: Cell | undefined) =>
   cell instanceof Date ? cell.toISOString().slice(0, 10) : (cell ?? '').trim();
 
 const FIELD_HINTS: Record<Field, RegExp> = {
+  registeredAt: /horodat|timestamp|date d.?inscription|submitted|envoy/,
   club: /\bclub\b/,
   email: /mail/,
   phone: /\btel\b|telephone|phone|portable|mobile/,
@@ -79,9 +81,12 @@ const tokens = (text: string) =>
       .filter((t) => t.length > 1),
   );
 
-function bestEvent(text: string, events: Event[]): string | undefined {
+function bestEvent(text: string, header: string, events: Event[]): string | undefined {
+  const gender = valueGender(text);
+  const family = disciplineFamily(text) ?? disciplineFamily(header);
   const wanted = tokens(text);
   const scored = events
+    .filter((event) => fitsGender(event.discipline, gender) && fitsFamily(event.discipline, family))
     .map((event) => {
       const words = tokens(`${event.name} ${event.categoryLabel ?? ''}`);
       return { id: event.id, score: [...wanted].filter((w) => words.has(w)).length };
@@ -92,6 +97,8 @@ function bestEvent(text: string, events: Event[]): string | undefined {
   if (scored.length > 1 && scored[1].score === scored[0].score) return undefined;
   return scored[0].id;
 }
+
+export const isYesValue = (value: string) => YES_VALUES.has(normalizeText(value));
 
 export function suggestGender(value: string): Gender | undefined {
   const v = normalizeText(value);
@@ -112,7 +119,11 @@ export function suggestValueMapping(
       const v = normalizeText(value);
       const guess = NO_VALUES.has(v)
         ? IGNORE
-        : bestEvent(YES_VALUES.has(v) ? table.headers[column] : value, events);
+        : bestEvent(
+            YES_VALUES.has(v) ? table.headers[column] : value,
+            table.headers[column],
+            events,
+          );
       if (guess) eventValues[column][value] = guess;
     }
   }

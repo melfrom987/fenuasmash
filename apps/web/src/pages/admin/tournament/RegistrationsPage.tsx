@@ -5,24 +5,39 @@ import type { RegistrationStatus } from '@/api/models';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { inputClass } from '@/components/ui/styles';
 import { useEvents } from '@/features/events/api';
-import { useTournamentRegistrations } from '@/features/registrations/api';
+import { seasonReferenceYear } from '@/features/players/age-category';
+import { useTournamentRegistrations, useTransferRegistrations } from '@/features/registrations/api';
+import { isOutOfCategory, suggestCategory } from '@/features/registrations/category-switch';
 import { EventPicker } from '@/features/registrations/components/EventPicker';
 import { RegistrationForm } from '@/features/registrations/components/RegistrationForm';
 import { RegistrationRow } from '@/features/registrations/components/RegistrationRow';
+import { TransferBar } from '@/features/registrations/components/TransferBar';
 import { isDoubles, REGISTRATION_STATUSES } from '@/features/registrations/constants';
+import { entryPoints, sortByRanking } from '@/features/registrations/ranking';
+import { useTournament } from '@/features/tournaments/api';
+import { ApiError } from '@/lib/api-client';
 import { useErrorMessage } from '@/lib/use-error-message';
 
 export function RegistrationsPage() {
   const { t } = useTranslation();
   const errorMessage = useErrorMessage();
   const { tournamentId = '' } = useParams();
+  const tournament = useTournament(tournamentId);
   const events = useEvents(tournamentId);
   const registrations = useTournamentRegistrations(tournamentId);
   const [status, setStatus] = useState<RegistrationStatus | ''>('');
+  const [selected, setSelected] = useState<string[]>([]);
+  const [switchReport, setSwitchReport] = useState<{ moved: number; errors: string[] } | null>(
+    null,
+  );
+  const transfer = useTransferRegistrations(tournamentId);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('event') ?? events.data?.[0]?.id;
   const event = events.data?.find((e) => e.id === selectedId);
+  const referenceYear = seasonReferenceYear(
+    tournament.data ? new Date(tournament.data.startsAt) : new Date(),
+  );
 
   const counts = useMemo(() => {
     const map = new Map<string, number>();
@@ -30,11 +45,59 @@ export function RegistrationsPage() {
     return map;
   }, [registrations.data]);
 
-  const eventRegistrations = (registrations.data ?? []).filter(
-    (r) => r.eventId === selectedId && (!status || r.status === status),
-  );
+  const eventRegistrations = event
+    ? sortByRanking(
+        (registrations.data ?? []).filter(
+          (r) => r.eventId === event.id && (!status || r.status === status),
+        ),
+        event.discipline,
+      )
+    : [];
+  const outOfCategory = event
+    ? eventRegistrations.filter((r) => isOutOfCategory(event, r)).map((r) => r.id)
+    : [];
   const count = event ? (counts.get(event.id) ?? 0) : 0;
   const full = event !== undefined && event.maxEntries !== null && count >= event.maxEntries;
+  const allSelected =
+    eventRegistrations.length > 0 && eventRegistrations.every((r) => selected.includes(r.id));
+
+  const suggestions = new Map(
+    event && events.data
+      ? outOfCategory.map((id) => {
+          const registration = eventRegistrations.find((r) => r.id === id);
+          return [id, registration && suggestCategory(registration, event, events.data)] as const;
+        })
+      : [],
+  );
+  const switchable = [...suggestions].filter(([, target]) => target !== undefined);
+
+  const switchCategories = async (ids: string[]) => {
+    const byTarget = new Map<string, string[]>();
+    for (const id of ids) {
+      const target = suggestions.get(id);
+      if (target) byTarget.set(target.id, [...(byTarget.get(target.id) ?? []), id]);
+    }
+    let moved = 0;
+    const errors: string[] = [];
+    for (const [targetEventId, registrationIds] of byTarget) {
+      try {
+        const result = await transfer.mutateAsync({ targetEventId, registrationIds });
+        moved += result.moved.length;
+        for (const r of result.rejected) {
+          const registration = eventRegistrations.find((x) => x.id === r.registrationId);
+          const name = registration ? registration.player.lastName.toUpperCase() : '';
+          errors.push(`${name} — ${errorMessage(new ApiError(400, r.message, r.code))}`);
+        }
+      } catch (error) {
+        errors.push(errorMessage(error instanceof Error ? error : new Error(String(error))));
+      }
+    }
+    setSelected([]);
+    setSwitchReport({ moved, errors });
+  };
+
+  const toggle = (id: string) =>
+    setSelected((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]));
 
   if (events.isPending) return <p className="text-sable-600">{t('common.loading')}</p>;
   if (events.isError) return <ErrorMessage>{errorMessage(events.error)}</ErrorMessage>;
@@ -62,6 +125,8 @@ export function RegistrationsPage() {
           onSelect={(eventId) => {
             setSearchParams({ event: eventId });
             setStatus('');
+            setSelected([]);
+            setSwitchReport(null);
           }}
         />
 
@@ -76,20 +141,14 @@ export function RegistrationsPage() {
               </p>
             </div>
 
-            <section className="space-y-3 rounded-lg bg-white p-6 shadow-sm">
-              <h3 className="font-display text-base font-semibold">{t('registrations.add')}</h3>
-              {full ? (
-                <p className="text-sm text-red-700">{t('registrations.full')}</p>
-              ) : (
-                <RegistrationForm key={event.id} tournamentId={tournamentId} event={event} />
-              )}
-            </section>
-
             <section className="space-y-3">
               <div className="flex flex-wrap items-end justify-between gap-3">
-                <h3 className="font-display text-base font-semibold">
-                  {t('registrations.listTitle')}
-                </h3>
+                <div className="space-y-1">
+                  <h3 className="font-display text-base font-semibold">
+                    {t('registrations.listTitle')}
+                  </h3>
+                  <p className="text-sable-600 text-xs">{t('registrations.sortHint')}</p>
+                </div>
                 {isDoubles(event.discipline) && (
                   <label className="block">
                     <span className="sr-only">{t('registrations.filterStatus')}</span>
@@ -109,6 +168,74 @@ export function RegistrationsPage() {
                 )}
               </div>
 
+              {eventRegistrations.length > 0 && (
+                <div className="flex flex-wrap items-center gap-4 text-sm">
+                  <label className="text-sable-800 flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={() =>
+                        setSelected(allSelected ? [] : eventRegistrations.map((r) => r.id))
+                      }
+                      className="accent-lagon-600 size-4"
+                    />
+                    {t('registrations.selectAll')}
+                  </label>
+                  {outOfCategory.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelected(outOfCategory)}
+                      className="text-red-700 hover:underline"
+                    >
+                      {t('registrations.selectOutOfCategory', { count: outOfCategory.length })}
+                    </button>
+                  )}
+                  {switchable.length > 0 && (
+                    <button
+                      type="button"
+                      disabled={transfer.isPending}
+                      onClick={() => void switchCategories(switchable.map(([id]) => id))}
+                      className="text-lagon-700 font-medium hover:underline disabled:opacity-50"
+                    >
+                      {t('registrations.switchAll', { count: switchable.length })}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {switchReport && (
+                <div className="rounded-lg bg-white p-3 text-sm shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-lagon-800 font-medium">
+                      {t('registrations.transfer.moved', { count: switchReport.moved })}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSwitchReport(null)}
+                      className="text-sable-600 text-xs hover:underline"
+                    >
+                      {t('registrations.transfer.dismiss')}
+                    </button>
+                  </div>
+                  {switchReport.errors.length > 0 && (
+                    <ul className="mt-1 space-y-1 text-red-800">
+                      {switchReport.errors.map((message) => (
+                        <li key={message}>{message}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              <TransferBar
+                tournamentId={tournamentId}
+                event={event}
+                events={events.data}
+                selected={selected}
+                registrations={registrations.data ?? []}
+                onClear={() => setSelected([])}
+              />
+
               {registrations.isPending && <p className="text-sable-600">{t('common.loading')}</p>}
               {registrations.isError && (
                 <ErrorMessage>{errorMessage(registrations.error)}</ErrorMessage>
@@ -120,15 +247,33 @@ export function RegistrationsPage() {
               )}
               {eventRegistrations.length > 0 && (
                 <ul className="divide-sable-200 divide-y rounded-lg bg-white shadow-sm">
-                  {eventRegistrations.map((registration) => (
+                  {eventRegistrations.map((registration, index) => (
                     <RegistrationRow
                       key={registration.id}
                       tournamentId={tournamentId}
                       event={event}
                       registration={registration}
+                      rank={index + 1}
+                      points={entryPoints(registration, event.discipline)}
+                      outOfCategory={outOfCategory.includes(registration.id)}
+                      referenceYear={referenceYear}
+                      selected={selected.includes(registration.id)}
+                      onToggle={() => toggle(registration.id)}
+                      suggestion={suggestions.get(registration.id)}
+                      switching={transfer.isPending}
+                      onSwitch={() => void switchCategories([registration.id])}
                     />
                   ))}
                 </ul>
+              )}
+            </section>
+
+            <section className="space-y-3 rounded-lg bg-white p-6 shadow-sm">
+              <h3 className="font-display text-base font-semibold">{t('registrations.add')}</h3>
+              {full ? (
+                <p className="text-sm text-red-700">{t('registrations.full')}</p>
+              ) : (
+                <RegistrationForm key={event.id} tournamentId={tournamentId} event={event} />
               )}
             </section>
           </div>

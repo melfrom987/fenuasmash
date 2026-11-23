@@ -74,3 +74,29 @@ export function useDeleteRegistration(tournamentId: string) {
     onSuccess: (_, registration) => refresh(registration.eventId),
   });
 }
+
+export type TransferResult = {
+  moved: Registration[];
+  rejected: { registrationId: string; code: string; message: string }[];
+};
+
+export function useTransferRegistrations(tournamentId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      targetEventId,
+      registrationIds,
+    }: {
+      targetEventId: string;
+      registrationIds: string[];
+    }) =>
+      api<TransferResult>(`/events/${targetEventId}/registrations/transfer`, {
+        method: 'POST',
+        body: JSON.stringify({ registrationIds }),
+      }),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: queryKeys.registrations(tournamentId) });
+      await qc.invalidateQueries({ queryKey: ['events'] });
+    },
+  });
+}
