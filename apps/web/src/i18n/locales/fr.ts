@@ -664,7 +664,36 @@ export const fr = {
     splitInto_other: 'Réparti en {{count}} séries :',
     fromParent: 'Série issue de',
   },
+  auth: {
+    title: 'Connexion à l’administration',
+    email: 'E-mail',
+    password: 'Mot de passe',
+    submit: 'Se connecter',
+    submitting: 'Connexion…',
+    expired: 'Votre session a expiré : reconnectez-vous pour continuer.',
+    logout: 'Se déconnecter',
+    retry: 'Réessayer',
+    forbiddenTitle: 'Accès réservé',
+    forbiddenText:
+      'L’administration est réservée aux organisateurs. Connectez-vous avec un compte organisateur.',
+    mockHint:
+      'Mode démo : admin@fenuasmash.pf / admin, orga@fenuasmash.pf / orga, club@fenuasmash.pf / club',
+    roles: {
+      ADMIN: 'Administrateur',
+      ORGANIZER: 'Organisateur',
+      CLUB: 'Club',
+      PLAYER: 'Joueur',
+    },
+    errors: {
+      emailRequired: 'Saisissez votre e-mail.',
+      passwordRequired: 'Saisissez votre mot de passe.',
+    },
+  },
   apiErrors: {
+    UNAUTHORIZED: 'Votre session a expiré : reconnectez-vous.',
+    FORBIDDEN: 'Votre compte n’a pas accès à cette action.',
+    INVALID_CREDENTIALS: 'E-mail ou mot de passe incorrect.',
+    TOO_MANY_LOGIN_ATTEMPTS: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.',
     VALIDATION_FAILED: 'Certains champs sont invalides.',
     INVALID_DATE_RANGE: 'La fin doit être après le début.',
     INVALID_ORGANIZATION: "Cette organisation n'existe pas.",
