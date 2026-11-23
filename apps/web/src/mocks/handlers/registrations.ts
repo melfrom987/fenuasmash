@@ -5,6 +5,7 @@ import { birthYearFits } from '@/features/players/age-category';
 import { isDoubles, requiredGender } from '@/features/registrations/constants';
 import { db } from '../data';
 import { toPlayerSummary } from '../registrations';
+import { isDrawPublished } from './draws';
 import { normalize, problem } from './utils';
 
 type CreateBody = { playerId?: string; partnerId?: string | null };
@@ -41,6 +42,9 @@ const forbiddenCombination = (event: Event, playerId: string) => {
     );
   });
 };
+
+const locked = () =>
+  problem(409, 'DRAW_PUBLISHED', 'The draw of this event is published: registrations are locked');
 
 const eventOrder = (r: Registration) =>
   DISCIPLINES.indexOf(findEvent(r.eventId)?.discipline ?? 'MS');
@@ -117,6 +121,7 @@ export const registrationHandlers = [
     await delay();
     const event = findEvent(params.eventId);
     if (!event) return problem(404, 'EVENT_NOT_FOUND', 'Event not found');
+    if (isDrawPublished(event.id)) return locked();
 
     const body = (await request.json()) as CreateBody;
     const player = findPlayer(body.playerId);
@@ -165,6 +170,7 @@ export const registrationHandlers = [
     await delay();
     const target = findEvent(params.eventId);
     if (!target) return problem(404, 'EVENT_NOT_FOUND', 'Event not found');
+    if (isDrawPublished(target.id)) return locked();
     const { registrationIds = [] } = (await request.json()) as { registrationIds?: string[] };
 
     const moved: Registration[] = [];
@@ -180,6 +186,10 @@ export const registrationHandlers = [
       }
       if (registration.eventId === target.id) {
         moved.push(registration);
+        continue;
+      }
+      if (isDrawPublished(registration.eventId)) {
+        reject(id, 'DRAW_PUBLISHED', 'The draw of the source event is published');
         continue;
       }
       const source = findEvent(registration.eventId);
@@ -225,6 +235,7 @@ export const registrationHandlers = [
     const registration = db.registrations.find((r) => r.id === params.registrationId);
     if (!registration) return problem(404, 'REGISTRATION_NOT_FOUND', 'Registration not found');
     const event = findEvent(registration.eventId)!;
+    if (isDrawPublished(event.id)) return locked();
     const player = findPlayer(registration.player.id)!;
     const body = (await request.json()) as UpdateBody;
 
@@ -259,6 +270,7 @@ export const registrationHandlers = [
     await delay();
     const index = db.registrations.findIndex((r) => r.id === params.registrationId);
     if (index === -1) return problem(404, 'REGISTRATION_NOT_FOUND', 'Registration not found');
+    if (isDrawPublished(db.registrations[index].eventId)) return locked();
     db.registrations.splice(index, 1);
     return new HttpResponse(null, { status: 204 });
   }),

@@ -6,6 +6,8 @@ import { clubHandlers } from './clubs';
 import { playerHandlers } from './players';
 import { registrationHandlers } from './registrations';
 import { registrationImportHandlers } from './registration-import';
+import { drawHandlers } from './draws';
+import { seriesHandlers } from './series';
 export const handlers = [
   ...organizationHandlers,
   ...tournamentHandlers,
@@ -15,4 +17,6 @@ export const handlers = [
   ...playerHandlers,
   ...registrationHandlers,
   ...registrationImportHandlers,
+  ...drawHandlers,
+  ...seriesHandlers,
 ];

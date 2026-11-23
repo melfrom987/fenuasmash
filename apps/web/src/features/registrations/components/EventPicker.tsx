@@ -1,6 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import type { Event } from '@/api/models';
 
+function withSeries(events: Event[]) {
+  const ids = new Set(events.map((e) => e.id));
+  const isRoot = (e: Event) => e.parentEventId === null || !ids.has(e.parentEventId);
+  return events
+    .filter(isRoot)
+    .flatMap((root) => [root, ...events.filter((e) => e.parentEventId === root.id)]);
+}
+
 export function EventPicker({
   events,
   counts,
@@ -17,12 +25,12 @@ export function EventPicker({
   return (
     <nav aria-label={t('registrations.eventsLabel')}>
       <ul className="space-y-1">
-        {events.map((event) => {
+        {withSeries(events).map((event) => {
           const count = counts.get(event.id) ?? 0;
           const full = event.maxEntries !== null && count >= event.maxEntries;
           const selected = event.id === selectedId;
           return (
-            <li key={event.id}>
+            <li key={event.id} className={event.parentEventId ? 'pl-4' : undefined}>
               <button
                 type="button"
                 onClick={() => onSelect(event.id)}

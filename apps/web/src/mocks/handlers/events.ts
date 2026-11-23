@@ -82,6 +82,7 @@ export const eventHandlers = [
       poolCount: null,
       poolSize: null,
       qualifiersPerPool: null,
+      parentEventId: null,
     };
     db.events.push(event);
     return HttpResponse.json(event, { status: 201 });

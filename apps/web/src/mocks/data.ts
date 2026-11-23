@@ -1,4 +1,4 @@
-import type { Court, Organization, Tournament, Event } from '@/api/models';
+import type { Court, Draw, Organization, Tournament, Event } from '@/api/models';
 import { clubs, players } from './people';
 import { seedRegistrations } from './registrations';
 
@@ -69,6 +69,7 @@ const events: Event[] = [
     poolCount: null,
     poolSize: null,
     qualifiersPerPool: null,
+    parentEventId: null,
   },
   {
     id: '30000000-0000-4000-8000-000000000002',
@@ -84,6 +85,7 @@ const events: Event[] = [
     poolCount: null,
     poolSize: null,
     qualifiersPerPool: null,
+    parentEventId: null,
   },
   {
     id: '30000000-0000-4000-8000-000000000003',
@@ -99,9 +101,21 @@ const events: Event[] = [
     poolCount: null,
     poolSize: null,
     qualifiersPerPool: null,
+    parentEventId: null,
   },
 ];
 
 const registrations = seedRegistrations(events, players);
 
-export const db = { organizations, tournaments, courts, events, clubs, players, registrations };
+const draws: Draw[] = [];
+
+export const db = {
+  organizations,
+  tournaments,
+  courts,
+  events,
+  clubs,
+  players,
+  registrations,
+  draws,
+};

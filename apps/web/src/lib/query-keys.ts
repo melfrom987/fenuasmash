@@ -8,6 +8,7 @@ export const queryKeys = {
   courts: (tournamentId: string) => ['tournaments', tournamentId, 'courts'] as const,
   events: (tournamentId: string) => ['tournaments', tournamentId, 'events'] as const,
   event: (eventId: string) => ['events', eventId] as const,
+  draw: (eventId: string) => ['events', eventId, 'draw'] as const,
   registrations: (tournamentId: string) => ['tournaments', tournamentId, 'registrations'] as const,
   eligiblePlayersAll: (eventId: string) => ['events', eventId, 'eligible-players'] as const,
   eligiblePlayers: (eventId: string, params: EligiblePlayersParams) =>

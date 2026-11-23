@@ -14,6 +14,7 @@ import { CreateEventPage } from '@/pages/admin/tournament/CreateEventPage';
 import { EditEventPage } from '@/pages/admin/tournament/EditEventPage';
 import { RegistrationsPage } from '@/pages/admin/tournament/RegistrationsPage';
 import { ImportRegistrationsPage } from '@/pages/admin/tournament/ImportRegistrationsPage';
+import { DrawsPage } from '@/pages/admin/tournament/DrawsPage';
 import { PlayersPage } from '@/pages/admin/players/PlayersPage';
 import { CreatePlayerPage } from '@/pages/admin/players/CreatePlayerPage';
 import { EditPlayerPage } from '@/pages/admin/players/EditPlayerPage';
@@ -40,6 +41,7 @@ export const router = createBrowserRouter([
           { path: 'events/:eventId', element: <EditEventPage /> },
           { path: 'registrations', element: <RegistrationsPage /> },
           { path: 'registrations/import', element: <ImportRegistrationsPage /> },
+          { path: 'draws', element: <DrawsPage /> },
         ],
       },
       { path: 'players', element: <PlayersPage /> },
