@@ -230,3 +230,13 @@ export type DrawSlotRef = { pool: string; index: number } | { position: number }
 export type SeriesSplit = { label: string; registrationIds: string[] };
 export type SeriesSplitRequest = { series: SeriesSplit[] };
 export type SeriesSplitResult = { events: Event[] };
+
+export type UserRole = 'ADMIN' | 'ORGANIZER' | 'CLUB' | 'PLAYER';
+export type LoginRequest = { email: string; password: string };
+export type LoginResponse = { accessToken: string; tokenType: 'Bearer'; expiresAt: IsoDate };
+export type CurrentUser = {
+  id: string;
+  email: string;
+  role: UserRole;
+  organizationId: string | null;
+};

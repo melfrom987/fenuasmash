@@ -2,6 +2,7 @@ import type { PlayerFilters } from '@/features/players/api';
 import type { EligiblePlayersParams } from '@/features/registrations/api';
 
 export const queryKeys = {
+  me: ['auth', 'me'] as const,
   organizations: ['organizations'] as const,
   tournaments: ['tournaments'] as const,
   tournament: (tournamentId: string) => ['tournaments', tournamentId] as const,
