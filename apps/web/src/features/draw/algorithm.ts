@@ -188,7 +188,7 @@ export function drawBracket(ranked: DrawEntry[], seedCount: number, random: Rand
     slots[position - 1].entry = { ...ranked[i], seed: i + 1 };
   });
 
-  const free = slots.map((_,i) => i).filter((i) => !slots[i].bye && !slots[i].entry);
+  const free = slots.map((_, i) => i).filter((i) => !slots[i].bye && !slots[i].entry);
   const others = shuffle(ranked.slice(seedPositions.length), random);
   free.forEach((index, i) => {
     slots[index].entry = others[i] ?? null;

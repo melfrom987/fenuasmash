@@ -22,10 +22,32 @@ info:
     Operations marked with `x-status: planned` are not implemented yet: they describe what
     the backend will implement next, so that web and mobile can work in parallel (with mocks).
 
+    Authentication:
+    - Log in with `POST /auth/login`, then send `Authorization: Bearer <accessToken>` on every
+      request. The token is valid for 12 hours (`expiresAt`); after that, log in again.
+    - Operations with `security: []` are public. The others need a token, and `x-roles` lists
+      the roles allowed to call them.
+    - No token, or an invalid or expired one, returns **401** `UNAUTHORIZED`, even on a public
+      operation: the client should then log in again. A role that is not allowed returns
+      **403** `FORBIDDEN`.
+
+    | Role | Can |
+    |---|---|
+    | (public) | Read organizations, tournaments, events, courts and clubs |
+    | `ADMIN` | Create accounts and organizations |
+    | `ORGANIZER` | Manage tournaments, events, courts, clubs, players and registrations |
+    | `CLUB` | Read players and registrations (planned: only the players of its club) |
+    | `PLAYER` | Planned with online registration (phase 3) |
+
 servers:
   - url: /api
 
+security:
+  - bearerAuth: []
+
 tags:
+  - name: Auth
+  - name: Accounts
   - name: Organizations
   - name: Tournaments
   - name: Events
@@ -36,11 +58,88 @@ tags:
   - name: Import
 
 paths:
+  # ---------------------------------------------------------------- Auth
+  /auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      security: []
+      summary: Log in with an email and a password
+      description: |
+        The email is case insensitive. A wrong password and an unknown email get the same
+        `INVALID_CREDENTIALS` answer, so that it never reveals whether an account exists.
+
+        After 5 failed logins for one email, or 20 from one IP address, every login for that
+        email or address is refused for 15 minutes with `TOO_MANY_LOGIN_ATTEMPTS`, even with
+        the right password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: 'Logged in. The response is never cached (`Cache-Control: no-store`).'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+          # INVALID_CREDENTIALS
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      operationId: getCurrentUser
+      summary: Get the logged-in account
+      description: Any logged-in account. Read from the database, so it is always up to date.
+      responses:
+        '200':
+          description: The logged-in account
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CurrentUser' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ---------------------------------------------------------------- Accounts
+  /accounts:
+    post:
+      tags: [Accounts]
+      operationId: createAccount
+      x-roles: [ADMIN]
+      summary: Create an account
+      description: |
+        Only `ORGANIZER` accounts can be created for now (`INVALID_ROLE` otherwise): club
+        accounts come with clubs, as each one is linked to its club, and player accounts with
+        online registration. The first admin is created when the API starts.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAccountRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED, INVALID_ROLE, INVALID_ORGANIZATION
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # EMAIL_ALREADY_USED
+
   # ---------------------------------------------------------------- Organizations
   /organizations:
     get:
       tags: [Organizations]
       operationId: listOrganizations
+      security: []
       summary: List organizations
       responses:
         '200':
@@ -53,6 +152,7 @@ paths:
     post:
       tags: [Organizations]
       operationId: createOrganization
+      x-roles: [ADMIN]
       summary: Create an organization
       requestBody:
         required: true
@@ -66,6 +166,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Organization' }
         '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /organizations/{organizationId}:
     parameters:
@@ -73,6 +175,7 @@ paths:
     get:
       tags: [Organizations]
       operationId: getOrganization
+      security: []
       summary: Get an organization
       responses:
         '200':
@@ -87,6 +190,7 @@ paths:
     get:
       tags: [Tournaments]
       operationId: listTournaments
+      security: []
       summary: List tournaments, most recent start first
       responses:
         '200':
@@ -99,6 +203,7 @@ paths:
     post:
       tags: [Tournaments]
       operationId: createTournament
+      x-roles: [ORGANIZER]
       summary: Create a tournament with its rules and its courts
       description: Courts numbered 1 to `courtCount` are created in the same transaction.
       requestBody:
@@ -116,6 +221,8 @@ paths:
           $ref: '#/components/responses/BadRequest'
           # VALIDATION_FAILED, INVALID_DATE_RANGE, INVALID_ORGANIZATION, INVALID_SCORING_RULES,
           # INVALID_RELAY_SETTINGS, INVALID_FORBIDDEN_COMBINATION
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /tournaments/{tournamentId}:
     parameters:
@@ -123,6 +230,7 @@ paths:
     get:
       tags: [Tournaments]
       operationId: getTournament
+      security: []
       summary: Get a tournament
       responses:
         '200':
@@ -134,6 +242,7 @@ paths:
     patch:
       tags: [Tournaments]
       operationId: updateTournament
+      x-roles: [ORGANIZER]
       summary: Update a tournament and its rules
       description: |
         Only the fields present are changed. Removing a discipline that a forbidden
@@ -152,9 +261,12 @@ paths:
               schema: { $ref: '#/components/schemas/Tournament' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     delete:
       tags: [Tournaments]
       operationId: deleteTournament
+      x-roles: [ORGANIZER]
       summary: Delete a tournament that has not started
       responses:
         '204': { description: Deleted }
@@ -162,6 +274,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # TOURNAMENT_ALREADY_STARTED
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ---------------------------------------------------------------- Events
   /tournaments/{tournamentId}/events:
@@ -170,6 +284,7 @@ paths:
     get:
       tags: [Events]
       operationId: listEvents
+      security: []
       summary: List the events of a tournament
       description: Sorted by discipline (MS, WS, MD, WD, XD, OD), then by name.
       responses:
@@ -184,6 +299,7 @@ paths:
     post:
       tags: [Events]
       operationId: createEvent
+      x-roles: [ORGANIZER]
       summary: Create an event
       description: |
         Events are created before registrations open. Pool settings can stay empty until
@@ -207,6 +323,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # EVENT_NAME_ALREADY_EXISTS
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /events/{eventId}:
     parameters:
@@ -214,6 +332,7 @@ paths:
     get:
       tags: [Events]
       operationId: getEvent
+      security: []
       summary: Get an event
       responses:
         '200':
@@ -225,6 +344,7 @@ paths:
     patch:
       tags: [Events]
       operationId: updateEvent
+      x-roles: [ORGANIZER]
       summary: Update an event
       requestBody:
         required: true
@@ -240,13 +360,18 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     delete:
       tags: [Events]
       operationId: deleteEvent
+      x-roles: [ORGANIZER]
       summary: Delete an event
       responses:
         '204': { description: Deleted }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ---------------------------------------------------------------- Courts
   /tournaments/{tournamentId}/courts:
@@ -255,6 +380,7 @@ paths:
     get:
       tags: [Courts]
       operationId: listCourts
+      security: []
       summary: List the courts of a tournament, by number
       responses:
         '200':
@@ -268,6 +394,7 @@ paths:
     post:
       tags: [Courts]
       operationId: addCourt
+      x-roles: [ORGANIZER]
       summary: Add a court with the next number
       responses:
         '201':
@@ -279,6 +406,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # COURT_LIMIT_REACHED (50 courts)
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /courts/{courtId}:
     parameters:
@@ -286,6 +415,7 @@ paths:
     get:
       tags: [Courts]
       operationId: getCourt
+      security: []
       summary: Get a court
       responses:
         '200':
@@ -297,6 +427,7 @@ paths:
     patch:
       tags: [Courts]
       operationId: updateCourt
+      x-roles: [ORGANIZER]
       summary: Enable or disable a court
       requestBody:
         required: true
@@ -311,9 +442,12 @@ paths:
               schema: { $ref: '#/components/schemas/Court' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     delete:
       tags: [Courts]
       operationId: deleteCourt
+      x-roles: [ORGANIZER]
       summary: Remove the last court of a tournament
       responses:
         '204': { description: Deleted }
@@ -321,12 +455,15 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # COURT_NOT_LAST; planned: COURT_IN_USE
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ---------------------------------------------------------------- Clubs (planned)
   /clubs:
     get:
       tags: [Clubs]
       operationId: listClubs
+      security: []
       x-status: planned
       summary: List clubs, by name
       parameters:
@@ -345,6 +482,7 @@ paths:
     post:
       tags: [Clubs]
       operationId: createClub
+      x-roles: [ORGANIZER]
       x-status: planned
       summary: Create a club
       requestBody:
@@ -362,6 +500,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # CLUB_NAME_ALREADY_EXISTS
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /clubs/{clubId}:
     parameters:
@@ -369,6 +509,7 @@ paths:
     get:
       tags: [Clubs]
       operationId: getClub
+      security: []
       x-status: planned
       summary: Get a club
       responses:
@@ -381,6 +522,7 @@ paths:
     patch:
       tags: [Clubs]
       operationId: updateClub
+      x-roles: [ORGANIZER]
       x-status: planned
       summary: Update a club
       requestBody:
@@ -397,12 +539,15 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ---------------------------------------------------------------- Players (planned)
   /players:
     get:
       tags: [Players]
       operationId: listPlayers
+      x-roles: [ORGANIZER, CLUB]
       x-status: planned
       summary: Search players, paginated, by last name then first name
       parameters:
@@ -424,9 +569,12 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/PlayerPage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Players]
       operationId: createPlayer
+      x-roles: [ORGANIZER]
       x-status: planned
       summary: Create a player
       requestBody:
@@ -446,6 +594,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # PLAYER_LICENSE_ALREADY_EXISTS
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /players/{playerId}:
     parameters:
@@ -453,6 +603,7 @@ paths:
     get:
       tags: [Players]
       operationId: getPlayer
+      x-roles: [ORGANIZER, CLUB]
       x-status: planned
       summary: Get a player
       responses:
@@ -462,9 +613,12 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Player' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     patch:
       tags: [Players]
       operationId: updatePlayer
+      x-roles: [ORGANIZER]
       x-status: planned
       summary: Update a player profile
       requestBody:
@@ -481,6 +635,8 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ---------------------------------------------------------------- Registrations (planned)
   /tournaments/{tournamentId}/registrations:
@@ -489,6 +645,7 @@ paths:
     get:
       tags: [Registrations]
       operationId: listTournamentRegistrations
+      x-roles: [ORGANIZER, CLUB]
       x-status: planned
       summary: List the registrations of a tournament
       parameters:
@@ -510,6 +667,8 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Registration' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /events/{eventId}/registrations:
     parameters:
@@ -517,6 +676,7 @@ paths:
     get:
       tags: [Registrations]
       operationId: listEventRegistrations
+      x-roles: [ORGANIZER, CLUB]
       x-status: planned
       summary: List the registrations of an event
       responses:
@@ -528,9 +688,12 @@ paths:
                 type: array
                 items: { $ref: '#/components/schemas/Registration' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Registrations]
       operationId: createRegistration
+      x-roles: [ORGANIZER]
       x-status: planned
       summary: Register a player (and a partner for doubles) in an event
       description: |
@@ -559,6 +722,8 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /events/{eventId}/eligible-players:
     parameters:
@@ -566,6 +731,7 @@ paths:
     get:
       tags: [Registrations]
       operationId: listEligiblePlayers
+      x-roles: [ORGANIZER, CLUB]
       x-status: planned
       summary: Players who can register in this event (or partner someone in it)
       description: |
@@ -589,6 +755,8 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PlayerPage' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   /registrations/{registrationId}:
     parameters:
@@ -596,6 +764,7 @@ paths:
     patch:
       tags: [Registrations]
       operationId: updateRegistration
+      x-roles: [ORGANIZER]
       x-status: planned
       summary: Set or change the partner, or confirm a pending pair
       description: |
@@ -616,14 +785,19 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     delete:
       tags: [Registrations]
       operationId: deleteRegistration
+      x-roles: [ORGANIZER]
       x-status: planned
       summary: Withdraw a registration
       responses:
         '204': { description: Deleted }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
   # ---------------------------------------------------------------- Import (planned)
   /tournaments/{tournamentId}/registrations/import:
@@ -632,6 +806,7 @@ paths:
     post:
       tags: [Import]
       operationId: importRegistrations
+      x-roles: [ORGANIZER]
       x-status: planned
       summary: Import registrations from a registration form export
       description: |
@@ -672,8 +847,17 @@ paths:
               schema: { $ref: '#/components/schemas/ImportReport' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token returned by `POST /auth/login`
+
   parameters:
     OrganizationId:
       name: organizationId
@@ -736,6 +920,28 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Unauthorized:
+      description: Missing, invalid or expired token (`UNAUTHORIZED`). Log in again.
+      headers:
+        WWW-Authenticate:
+          schema: { type: string, example: Bearer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    Forbidden:
+      description: The role of the account is not allowed (`FORBIDDEN`)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
+    TooManyRequests:
+      description: Too many failed logins (`TOO_MANY_LOGIN_ATTEMPTS`)
+      headers:
+        Retry-After:
+          description: Seconds to wait before trying again
+          schema: { type: integer, example: 900 }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/ProblemDetail' }
 
   schemas:
     # ------------------------------------------------------------ Errors
@@ -775,6 +981,13 @@ components:
         - VALIDATION_FAILED
         - DATA_CONFLICT
         - INTERNAL_ERROR
+        # Authentication and accounts
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - INVALID_CREDENTIALS
+        - TOO_MANY_LOGIN_ATTEMPTS
+        - INVALID_ROLE
+        - EMAIL_ALREADY_USED
         # Not found
         - ORGANIZATION_NOT_FOUND
         - TOURNAMENT_NOT_FOUND
@@ -847,6 +1060,68 @@ components:
         PENDING_PARTNER: the partner has not confirmed yet.
         LOOKING_FOR_PARTNER: doubles without a partner yet.
       enum: [CONFIRMED, PENDING_PARTNER, LOOKING_FOR_PARTNER]
+
+    # ------------------------------------------------------------ Auth and accounts
+    UserRole:
+      type: string
+      enum: [ADMIN, ORGANIZER, CLUB, PLAYER]
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, minLength: 1, maxLength: 254 }
+        password: { type: string, minLength: 1, maxLength: 128 }
+
+    LoginResponse:
+      type: object
+      required: [accessToken, tokenType, expiresAt]
+      properties:
+        accessToken:
+          type: string
+          description: 'To send as `Authorization: Bearer <accessToken>`'
+        tokenType: { type: string, enum: [Bearer] }
+        expiresAt: { type: string, format: date-time }
+
+    CurrentUser:
+      type: object
+      required: [id, email, role, organizationId]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/UserRole' }
+        organizationId:
+          type: [string, 'null']
+          format: uuid
+          description: The federation of an organizer; null for other roles
+
+    Account:
+      type: object
+      required: [id, email, role, organizationId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email, description: Stored in lower case }
+        role: { $ref: '#/components/schemas/UserRole' }
+        organizationId: { type: [string, 'null'], format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    CreateAccountRequest:
+      type: object
+      required: [email, password, role]
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password:
+          type: string
+          minLength: 12
+          maxLength: 72
+          description: At most 72 bytes in UTF-8
+        role:
+          allOf: [{ $ref: '#/components/schemas/UserRole' }]
+          description: Only `ORGANIZER` for now
+        organizationId:
+          type: [string, 'null']
+          format: uuid
+          description: Required for an organizer
 
     # ------------------------------------------------------------ Organizations
     Organization:

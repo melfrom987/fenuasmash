@@ -95,6 +95,8 @@ Local settings are stored in `.env`, which is never committed.
 | `POSTGRES_PORT` | `5432` | Host port for the database |
 | `API_PORT` | `8081` | Host port for the API |
 | `WEB_PORT` | `8090` | Host port for the web application |
+| `JWT_SECRET` | local value | Secret that signs login tokens, 32 characters minimum. Required in production: generate it with `openssl rand -base64 48` |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | `admin@fenuasmash.local`, `change-me-admin` | First admin account, created at startup when no admin exists. The password needs 12 characters minimum |
 | `IMAGE_PREFIX`, `IMAGE_TAG`, `HTTP_PORT` | — | Production only |
 
 ## Files

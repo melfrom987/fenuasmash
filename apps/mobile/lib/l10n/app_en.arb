@@ -1,0 +1,298 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Badminton Umpire",
+
+  "language": "Language",
+  "french": "French",
+  "english": "English",
+
+  "newMatch": "New match",
+  "matchSetupDescription": "Configure the players and the initial service.",
+  "startMatch": "Start match",
+  "tournamentName": "Tournament name",
+  "defaultTournamentName": "Tournament",
+  "courtNumber": "Court number",
+  "court": "Court",
+  "category": "Category",
+  "umpireName": "Umpire name",
+  "serviceJudgeName": "Service judge name",
+  "umpire": "Umpire",
+  "serviceJudge": "Service judge",
+  "umpireInformation": "Officials",
+
+  "newMatch": "New match",
+  "newMatchDescription": "Configure and start a new match.",
+  "matchSetupDescription": "Configure the players and the initial service.",
+  "startMatch": "Start match",
+
+  "history": "History",
+  "historyDescription": "View saved matches.",
+  "matchHistory": "Match history",
+  "matchDetails": "Match details",
+  "noMatchHistory": "No saved matches.",
+
+  "menSingles": "Men's Singles",
+  "womenSingles": "Women's Singles",
+  "menDoubles": "Men's Doubles",
+  "womenDoubles": "Women's Doubles",
+  "mixedDoubles": "Mixed Doubles",
+
+  "team": "team",
+  "teamA": "Team A",
+  "teamB": "Team B",
+  "leftTeam": "Left team",
+  "rightTeam": "Right team",
+  "left": "Left",
+  "right": "Right",
+  "leftSide": "Left side",
+  "rightSide": "Right side",
+  "startingSide": "Team position",
+  "chooseLeftTeam": "Select the team on the right.",
+  "switchSides": "Change ends",
+
+  "player": "Player",
+  "playerOne": "Player 1",
+  "playerTwo": "Player 2",
+  "server": "Server",
+  "receiver": "Receiver",
+  "chooseServerReceiver": "Choose the server and receiver",
+  "positionsOnlyAtZero": "Positions can only be corrected at 0–0. Undo the played points first to return to 0–0.",
+
+  "set": "Game",
+  "sets": "Games",
+  "setPoint": "GAME POINT",
+  "matchPoint": "MATCH POINT",
+  "undoLastPoint": "Undo last point",
+  "noPointToUndo": "No point to undo.",
+  "nextSet": "Next game",
+  "startSet": "Start game",
+  "startTime": "Start",
+  "endTime": "End",
+
+  "shuttlesUsed": "Shuttles used",
+  "shuttles": "Shuttles",
+
+  "midSetInterval": "Mid-game interval",
+  "endOfSet": "End of game",
+  "finishInterval": "End interval",
+  "resumeMatch": "Resume match",
+
+  "umpireAnnouncement": "Umpire announcement",
+  "firstSetAnnouncement": "Game! First game won by {winner}, {score}. Change ends.",
+  "@firstSetAnnouncement": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      },
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "secondSetAnnouncement": "Game! Second game won by {winner}, {score}. Change ends.",
+  "@secondSetAnnouncement": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      },
+      "score": {
+        "type": "String"
+      }
+    }
+  },
+  "oneGameAll": "One game all.",
+  "twentySecondsAnnouncement": "Court {courtNumber}, 20 seconds.",
+  "@twentySecondsAnnouncement": {
+    "placeholders": {
+      "courtNumber": {
+        "type": "String"
+      }
+    }
+  },
+  "matchAnnouncement": "Game! Match won by {winner}, {scores}.",
+  "@matchAnnouncement": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      },
+      "scores": {
+        "type": "String"
+      }
+    }
+  },
+
+  "readyToPlayAnnouncement": "Ready to play.",
+
+  "firstGameSinglesStartAnnouncement": "Ladies and Gentlemen on my right, {right} and on my left, {left}. {server} to serve love all play.",
+  "@firstGameSinglesStartAnnouncement": {
+    "placeholders": {
+      "right": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+
+  "firstGameDoublesStartAnnouncement": "Ladies and Gentlemen on my right, {right} and on my left, {left}. {server} to serve to {receiver} love all play.",
+  "@firstGameDoublesStartAnnouncement": {
+    "placeholders": {
+      "right": {
+        "type": "String"
+      },
+      "left": {
+        "type": "String"
+      },
+      "server": {
+        "type": "String"
+      },
+      "receiver": {
+        "type": "String"
+      }
+    }
+  },
+
+  "secondGameStartAnnouncement": "Second game love all play.",
+  "finalGameStartAnnouncement": "Final game love all play.",
+
+  "matchFinished": "Match finished",
+  "winner": "Winner",
+  "duration": "Duration:",
+  "finishMatch": "Finish match",
+
+  "matchActions": "Match actions",
+  "actions": "Actions",
+  "matchInterruption": "Match interruption",
+  "callMedicalService": "Call medical staff",
+  "callScoringTable": "Call scorer's table",
+  "callReferee": "Call referee",
+  "correctPlayerPositions": "Correct player positions",
+
+  "assistance": "Assistance",
+  "incidents": "Incidents",
+  "corrections": "Corrections",
+  "match": "Match",
+  "injury": "Injury",
+
+  "warningOrCard": "Warning or card",
+  "sanction": "Sanction",
+  "warning": "Warning",
+  "yellowCard": "Yellow card",
+  "redCard": "Red card",
+  "blackCard": "Black card",
+  "confirmSanction": "Confirm sanction",
+  "irreversibleAction": "This action cannot be undone. Check the information before confirming.",
+
+  "retirement": "Retirement",
+  "selectRetiringPlayer": "Select the player who is retiring.",
+  "confirmRetirement": "Confirm retirement",
+  "retirementConfirmationMessage": "This retirement will immediately end the match. {winner} will be declared the winner. This action cannot be undone.",
+  "@retirementConfirmationMessage": {
+    "placeholders": {
+      "winner": {
+        "type": "String"
+      }
+    }
+  },
+
+  "playerColors": "Player colors",
+  "colorsOf": "Color of",
+  "editPlayerColors": "Edit player colors",
+  "sameColor": "Same color",
+  "apply": "Apply",
+
+  "back": "Back",
+  "home": "Home",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "continueLabel": "Continue",
+  "start": "Start",
+  "finish": "Finish",
+  "optional": "Optional",
+  "requiredField": "Required field",
+  "notProvided": "Not provided",
+
+  "actionNotImplemented": "Action \"{title}\" is not implemented yet.",
+  "@actionNotImplemented": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+
+  "checkServerReceiver": "Check the server and receiver before starting the game.",
+  "confirmAndStartSet": "Confirm and start game",
+
+  "selected": "selected",
+  "selectMatches": "Select matches",
+  "deleteSelectedMatches": "Delete matches",
+  "clearHistory": "Clear history",
+  "clearHistoryConfirmation": "Are you sure you want to delete all saved matches?",
+  "delete": "Delete",
+  "deleteSelectedMatchesConfirmation": "Delete the {count} selected matches?",
+  "@deleteSelectedMatchesConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "warmup": "Warm-up",
+  "startWarmup": "Start warm-up",
+  "skipWarmup": "Skip warm-up",
+
+  "matchClassification": "Match classification",
+  "matchClassificationDescription": "Define the category and competition information.",
+
+  "ageCategory": "Age category",
+  "ageCategoryHint": "e.g. U15 Girls",
+
+  "poolGroup": "Pool / Group",
+  "poolGroupHint": "e.g. Pool B",
+
+  "tournamentPhase": "Stage",
+  "tournamentPhaseHint": "e.g. Quarter-final",
+
+  "agePoussin": "Poussin",
+  "agePoussine": "Poussine",
+  "ageBenjamin": "Benjamin",
+  "ageBenjamine": "Benjamine",
+  "ageMinimeBoy": "Minime Boys",
+  "ageMinimeGirl": "Minime Girls",
+  "ageCadet": "Cadet",
+  "ageCadette": "Cadette",
+  "ageJuniorBoy": "Junior Boys",
+  "ageJuniorGirl": "Junior Girls",
+  "ageSeniorSeries1": "Senior Series 1",
+  "ageSeniorSeries2": "Senior Series 2",
+  "ageSeniorSeries3": "Senior Series 3",
+
+  "poolUnique": "Single pool",
+  "poolA": "Pool A",
+  "poolB": "Pool B",
+  "poolC": "Pool C",
+  "poolD": "Pool D",
+
+  "phasePoolMatch": "Pool match",
+  "phaseRoundOf16": "Round of 16",
+  "phaseQuarterFinal": "Quarter-final",
+  "phaseSemiFinal": "Semi-final",
+  "phaseFinal": "Final",
+  "phaseClassification": "Classification match",
+
+  "settings": "Settings",
+  "language": "Language",
+  "french": "French",
+  "english": "English",
+  "matchSettings": "Match",
+  "umpireAnnouncements": "Umpire announcements",
+  "umpireAnnouncementsDescription": "Display announcements to be spoken by the umpire during the match"
+
+}
