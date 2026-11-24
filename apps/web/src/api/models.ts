@@ -240,3 +240,20 @@ export type CurrentUser = {
   role: UserRole;
   organizationId: string | null;
 };
+
+export type PairingCode = { code: string; courtId: string; expiresAt: IsoDate };
+export type Tablet = {
+  id: string;
+  courtId: string;
+  courtNumber: number;
+  deviceName: string | null;
+  pairedAt: IsoDate;
+  lastSeenAt: IsoDate;
+  revokedAt: IsoDate | null;
+};
+export type PairTabletResponse = {
+  tabletId: string;
+  accessToken: string;
+  tokenType: 'Bearer';
+  court: Court;
+};
