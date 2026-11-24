@@ -2,13 +2,14 @@ export type IsoDate = string;
 
 export type Discipline = 'MS' | 'WS' | 'MD' | 'WD' | 'XD' | 'OD';
 export type CategoryType = 'OPEN' | 'AGE' | 'LEVEL';
+
 export type MatchStatus =
-  | 'PENDING'
+  | 'SCHEDULED'
   | 'READY'
   | 'CALLED'
   | 'WARMUP'
   | 'IN_PROGRESS'
-  | 'COMPLETED'
+  | 'FINISHED'
   | 'CANCELLED'
   | 'WALKOVER';
 export type AssignmentStatus = 'ASSIGNED' | 'RELEASED' | 'CANCELLED';
@@ -112,22 +113,6 @@ export type Court = {
   tournamentId: string;
   number: number;
   active: boolean;
-};
-
-export type Match = {
-  id: string;
-  tournamentId: string;
-  eventId: string;
-  reference: string | null;
-  roundLabel: string | null;
-  entryAId: string | null;
-  entryBId: string | null;
-  status: MatchStatus;
-  scheduledAt: IsoDate | null;
-  startedAt: IsoDate | null;
-  finishedAt: IsoDate | null;
-  score: unknown;
-  stateVersion: number;
 };
 
 export type MatchAssignment = {
@@ -256,4 +241,38 @@ export type PairTabletResponse = {
   accessToken: string;
   tokenType: 'Bearer';
   court: Court;
+};
+
+
+export type MatchSide = 'A' | 'B';
+export type MatchOutcome = 'NORMAL' | 'RETIRED' | 'WALKOVER';
+export type Match = {
+  id: string;
+  tournamentId: string;
+  eventId: string;
+  round: number | null;
+  sideA: string | null;
+  sideB: string | null;
+  courtId: string | null;
+  status: MatchStatus;
+  winner: MatchSide | null;
+  outcome: MatchOutcome | null;
+  stateVersion: number;
+  startedAt: IsoDate | null;
+  endedAt: IsoDate | null;
+  createdAt: IsoDate;
+  updatedAt: IsoDate;
+};
+export type QueuedMatch = { match: Match; available: boolean };
+export type CourtAssignment = { court: Court; match: Match | null };
+export type CreateMatchRequest = {
+  round: number | null;
+  sideA: string | null;
+  sideB: string | null;
+};
+export type ChangeMatchStatusRequest = {
+  status: MatchStatus;
+  stateVersion: number;
+  winner?: MatchSide | null;
+  outcome?: 'NORMAL' | 'RETIRED' | null;
 };
