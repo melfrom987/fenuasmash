@@ -91,9 +91,12 @@ export type Event = {
   categoryLabel: string | null;
   plannedDate: IsoDate | null;
   maxEntries: number | null;
+  minBirthYear: number | null;
+  maxBirthYear: number | null;
   poolCount: number | null;
   poolSize: number | null;
   qualifiersPerPool: number | null;
+  parentEventId: string | null;
 };
 export type Entry = {
   id: string;
@@ -161,7 +164,7 @@ export type RegistrationStatus = 'CONFIRMED' | 'PENDING_PARTNER' | 'LOOKING_FOR_
 
 export type PlayerSummary = Pick<
   Player,
-  'id' | 'firstName' | 'lastName' | 'gender' | 'birthDate' | 'licenseNumber'
+  'id' | 'firstName' | 'lastName' | 'gender' | 'birthDate' | 'licenseNumber' | 'rankings'
 > & { clubName: string };
 
 export type Registration = {
@@ -171,5 +174,69 @@ export type Registration = {
   status: RegistrationStatus;
   player: PlayerSummary;
   partner: PlayerSummary | null;
+  registeredAt: IsoDate;
   createdAt: IsoDate;
+};
+
+export type DrawStatus = 'DRAFT' | 'PUBLISHED';
+
+export type DrawEntry = {
+  registrationId: string;
+  seed: number | null;
+  points: number | null;
+  player: PlayerSummary;
+  partner: PlayerSummary | null;
+};
+
+export type Pool = {
+  name: string;
+  qualifiers: number;
+  entries: DrawEntry[];
+};
+
+export type PoolQualifier = { pool: string; rank: number };
+
+export type BracketSlot = {
+  position: number;
+  entry: DrawEntry | null;
+  qualifier: PoolQualifier | null;
+  bye: boolean;
+};
+
+export type Bracket = {
+  size: number;
+  slots: BracketSlot[];
+};
+
+export type Draw = {
+  eventId: string;
+  status: DrawStatus;
+  seedCount: number;
+  pools: Pool[];
+  bracket: Bracket | null;
+  excludedRegistrationIds: string[];
+  createdAt: IsoDate;
+  publishedAt: IsoDate | null;
+};
+
+export type DrawSettings = {
+  poolCount: number | null;
+  qualifiersPerPool: number | null;
+  seedCount: number | null;
+};
+
+export type DrawSlotRef = { pool: string; index: number } | { position: number };
+
+export type SeriesSplit = { label: string; registrationIds: string[] };
+export type SeriesSplitRequest = { series: SeriesSplit[] };
+export type SeriesSplitResult = { events: Event[] };
+
+export type UserRole = 'ADMIN' | 'ORGANIZER' | 'CLUB' | 'PLAYER';
+export type LoginRequest = { email: string; password: string };
+export type LoginResponse = { accessToken: string; tokenType: 'Bearer'; expiresAt: IsoDate };
+export type CurrentUser = {
+  id: string;
+  email: string;
+  role: UserRole;
+  organizationId: string | null;
 };

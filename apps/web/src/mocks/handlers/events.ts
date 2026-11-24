@@ -6,7 +6,14 @@ import { db } from '../data';
 type EventBody = Partial<
   Pick<
     Event,
-    'name' | 'discipline' | 'categoryType' | 'categoryLabel' | 'plannedDate' | 'maxEntries'
+    | 'name'
+    | 'discipline'
+    | 'categoryType'
+    | 'categoryLabel'
+    | 'plannedDate'
+    | 'maxEntries'
+    | 'minBirthYear'
+    | 'maxBirthYear'
   >
 >;
 
@@ -70,9 +77,12 @@ export const eventHandlers = [
       categoryLabel: body.categoryType === 'OPEN' ? null : (body.categoryLabel ?? null),
       plannedDate: body.plannedDate ?? null,
       maxEntries: body.maxEntries ?? null,
+      minBirthYear: body.categoryType === 'AGE' ? (body.minBirthYear ?? null) : null,
+      maxBirthYear: body.categoryType === 'AGE' ? (body.maxBirthYear ?? null) : null,
       poolCount: null,
       poolSize: null,
       qualifiersPerPool: null,
+      parentEventId: null,
     };
     db.events.push(event);
     return HttpResponse.json(event, { status: 201 });
@@ -102,6 +112,10 @@ export const eventHandlers = [
 
     Object.assign(event, body, { name });
     if (event.categoryType === 'OPEN') event.categoryLabel = null;
+    if (event.categoryType !== 'AGE') {
+      event.minBirthYear = null;
+      event.maxBirthYear = null;
+    }
     return HttpResponse.json(event);
   }),
 

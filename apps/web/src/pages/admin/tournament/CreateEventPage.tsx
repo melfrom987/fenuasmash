@@ -2,6 +2,8 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { useCreateEvent } from '@/features/events/api';
 import { EventForm } from '@/features/events/components/EventForm';
+import { seasonReferenceYear } from '@/features/players/age-category';
+import { useTournament } from '@/features/tournaments/api';
 import { toEventInput, type EventFormValues } from '@/features/events/schema';
 
 export function CreateEventPage() {
@@ -9,6 +11,10 @@ export function CreateEventPage() {
   const navigate = useNavigate();
   const { tournamentId = '' } = useParams();
   const createEvent = useCreateEvent(tournamentId);
+  const tournament = useTournament(tournamentId);
+  const seasonYear = seasonReferenceYear(
+    tournament.data ? new Date(tournament.data.startsAt) : new Date(),
+  );
 
   const handleSubmit = async (values: EventFormValues) => {
     await createEvent.mutateAsync(toEventInput(values));
@@ -22,7 +28,7 @@ export function CreateEventPage() {
       </Link>
       <h2 className="font-display text-lg font-semibold">{t('events.createTitle')}</h2>
       <div className="rounded-lg bg-white p-6 shadow-sm">
-        <EventForm onSubmit={handleSubmit} />
+        <EventForm seasonYear={seasonYear} onSubmit={handleSubmit} />
       </div>
     </div>
   );

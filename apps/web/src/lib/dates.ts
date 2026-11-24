@@ -13,7 +13,17 @@ const timeFormatter = new Intl.DateTimeFormat('fr-FR', {
   minute: '2-digit',
 });
 
+const dateTimeFormatter = new Intl.DateTimeFormat('fr-FR', {
+  timeZone: TIME_ZONE,
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
 export const formatDate = (iso: string) => dateFormatter.format(new Date(iso));
+export const formatDateTime = (iso: string) => dateTimeFormatter.format(new Date(iso));
 export const formatTime = (iso: string) => timeFormatter.format(new Date(iso));
 export const tahitiInputToIso = (value: string) => new Date(`${value}:00-10:00`).toISOString();
 

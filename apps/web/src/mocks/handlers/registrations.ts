@@ -1,9 +1,11 @@
 import { delay, http, HttpResponse } from 'msw';
 import type { Event, Player, PlayerPage, Registration, RegistrationStatus } from '@/api/models';
 import { DISCIPLINES } from '@/features/events/constants';
+import { birthYearFits } from '@/features/players/age-category';
 import { isDoubles, requiredGender } from '@/features/registrations/constants';
 import { db } from '../data';
 import { toPlayerSummary } from '../registrations';
+import { isDrawPublished } from './draws';
 import { normalize, problem } from './utils';
 
 type CreateBody = { playerId?: string; partnerId?: string | null };
@@ -20,9 +22,9 @@ const registeredIn = (eventId: string, playerId: string, exceptId?: string) =>
       (r.player.id === playerId || r.partner?.id === playerId),
   );
 
-const genderFits = (event: Event, player: Player, partnerOf?: Player) => {
+const canPlay = (event: Event, player: Player, partnerOf?: Player) => {
   const gender = requiredGender(event.discipline, partnerOf?.gender);
-  return gender === null || player.gender === gender;
+  return (gender === null || player.gender === gender) && birthYearFits(event, player.birthDate);
 };
 
 const forbiddenCombination = (event: Event, playerId: string) => {
@@ -41,13 +43,16 @@ const forbiddenCombination = (event: Event, playerId: string) => {
   });
 };
 
+const locked = () =>
+  problem(409, 'DRAW_PUBLISHED', 'The draw of this event is published: registrations are locked');
+
 const eventOrder = (r: Registration) =>
   DISCIPLINES.indexOf(findEvent(r.eventId)?.discipline ?? 'MS');
 
 function checkPartner(event: Event, player: Player, partnerId: string, exceptId?: string) {
   const partner = findPlayer(partnerId);
   if (!partner) return problem(404, 'PLAYER_NOT_FOUND', 'Partner not found');
-  if (partner.id === player.id || !genderFits(event, partner, player)) {
+  if (partner.id === player.id || !canPlay(event, partner, player)) {
     return problem(400, 'PARTNER_NOT_ELIGIBLE', 'Partner cannot play in this event');
   }
   if (registeredIn(event.id, partner.id, exceptId)) {
@@ -89,7 +94,7 @@ export const registrationHandlers = [
 
     const eligible = db.players
       .filter((p) => p.id !== partnerOf?.id)
-      .filter((p) => genderFits(event, p, partnerOf))
+      .filter((p) => canPlay(event, p, partnerOf))
       .filter((p) => !registeredIn(event.id, p.id))
       .filter(
         (p) =>
@@ -116,6 +121,7 @@ export const registrationHandlers = [
     await delay();
     const event = findEvent(params.eventId);
     if (!event) return problem(404, 'EVENT_NOT_FOUND', 'Event not found');
+    if (isDrawPublished(event.id)) return locked();
 
     const body = (await request.json()) as CreateBody;
     const player = findPlayer(body.playerId);
@@ -126,7 +132,7 @@ export const registrationHandlers = [
         { field: 'partnerId', message: 'must be null for singles' },
       ]);
     }
-    if (!genderFits(event, player)) {
+    if (!canPlay(event, player)) {
       return problem(400, 'PLAYER_NOT_ELIGIBLE', 'Player cannot play in this event');
     }
     if (registeredIn(event.id, player.id)) {
@@ -153,10 +159,75 @@ export const registrationHandlers = [
       status,
       player: toPlayerSummary(player),
       partner: partner ? toPlayerSummary(partner) : null,
+      registeredAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     };
     db.registrations.push(registration);
     return HttpResponse.json(registration, { status: 201 });
+  }),
+
+  http.post('/api/events/:eventId/registrations/transfer', async ({ params, request }) => {
+    await delay();
+    const target = findEvent(params.eventId);
+    if (!target) return problem(404, 'EVENT_NOT_FOUND', 'Event not found');
+    if (isDrawPublished(target.id)) return locked();
+    const { registrationIds = [] } = (await request.json()) as { registrationIds?: string[] };
+
+    const moved: Registration[] = [];
+    const rejected: { registrationId: string; code: string; message: string }[] = [];
+    const reject = (registrationId: string, code: string, message: string) =>
+      rejected.push({ registrationId, code, message });
+
+    for (const id of registrationIds) {
+      const registration = db.registrations.find((r) => r.id === id);
+      if (!registration) {
+        reject(id, 'REGISTRATION_NOT_FOUND', 'Registration not found');
+        continue;
+      }
+      if (registration.eventId === target.id) {
+        moved.push(registration);
+        continue;
+      }
+      if (isDrawPublished(registration.eventId)) {
+        reject(id, 'DRAW_PUBLISHED', 'The draw of the source event is published');
+        continue;
+      }
+      const source = findEvent(registration.eventId);
+      if (
+        !source ||
+        source.tournamentId !== target.tournamentId ||
+        source.discipline !== target.discipline
+      ) {
+        reject(id, 'INCOMPATIBLE_EVENT', 'The target event has another discipline');
+        continue;
+      }
+      const player = findPlayer(registration.player.id);
+      const partner = registration.partner ? findPlayer(registration.partner.id) : undefined;
+      if (!player || !canPlay(target, player)) {
+        reject(id, 'PLAYER_NOT_ELIGIBLE', 'Player cannot play in this event');
+        continue;
+      }
+      if (partner && !canPlay(target, partner, player)) {
+        reject(id, 'PARTNER_NOT_ELIGIBLE', 'Partner cannot play in this event');
+        continue;
+      }
+      if (registeredIn(target.id, player.id)) {
+        reject(id, 'ALREADY_REGISTERED', 'Already registered in this event');
+        continue;
+      }
+      if (partner && registeredIn(target.id, partner.id)) {
+        reject(id, 'PARTNER_ALREADY_REGISTERED', 'Partner already registered');
+        continue;
+      }
+      const count = db.registrations.filter((r) => r.eventId === target.id).length;
+      if (target.maxEntries !== null && count >= target.maxEntries) {
+        reject(id, 'EVENT_FULL', 'This event is full');
+        continue;
+      }
+      registration.eventId = target.id;
+      moved.push(registration);
+    }
+    return HttpResponse.json({ moved, rejected });
   }),
 
   http.patch('/api/registrations/:registrationId', async ({ params, request }) => {
@@ -164,6 +235,7 @@ export const registrationHandlers = [
     const registration = db.registrations.find((r) => r.id === params.registrationId);
     if (!registration) return problem(404, 'REGISTRATION_NOT_FOUND', 'Registration not found');
     const event = findEvent(registration.eventId)!;
+    if (isDrawPublished(event.id)) return locked();
     const player = findPlayer(registration.player.id)!;
     const body = (await request.json()) as UpdateBody;
 
@@ -198,6 +270,7 @@ export const registrationHandlers = [
     await delay();
     const index = db.registrations.findIndex((r) => r.id === params.registrationId);
     if (index === -1) return problem(404, 'REGISTRATION_NOT_FOUND', 'Registration not found');
+    if (isDrawPublished(db.registrations[index].eventId)) return locked();
     db.registrations.splice(index, 1);
     return new HttpResponse(null, { status: 204 });
   }),
