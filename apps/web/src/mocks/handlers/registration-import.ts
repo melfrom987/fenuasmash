@@ -10,6 +10,7 @@ import type {
   PlayerCandidate,
   PlayerMatch,
 } from '@/features/registration-import/types';
+import { birthYearFits } from '@/features/players/age-category';
 import { requiredGender } from '@/features/registrations/constants';
 import { db } from '../data';
 import { toPlayerSummary } from '../registrations';
@@ -239,6 +240,8 @@ function analyse(tournamentId: string, rows: ImportRow[]) {
         let blocking: ImportIssue | null = null;
         if (gender && row.gender !== gender) {
           blocking = issue('PLAYER_NOT_ELIGIBLE', 'Wrong gender for this event');
+        } else if (!birthYearFits(event, row.birthDate)) {
+          blocking = issue('PLAYER_NOT_ELIGIBLE', 'Wrong age for this event');
         } else if (
           event.discipline === 'XD' &&
           partnerGender !== null &&
@@ -348,6 +351,7 @@ export const registrationImportHandlers = [
       for (const [rowNumber, rowEntries] of entries) {
         const player = players.get(rowNumber);
         if (!player) continue;
+        const registeredAt = states.get(rowNumber)?.row.registeredAt ?? new Date().toISOString();
         for (const entry of rowEntries) {
           const event = findEvent(entry.report.eventId);
           if (!event || entry.report.status === null || entry.coveredByRow !== null) continue;
@@ -362,6 +366,7 @@ export const registrationImportHandlers = [
             status: entry.report.status,
             player: toPlayerSummary(player),
             partner: partner ? toPlayerSummary(partner) : null,
+            registeredAt,
             createdAt: new Date().toISOString(),
           };
           db.registrations.push(registration);

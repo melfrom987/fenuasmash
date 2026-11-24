@@ -51,3 +51,39 @@ export function detectDateOrder(cells: Cell[]): { order: DateOrder; certain: boo
   }
   return { order: 'DMY', certain: false };
 }
+
+const TIME = /(\d{1,2}):(\d{2})(?::(\d{2}))?/;
+const TAHITI_OFFSET_HOURS = 10;
+
+const tahitiToIso = (y: number, mo: number, d: number, h: number, mi: number, s: number) =>
+  new Date(Date.UTC(y, mo - 1, d, h + TAHITI_OFFSET_HOURS, mi, s)).toISOString();
+
+export function parseDateTime(cell: Cell, order: DateOrder): string | null {
+  if (cell instanceof Date) {
+    return tahitiToIso(
+      cell.getUTCFullYear(),
+      cell.getUTCMonth() + 1,
+      cell.getUTCDate(),
+      cell.getUTCHours(),
+      cell.getUTCMinutes(),
+      cell.getUTCSeconds(),
+    );
+  }
+  const value = cell.trim();
+  if (/^\d{4,6}\.\d+$/.test(value)) {
+    const wall = new Date(Date.UTC(1899, 11, 30) + Number(value) * 86_400_000);
+    return parseDateTime(wall, order);
+  }
+  const date = parseDate(value, order);
+  if (!date) return null;
+  const time = TIME.exec(value);
+  const [y, mo, d] = date.split('-').map(Number);
+  return tahitiToIso(
+    y,
+    mo,
+    d,
+    time ? Number(time[1]) : 0,
+    time ? Number(time[2]) : 0,
+    time?.[3] ? Number(time[3]) : 0,
+  );
+}

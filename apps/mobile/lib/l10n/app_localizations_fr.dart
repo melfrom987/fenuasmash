@@ -539,4 +539,36 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get umpireAnnouncementsDescription =>
       'Afficher les annonces à prononcer par l\'arbitre pendant le match';
+
+  @override
+  String get scoreSyncUpToDate => 'À jour';
+
+  @override
+  String scoreSyncPending(int count) {
+    return '$count en attente';
+  }
+
+  @override
+  String scoreSyncOffline(int count) {
+    return 'Hors ligne · $count en attente';
+  }
+
+  @override
+  String get scoreSyncBlocked => 'Envoi bloqué';
+
+  @override
+  String get scoreSyncUpToDateTooltip =>
+      'Tous les points sont enregistrés sur le serveur.';
+
+  @override
+  String get scoreSyncPendingTooltip =>
+      'Les points sont gardés sur la tablette et envoyés au serveur.';
+
+  @override
+  String get scoreSyncOfflineTooltip =>
+      'Le serveur est injoignable. Les points sont gardés sur la tablette et seront envoyés au retour du réseau.';
+
+  @override
+  String get scoreSyncBlockedTooltip =>
+      'Le serveur refuse les points d\'un match. Ils sont gardés sur la tablette : prévenez l\'organisateur.';
 }

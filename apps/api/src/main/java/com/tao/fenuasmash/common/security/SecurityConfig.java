@@ -20,8 +20,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * <p>
  * Reads are public, except player records and registrations, which only
  * organizers and clubs can read. Organizers manage tournaments, events, courts,
- * matches, clubs, players and registrations; the admin manages accounts and
- * organizations. Routes added later are closed until a rule lets them in.
+ * matches, clubs, players, registrations and umpire tablets; the admin manages
+ * accounts and organizations. A paired tablet reads its court. Routes added
+ * later are closed until a rule lets them in.
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -29,7 +30,7 @@ class SecurityConfig {
 
 	@Bean
 	SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityProblemHandler problemHandler,
-			JwtService jwtService) throws Exception {
+			JwtService jwtService, TabletAuthenticator tabletAuthenticator) throws Exception {
 		http.csrf(AbstractHttpConfigurer::disable)
 			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.httpBasic(AbstractHttpConfigurer::disable)
@@ -38,7 +39,7 @@ class SecurityConfig {
 			.requestCache(AbstractHttpConfigurer::disable)
 			.exceptionHandling(errors -> errors.authenticationEntryPoint(problemHandler)
 				.accessDeniedHandler(problemHandler))
-			.addFilterBefore(new BearerTokenFilter(jwtService, problemHandler),
+			.addFilterBefore(new BearerTokenFilter(jwtService, tabletAuthenticator, problemHandler),
 					UsernamePasswordAuthenticationFilter.class)
 			// The first matching rule wins
 			.authorizeHttpRequests(requests -> requests
@@ -47,10 +48,18 @@ class SecurityConfig {
 				.permitAll()
 				.requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/health/**")
 				.permitAll()
-				.requestMatchers(HttpMethod.POST, "/api/auth/login")
+				.requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/tablets/pair")
 				.permitAll()
+				// Accounts only: a tablet has no account
 				.requestMatchers(HttpMethod.GET, "/api/auth/me")
-				.authenticated()
+				.hasAnyRole("ADMIN", "ORGANIZER", "CLUB", "PLAYER")
+				.requestMatchers(HttpMethod.GET, "/api/tablets/me")
+				.hasRole(TabletPrincipal.ROLE)
+				// When each tablet was last seen is for organizers only
+				.requestMatchers(HttpMethod.GET, "/api/tournaments/*/tablets")
+				.hasRole("ORGANIZER")
+				.requestMatchers(HttpMethod.POST, "/api/tablets/*/revoke")
+				.hasRole("ORGANIZER")
 				.requestMatchers("/api/accounts", "/api/accounts/**")
 				.hasRole("ADMIN")
 				.requestMatchers(HttpMethod.POST, "/api/organizations")

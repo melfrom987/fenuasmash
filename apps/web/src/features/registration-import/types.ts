@@ -8,7 +8,15 @@ export type Table = {
   rows: Cell[][];
 };
 
-export const FIELDS = ['fullName', 'birthDate', 'gender', 'club', 'email', 'phone'] as const;
+export const FIELDS = [
+  'fullName',
+  'birthDate',
+  'gender',
+  'club',
+  'email',
+  'phone',
+  'registeredAt',
+] as const;
 export type Field = (typeof FIELDS)[number];
 export const REQUIRED_FIELDS: readonly Field[] = ['fullName', 'birthDate', 'gender', 'club'];
 
@@ -55,6 +63,7 @@ export type ImportRow = {
   email: string | null;
   phone: string | null;
   playerDecision?: PlayerDecision;
+  registeredAt: string | null;
   entries: ImportEntry[];
 };
 

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { useDeleteEvent, useEvent, useUpdateEvent } from '@/features/events/api';
 import { EventForm } from '@/features/events/components/EventForm';
+import { seasonReferenceYear } from '@/features/players/age-category';
+import { useTournament } from '@/features/tournaments/api';
 import { toEventFormValues, toEventInput, type EventFormValues } from '@/features/events/schema';
 import { useErrorMessage } from '@/lib/use-error-message';
 
@@ -13,6 +15,10 @@ export function EditEventPage() {
   const navigate = useNavigate();
   const { tournamentId = '', eventId = '' } = useParams();
   const event = useEvent(eventId);
+  const tournament = useTournament(tournamentId);
+  const seasonYear = seasonReferenceYear(
+    tournament.data ? new Date(tournament.data.startsAt) : new Date(),
+  );
   const updateEvent = useUpdateEvent(tournamentId, eventId);
   const deleteEvent = useDeleteEvent(tournamentId);
   const [confirming, setConfirming] = useState(false);
@@ -40,6 +46,7 @@ export function EditEventPage() {
             <EventForm
               key={event.data.id}
               defaultValues={toEventFormValues(event.data)}
+              seasonYear={seasonYear}
               onSubmit={handleSubmit}
             />
           </div>

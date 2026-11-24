@@ -109,17 +109,22 @@ AppSettings        global user preferences
 
 Keeping these concepts separate prevents a single model from becoming responsible for every kind of state.
 
-## Future backend synchronization
+## Score events and backend synchronization
 
-When a backend is introduced, local persistence should remain useful for resilience. A possible model is:
+Each point and undo is also a score event (`ScoreEvent`): an id generated on the tablet, a sequence from 1 and the time it was entered. The rules are those of `sendScoreEvents` in `contracts/openapi.yaml`.
 
 ```mermaid
 flowchart LR
-    Controller --> Local[Local draft]
-    Controller --> Sync[Sync layer]
-    Sync --> API[Backend]
+    Controller --> Outbox[ScoreEventOutbox<br/>local queue]
+    Outbox --> Sync[ScoreEventSync<br/>+ scheduler]
+    Sync --> Api[HttpScoreEventApi]
+    Api --> Backend[POST /matches/id/events]
 ```
 
-Local recovery can protect an umpire from temporary connectivity loss while the backend remains the shared tournament source of truth.
+- `ScoreEventOutbox` keeps the events the backend has not confirmed yet, per match, in their own file. An event leaves it only once its id comes back in `acceptedIds` or `duplicateIds`.
+- `ScoreEventSync` sends them in sequence order, in batches of 100; `ScoreEventSyncScheduler` tries again after 2 s, 5 s, 15 s, 30 s, then every 60 s while the backend cannot be reached.
+- `HttpScoreEventApi` is the HTTP client: it sends the tablet token and turns every answer into a result. No answer, a timeout, 408, 429 or 5xx means "try again later"; `SEQUENCE_GAP` gives the sequence to send again from; any other refusal (`TABLET_REVOKED`, `MATCH_NOT_IN_PROGRESS`, `SEQUENCE_ALREADY_USED`...) blocks the match until someone looks at it.
+- The backend ignores an event it already received, so sending again after a lost answer or a crash never counts a point twice.
 
-Conflict and synchronization rules should be designed explicitly before live remote scoring is introduced.
+The match page does not send anything yet (`_scoreSync` stays null and the indicator is hidden): it needs the tablet token from pairing (#85) and the backend id of the match (#101, #105). The events wait in the queue meanwhile.
+

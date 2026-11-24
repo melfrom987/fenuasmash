@@ -8,6 +8,7 @@ export const toPlayerSummary = (player: Player): PlayerSummary => ({
   birthDate: player.birthDate,
   clubName: player.club.name,
   licenseNumber: player.licenseNumber,
+  rankings: player.rankings,
 });
 
 export function seedRegistrations(events: Event[], players: Player[]): Registration[] {
@@ -27,6 +28,7 @@ export function seedRegistrations(events: Event[], players: Player[]): Registrat
       status,
       player: toPlayerSummary(players[player]),
       partner: partner === null ? null : toPlayerSummary(players[partner]),
+      registeredAt: new Date(Date.UTC(2026, 9, 1 + n)).toISOString(),
       createdAt: new Date(Date.UTC(2026, 9, 1 + n)).toISOString(),
     };
   };
