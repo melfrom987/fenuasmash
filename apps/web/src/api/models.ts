@@ -243,7 +243,6 @@ export type PairTabletResponse = {
   court: Court;
 };
 
-
 export type MatchSide = 'A' | 'B';
 export type MatchOutcome = 'NORMAL' | 'RETIRED' | 'WALKOVER';
 export type Match = {

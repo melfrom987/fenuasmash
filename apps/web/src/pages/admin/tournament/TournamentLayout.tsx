@@ -1,7 +1,11 @@
-import { Link, NavLink, Outlet, useParams } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { useTournament } from '@/features/tournaments/api';
+import { NextStepBanner } from '@/features/tournaments/components/NextStepBanner';
+import { TournamentSteps } from '@/features/tournaments/components/TournamentSteps';
+import { STEPS, stepOf, type NextAction } from '@/features/tournaments/progress';
+import { useTournamentProgress } from '@/features/tournaments/use-tournament-progress';
 import { formatDate } from '@/lib/dates';
 import { useErrorMessage } from '@/lib/use-error-message';
 
@@ -12,11 +16,23 @@ const tabClass = ({ isActive }: { isActive: boolean }) =>
       : 'border-transparent text-sable-600 hover:text-sable-800'
   }`;
 
+function isHere(next: NextAction, path: string, search: string) {
+  const [targetPath, targetSearch = ''] = next.to.split('?');
+  return path === targetPath && (!targetSearch || search === `?${targetSearch}`);
+}
+
 export function TournamentLayout() {
   const { t } = useTranslation();
   const errorMessage = useErrorMessage();
   const { tournamentId = '' } = useParams();
+  const location = useLocation();
   const tournament = useTournament(tournamentId);
+  const progress = useTournamentProgress(tournamentId);
+
+  const base = `/admin/tournaments/${tournamentId}/`;
+  const path = location.pathname.startsWith(base) ? location.pathname.slice(base.length) : '';
+  const activeStep = stepOf(path);
+  const pages = STEPS.find((step) => step.id === activeStep)?.pages ?? [];
 
   return (
     <div>
@@ -41,26 +57,28 @@ export function TournamentLayout() {
             })}
           </p>
 
-          <nav className="border-sable-200 mt-6 flex gap-1 border-b">
-            <NavLink to="settings" className={tabClass}>
-              {t('tournamentDetail.tabs.settings')}
-            </NavLink>
-            <NavLink to="events" className={tabClass}>
-              {t('tournamentDetail.tabs.events')}
-            </NavLink>
-            <NavLink to="registrations" className={tabClass}>
-              {t('tournamentDetail.tabs.registrations')}
-            </NavLink>
-            <NavLink to="draws" className={tabClass}>
-              {t('tournamentDetail.tabs.draws')}
-            </NavLink>
-            <NavLink to="matches" className={tabClass}>
-              {t('tournamentDetail.tabs.matches')}
-            </NavLink>
-            <NavLink to="tablets" className={tabClass}>
-              {t('tournamentDetail.tabs.tablets')}
-            </NavLink>
+          <nav aria-label={t('tournamentDetail.stepsLabel')} className="mt-6">
+            <TournamentSteps progress={progress} activeStep={activeStep} />
           </nav>
+
+          {progress?.next && (
+            <div className="mt-3">
+              <NextStepBanner
+                next={progress.next}
+                here={isHere(progress.next, path, location.search)}
+              />
+            </div>
+          )}
+
+          {pages.length > 1 && (
+            <nav className="border-sable-200 mt-6 flex gap-1 border-b">
+              {pages.map((page) => (
+                <NavLink key={page.path} to={page.path} className={tabClass}>
+                  {t(`tournamentDetail.tabs.${page.label}`)}
+                </NavLink>
+              ))}
+            </nav>
+          )}
 
           <div className="mt-6">
             <Outlet />

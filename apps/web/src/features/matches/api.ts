@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type {
   ChangeMatchStatusRequest,
   CourtAssignment,
@@ -10,12 +10,14 @@ import { ApiError, api } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
 import { LIVE_REFRESH_MS } from './status';
 
-export function useTournamentMatches(tournamentId: string) {
-  return useQuery({
+export const tournamentMatchesQuery = (tournamentId: string) =>
+  queryOptions({
     queryKey: queryKeys.matches(tournamentId),
     queryFn: () => api<Match[]>(`/tournaments/${tournamentId}/matches`),
-    refetchInterval: LIVE_REFRESH_MS,
   });
+
+export function useTournamentMatches(tournamentId: string) {
+  return useQuery({ ...tournamentMatchesQuery(tournamentId), refetchInterval: LIVE_REFRESH_MS });
 }
 
 export function useMatchQueue(tournamentId: string) {
