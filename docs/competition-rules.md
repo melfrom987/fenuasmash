@@ -305,7 +305,7 @@ Suggested number of pools: entries / 4, rounded. One pool means a single pool (r
 
 1. Seed 1 is on the first line, seed 2 on the last line.
 2. Seeds 3 and 4 are drawn into the two remaining quarters, seeds 5 to 8 into the remaining eighths, and so on.
-3. When the number of entries is not a power of 2, byes go to the best seeds.
+3. When the number of entries is not a power of 2, byes go to the best seeds, facing the line where each one was drawn; with more byes than seeds, the remaining byes go to the best lines of the bracket.
 4. The other entries are placed by random draw, separating players of the same club in the first round when possible.
 
 **Pools then knockout**:
@@ -321,6 +321,8 @@ Suggested number of pools: entries / 4, rounded. One pool means a single pool (r
    With 2 pools: 1 and 4 in pool A, 2 and 3 in pool B, then random.
 2. Players of the same club are put in different pools when possible.
 3. The qualifiers (`qualifiersPerPool`, fewer than the smallest pool) go into a knockout bracket: pool winners are placed like seeds, and the other qualifiers are drawn into the opposite half from the winner of their pool, so two players of the same pool can only meet in the final.
+
+**Reproducible draw**: every random choice of the draw comes from a seed (`randomSeed`), kept with the draw. The same confirmed entries, settings and seed always give the same draw, so a draw can be checked or replayed.
 
 **Draft, then published**: the draw is first a **draft**. The organizer can run it again, change the settings or swap two entries (in pools or in the bracket). Remaining same-club conflicts are shown as a warning. Once **published**, the draw is locked, and so are the registrations of the event (`DRAW_PUBLISHED`): no addition, change, withdrawal or move.
 
