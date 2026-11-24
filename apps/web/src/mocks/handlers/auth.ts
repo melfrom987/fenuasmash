@@ -85,6 +85,7 @@ export const authHandlers = [
   }),
 
   http.all('/api/*', ({ request }) => {
+    if (new URL(request.url).pathname === '/api/tablets/pair') return undefined;
     if (!accountFrom(request)) return unauthorized();
     return undefined;
   }),

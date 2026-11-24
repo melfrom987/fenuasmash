@@ -22,6 +22,17 @@ const dateTimeFormatter = new Intl.DateTimeFormat('fr-FR', {
   minute: '2-digit',
 });
 
+export function formatRelative(iso: string, language: string, now = Date.now()) {
+  const seconds = Math.round((new Date(iso).getTime() - now) / 1000);
+  const format = new Intl.RelativeTimeFormat(language, { numeric: 'auto' });
+  if (Math.abs(seconds) < 60) return format.format(seconds, 'second');
+  const minutes = Math.round(seconds / 60);
+  if (Math.abs(minutes) < 60) return format.format(minutes, 'minute');
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) return format.format(hours, 'hour');
+  return format.format(Math.round(hours / 24), 'day');
+}
+
 export const formatDate = (iso: string) => dateFormatter.format(new Date(iso));
 export const formatDateTime = (iso: string) => dateTimeFormatter.format(new Date(iso));
 export const formatTime = (iso: string) => timeFormatter.format(new Date(iso));
