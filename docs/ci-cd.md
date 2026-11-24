@@ -83,6 +83,4 @@ Server and repository configuration is described in [installation.md](installati
 
 ## Dependency Updates
 
-**Configuration:** `.github/dependabot.yml`
-
-Dependabot opens weekly pull requests against `dev` for Maven, npm, pub, Docker and GitHub Actions dependencies. They go through the same CI checks as any other pull request.
+Automatic dependency update pull requests (Dependabot) are disabled. Dependencies are updated by hand, in a regular pull request, when the team decides to.
