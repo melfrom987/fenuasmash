@@ -7,6 +7,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { Field } from '@/components/ui/Field';
 import { inputClass } from '@/components/ui/styles';
 import { key } from '@/i18n';
+import { categoryBirthYears } from '@/features/players/age-category';
 import { applyApiFieldErrors } from '@/lib/form-errors';
 import { useErrorMessage } from '@/lib/use-error-message';
 import {
@@ -19,9 +20,11 @@ import { eventFormSchema, type EventFormValues } from '../schema';
 
 export function EventForm({
   defaultValues,
+  seasonYear,
   onSubmit,
 }: {
   defaultValues?: EventFormValues;
+  seasonYear: number;
   onSubmit: (values: EventFormValues) => Promise<unknown>;
 }) {
   const { t } = useTranslation();
@@ -46,6 +49,8 @@ export function EventForm({
       categoryLabel: '',
       plannedDate: '',
       maxEntries: Number.NaN,
+      minBirthYear: Number.NaN,
+      maxBirthYear: Number.NaN,
     },
   });
 
@@ -57,6 +62,15 @@ export function EventForm({
     const base = t(`events.disciplines.${discipline}`);
     const label = categoryLabel.trim();
     setValue('name', type !== 'OPEN' && label ? `${base} ${label}` : base);
+  };
+
+  const fillBirthYears = (force: boolean) => {
+    if (!force && (dirtyFields.minBirthYear || dirtyFields.maxBirthYear)) return;
+    const { categoryType: type, categoryLabel } = getValues();
+    const bounds = type === 'AGE' ? categoryBirthYears(categoryLabel, seasonYear) : null;
+    if (!bounds && !force) return;
+    setValue('minBirthYear', bounds?.minBirthYear ?? Number.NaN, { shouldDirty: force });
+    setValue('maxBirthYear', bounds?.maxBirthYear ?? Number.NaN, { shouldDirty: force });
   };
 
   const submit = async (values: EventFormValues) => {
@@ -92,6 +106,10 @@ export function EventForm({
             {...register('categoryType', {
               onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
                 if (e.target.value === 'OPEN') setValue('categoryLabel', '');
+                if (e.target.value !== 'AGE') {
+                  setValue('minBirthYear', Number.NaN);
+                  setValue('maxBirthYear', Number.NaN);
+                }
                 syncName();
               },
             })}
@@ -114,9 +132,47 @@ export function EventForm({
           <input
             className={inputClass}
             list={categoryType === 'AGE' ? 'event-age-categories' : 'event-level-categories'}
-            {...register('categoryLabel', { onChange: syncName })}
+            {...register('categoryLabel', {
+              onChange: () => {
+                syncName();
+                fillBirthYears(false);
+              },
+            })}
           />
         </Field>
+      )}
+
+      {categoryType === 'AGE' && (
+        <div className="bg-sable-50 space-y-3 rounded-md p-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t('events.form.minBirthYear')} error={errors.minBirthYear?.message}>
+              <input
+                type="number"
+                className={`${inputClass} tabular-nums`}
+                {...register('minBirthYear', { valueAsNumber: true })}
+              />
+            </Field>
+            <Field label={t('events.form.maxBirthYear')} error={errors.maxBirthYear?.message}>
+              <input
+                type="number"
+                className={`${inputClass} tabular-nums`}
+                {...register('maxBirthYear', { valueAsNumber: true })}
+              />
+            </Field>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sable-600 text-xs">
+              {t('events.form.birthYearsHint', { season: `${seasonYear - 1}–${seasonYear}` })}
+            </p>
+            <button
+              type="button"
+              onClick={() => fillBirthYears(true)}
+              className="text-lagon-700 text-sm hover:underline"
+            >
+              {t('events.form.computeBirthYears')}
+            </button>
+          </div>
+        </div>
       )}
       <datalist id="event-age-categories">
         {AGE_CATEGORY_SUGGESTIONS.map((label) => (

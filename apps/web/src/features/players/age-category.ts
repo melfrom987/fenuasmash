@@ -33,3 +33,45 @@ export function getAgeCategory(
   if (age < VETERAN_MIN_AGE) return { code: 'SENIOR' };
   return { code: 'VETERAN', level: Math.min(8, Math.floor((age - VETERAN_MIN_AGE) / 5) + 1) };
 }
+
+const CATEGORY_MAX_AGE: [RegExp, number][] = [
+  [/minibad/, 8],
+  [/poussin/, 10],
+  [/benjamin/, 12],
+  [/minime/, 14],
+  [/cadet/, 16],
+  [/junior/, 18],
+];
+
+export type BirthYearBounds = { minBirthYear: number | null; maxBirthYear: number | null };
+
+export function categoryBirthYears(label: string, referenceYear: number): BirthYearBounds | null {
+  const value = label
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+  const under = /\bu\s?(\d{1,2})\b/.exec(value);
+  if (under) return { minBirthYear: referenceYear - (Number(under[1]) - 1), maxBirthYear: null };
+
+  for (const [pattern, maxAge] of CATEGORY_MAX_AGE) {
+    if (pattern.test(value)) return { minBirthYear: referenceYear - maxAge, maxBirthYear: null };
+  }
+
+  if (/veteran/.test(value)) {
+    const level = /\bv\s?([1-8])\b/.exec(value);
+    const minAge = VETERAN_MIN_AGE + (level ? (Number(level[1]) - 1) * 5 : 0);
+    return { minBirthYear: null, maxBirthYear: referenceYear - minAge };
+  }
+
+  if (/senior/.test(value)) return { minBirthYear: null, maxBirthYear: null };
+  return null;
+}
+
+export function birthYearFits(bounds: BirthYearBounds, birthDate: string) {
+  const year = Number(birthDate.slice(0, 4));
+  return (
+    (bounds.minBirthYear === null || year >= bounds.minBirthYear) &&
+    (bounds.maxBirthYear === null || year <= bounds.maxBirthYear)
+  );
+}

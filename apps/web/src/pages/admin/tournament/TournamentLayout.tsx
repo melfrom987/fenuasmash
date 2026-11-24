@@ -51,6 +51,9 @@ export function TournamentLayout() {
             <NavLink to="registrations" className={tabClass}>
               {t('tournamentDetail.tabs.registrations')}
             </NavLink>
+            <NavLink to="draws" className={tabClass}>
+              {t('tournamentDetail.tabs.draws')}
+            </NavLink>
           </nav>
 
           <div className="mt-6">
