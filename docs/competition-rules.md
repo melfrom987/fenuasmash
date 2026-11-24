@@ -118,7 +118,28 @@ Example of a club competition in pools then knockout:
 | Level | Ranking level | Series 1, Series 2 |
 | Open | Everyone | Men's Doubles |
 
+### Age Categories
+
+A player's age category is **computed from the birth year, never stored**, so it changes by itself every season. The season starts on September 1st; the reference year is the year in which the season ends (season 2026–2027 → 2027).
+
+`age = reference year − birth year`
+
+| Category | Age in the reference year | Season 2026–2027 (born in) |
+|---|---|---|
+| Minibad (U9) | 8 and under | 2019 and after |
+| Poussin (U11) | 9–10 | 2017–2018 |
+| Benjamin (U13) | 11–12 | 2015–2016 |
+| Minime (U15) | 13–14 | 2013–2014 |
+| Cadet (U17) | 15–16 | 2011–2012 |
+| Junior (U19) | 17–18 | 2009–2010 |
+| Senior | 19–34 | 1993–2008 |
+| Veteran V1 to V8 | 35–39 (V1), then every 5 years, 70 and over (V8) | 1992 and before |
+
+The web app and the backend compute it with the same rule. To confirm with the federation: the season start date in French Polynesia.
+
 **Playing up**: the age category comes from the birth year. A player can always play in an older category (a Minime in Cadet, Junior or Senior), never in a younger one. Nobody plays in Veteran without being old enough. An age event therefore has a single useful bound: the oldest birth year allowed (youth, seniors), or the most recent one (veterans).
+
+**Birth-year bounds**: each age event stores `minBirthYear` (oldest year allowed, youth) and `maxBirthYear` (most recent year allowed, veterans). The web app fills them from the category label and the season of the tournament (Minime U15 in 2026–2027 → born in 2013 or later; Veteran V2 → born in 1987 or earlier), and the organizer can change them. Registrations, the import and moves between events all check them. Seniors have no bound.
 
 **Level series**: there are no ranking series (D, R, N…) in French Polynesia. Players register in the event of their discipline (e.g. Men's Singles), and the organizer splits them into series at the draw.
 
@@ -133,12 +154,25 @@ Local needs come first: the database holds the players of the federation, each w
 | Last name, first name | Yes | |
 | Gender | Yes | To offer the right events and partners |
 | Birth date | Yes | Age categories |
-| Club | Yes | Created if it does not exist yet |
+| Club | Yes | Must exist (see Clubs below) |
 | License number | Yes (optional in the MVP) | Unique. The registration form does not ask for it, so a player is recognized by name and birth date |
-| Ranking | No (for now) | French Polynesia ranking: points and position. Will be used for seeding and to balance levels, and imported from the federation database later |
+| Age category | Computed | From the birth year, see Age Categories |
+| Ranking | No (for now) | French Polynesia ranking, **one per discipline**: singles, doubles, mixed doubles, each with points and position. Will be used for seeding and to balance levels, and imported from the federation database later |
 | Phone, email | No | |
 
 The organizer and club managers can see all this information.
+
+### Clubs
+
+| Data | Required | Notes |
+|---|---|---|
+| Name | Yes | Unique, case and accent insensitive |
+| City | Yes | |
+| Address | No | Street address or gym |
+| Email, phone | No | |
+| Logo | No | PNG, JPEG or WebP, 1 MB maximum (no SVG: it can contain scripts) |
+
+Since the city is required, a club that does not exist yet during an import is created with the city the organizer gives in the mapping step.
 
 ## Registrations
 
@@ -166,6 +200,16 @@ In the MVP, the organizer enters or imports registrations. Players registering t
 | Confirmed | Singles, or a pair confirmed by both players (or entered by the organizer) |
 | Pending partner | The partner has not confirmed yet |
 | Looking for a partner | Doubles registration without a partner; the organizer or another player can complete the pair |
+
+### Order and Registration Date
+
+Every registration keeps its **registration date** (`registeredAt`): the form timestamp for an import, otherwise the moment it was entered. It is kept when the registration moves to another event, so it can order a future waiting list.
+
+Registrations of an event are listed by ranking points in the discipline (singles, doubles or mixed ranking; a pair = the sum of both players' points), then by registration date when points are equal. Unranked entries come last.
+
+### Moving Registrations
+
+The organizer can select registrations and move them to another event of the **same discipline** in the same tournament: Minime U15 to Cadet U17, Senior to Series 2. Each one is checked against the target event (gender, birth years, already registered, maximum entries) and moved or rejected on its own, with the reason.
 
 ## Importing the Registration Form (MVP)
 
@@ -203,7 +247,8 @@ Special values in partner columns: "Non" (no) = not registered in this event; "E
 
 - **Columns change from one tournament to another**: the import starts with a mapping step (which column is the name, the birth date…; which pair of columns is an event and its partner), suggested automatically from the headers.
 - **So do values**: each distinct value of an event column ("Minime U15 G", "Oui") is mapped to an event of the tournament, or ignored.
-- **The partner is a free-text name**: it is matched against the other rows of the file, then against existing players (case and accent insensitive). Not found = a row to fix by hand.
+- **The partner is a free-text name**: it is matched against the other rows of the file, then against existing players (case and accent insensitive). Not found = the player is registered as looking for a partner, and the organizer adds the partner by hand.
+- **The name is a single field**: the web app splits it into last and first name ("Last First" by default, a word in capitals is taken as the last name), and the organizer can fix each row before the preview.
 - **Confirmation comes from the file**: if A names B and B names A in the same event, the pair is confirmed; if only A names B, the registration is pending the partner.
 - **Rules are checked** as for any registration (gender, age, maximum entries), and issues are listed in the summary.
 - **Dates in every format** are recognized: `21/11/2010` (day first), `11/21/2010` (month first), `2010-11-21`, dates followed by a time, and Excel date numbers. When a column is ambiguous (every value could be day first or month first), day first is assumed and shown in the mapping step, where the organizer can change it.
@@ -227,19 +272,79 @@ The web app reads the file and handles column and value mapping with the organiz
 
 Once registrations are closed, the organizer sets the structure of each event based on its entries, then runs the draw.
 
-**Structure adapted to the number of entries**: the format comes from the tournament, but the number and size of pools are set per event, and can change until the draw.
+**Level series**: adults register in the event of their discipline (e.g. Men's Singles). Before the draw, the organizer splits it into series:
+
+1. The confirmed entries are sorted by ranking points in the discipline (sum for a pair), then by registration date.
+2. The organizer chooses the number of series and the size of each one, from the strongest to the weakest (e.g. 21 entries: the 5 best in Series 1, the next 7 in Series 2, the last 9 in Series 3).
+3. Each series becomes an event of its own (`LEVEL`, e.g. "Simple Homme Série 1"), linked to the original event, with its own pools, draw and winner.
+4. Until the draw of a series is published, a player can still be moved from one series to another.
+
+| Ranking | 1–5 | 6–12 | 13–21 |
+|---|---|---|---|
+| Series | Série 1 (5) | Série 2 (7) | Série 3 (9) |
+
+**Structure adapted to the number of entries**: the format comes from the tournament; the organizer sets the **number of pools** per event and the draw distributes the entries as evenly as possible (3 to 8 per pool, at most 16 pools). Only `CONFIRMED` registrations are drawn.
 
 | Planned | Actual entries | Switch to |
 |---|---|---|
 | 2 pools of 3 (6 players) | 4 players | 1 single pool of 4 |
-| 4 pools of 4 (16 players) | 13 players | 3 pools (4, 4, 5) or 4 pools (3, 3, 3, 4), chosen by the organizer |
+| 4 pools of 4 (16 players) | 13 players | 3 pools (5, 4, 4) or 4 pools (4, 3, 3, 3), chosen by the organizer |
 
-**Seeding and draw (single elimination)**:
+Suggested number of pools: entries / 4, rounded. One pool means a single pool (round robin) with no final phase.
 
-1. The entries of the event are sorted by ranking.
-2. The best ones (seeds) are placed strategically, so they do not meet too early.
-3. The others are placed by random draw.
-4. When the number of entries is not a power of 2, byes go to the best seeds.
+**Seeds**: entries are sorted by ranking points in the discipline (sum for a pair), then by registration date. The number of seeds depends on the size of the bracket and can be changed by the organizer:
+
+| Bracket | Seeds |
+|---|---|
+| Up to 8 | 2 |
+| Up to 16 | 4 |
+| Up to 32 | 8 |
+| Beyond | 16 |
+
+**Single elimination**:
+
+1. Seed 1 is on the first line, seed 2 on the last line.
+2. Seeds 3 and 4 are drawn into the two remaining quarters, seeds 5 to 8 into the remaining eighths, and so on.
+3. When the number of entries is not a power of 2, byes go to the best seeds.
+4. The other entries are placed by random draw, separating players of the same club in the first round when possible.
+
+**Pools then knockout**:
+
+1. Pools are filled by rows of the ranking, one entry per pool per row. The first two rows follow a snake, so the best entries are spread and the first two never meet in pools; the following rows are drawn at random (a full snake would be too predictable).
+
+   | Row | Pool A | Pool B | Pool C |
+   |---|---|---|---|
+   | 1 (snake) | 1 | 2 | 3 |
+   | 2 (snake) | 6 | 5 | 4 |
+   | 3 and more | random | random | random |
+
+   With 2 pools: 1 and 4 in pool A, 2 and 3 in pool B, then random.
+2. Players of the same club are put in different pools when possible.
+3. The qualifiers (`qualifiersPerPool`, fewer than the smallest pool) go into a knockout bracket: pool winners are placed like seeds, and the other qualifiers are drawn into the opposite half from the winner of their pool, so two players of the same pool can only meet in the final.
+
+**Draft, then published**: the draw is first a **draft**. The organizer can run it again, change the settings or swap two entries (in pools or in the bracket). Remaining same-club conflicts are shown as a warning. Once **published**, the draw is locked, and so are the registrations of the event (`DRAW_PUBLISHED`): no addition, change, withdrawal or move.
+
+## Schedule
+
+The schedule gives the order of matches and their planned time, from the published draws. It is computed by the backend, checked and adjusted by the organizer, then published.
+
+**Settings (tournament)**:
+
+| Setting | Default | Use |
+|---|---|---|
+| Average match length | 25 min (best of 3 games to 15, warm-up included) | Length of a slot on a court |
+| Minimum rest | 20 min (rules), editable | Between two matches of the same player |
+| Call time | 30 min (usually 30 to 60) | Players are called this long before their first match |
+| Public visibility | As soon as published | Or only from the first day of the tournament (players still get their call time) |
+
+**Settings (event)**: planned slot (start and end, e.g. youth singles on Saturday, doubles on Sunday morning, mixed on Sunday afternoon) and whether the third place match is played.
+
+**Capacity**: with *n* active courts and matches of *d* minutes, about *n × 60 / d* matches per hour (6 courts, 25 min → 14 matches per hour).
+
+**Rules for placing a match** (details to come with the schedule):
+1. The match is inside the slot of its event.
+2. Each player has finished the previous match and rested the minimum time.
+3. A knockout match comes after the matches it depends on (pool results, previous round).
 
 ## Data Model
 
@@ -247,11 +352,11 @@ The full definition of each entity is in [`contracts/openapi.yaml`](../contracts
 
 | Entity | Main fields | Role |
 |---|---|---|
-| `Tournament` | Dates, minimum rest, rules (competition type, format, play mode, scoring, relay step, disciplines, forbidden combinations) | A competition and its rules |
-| `Event` | Discipline, category type and label, birth year bounds, planned date, maximum entries, pool structure | An event, created before registrations |
+| `Tournament` | Dates, minimum rest, average match length, call time, public visibility, rules (competition type, format, play mode, scoring, relay step, disciplines, forbidden combinations) | A competition and its rules |
+| `Event` | Discipline, category type and label, birth year bounds, planned date, maximum entries, pool structure, source event (series) | An event, created before registrations |
 | `Court` | Number, active | A court of a tournament |
-| `Club` | Name, city | A player's club |
-| `Player` | Name, gender, birth date, club, license, ranking, contact | A player profile |
+| `Club` | Name, city, address, contact, logo | A player's club |
+| `Player` | Name, gender, birth date, club, license, rankings (singles, doubles, mixed), contact | A player profile; the age category is computed |
 | `Registration` | Event, player, partner, status | A player (or pair) entered in an event |
 | `Team`, `TeamMember` (phase 2) | Tournament, name; team, player | Team competitions |
 | `TieLineup` (phase 2) | Tie, team, game, slot → players | A team's line-up for a tie |
@@ -269,7 +374,7 @@ The model plans for everything, but the MVP (December 20) only implements indivi
 | Categories | Age (birth year bounds) or open; level series set at the draw | — |
 | Registrations | Import of the form export, manual entry by the organizer | Player accounts and online registration (phase 3) |
 | Players | FenuaSmash database | Connection to the federation database and rankings |
-| Draw | Ranking, seeds, random draw | — |
+| Draw | Ranking, seeds, random draw with club separation, draft then published | — |
 | Team line-ups | — | Line-up rules (phase 2) |
 
 ## Open Questions
@@ -279,4 +384,3 @@ The model plans for everything, but the MVP (December 20) only implements indivi
 - **Events per player**: is there a limit (e.g. 2 events maximum per player)?
 - **Relay**: do the cap and the 2-point lead apply at each step, or only to the final score?
 - **Line-up rules**: are the rules listed above (matches per player, forbidden combinations, strength order) enough, or are others needed?
-- **Uneven pools** (4, 4, 5): set only the number of pools and let the draw distribute players? To decide with the draw.
