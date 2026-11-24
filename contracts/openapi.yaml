@@ -1242,6 +1242,11 @@ components:
       name: size
       in: query
       schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    MatchId:
+      name: matchId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
 
   responses:
     BadRequest:
@@ -2254,6 +2259,11 @@ components:
           items: { $ref: '#/components/schemas/ImportRowReport' }
 
     # ------------------------------------------------------------ Scores
+    MatchSide:
+      type: string
+      enum: [A, B]
+      description: One of the two players or pairs of a match, as listed in the match
+
     ScoreEventType:
       type: string
       enum: [POINT, UNDO]
