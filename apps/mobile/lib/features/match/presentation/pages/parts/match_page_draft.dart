@@ -105,7 +105,11 @@ extension _MatchPageDraft on _MatchPageState {
         if (report == null) {
           return const SizedBox.shrink();
         }
-        return ScoreSyncIndicator.fromReport(report);
+        return ScoreSyncIndicator.fromReport(
+          report,
+          matchId: widget.config.serverMatchId,
+          onRetry: () => unawaited(scoreSync.syncNow()),
+        );
       },
     );
   }

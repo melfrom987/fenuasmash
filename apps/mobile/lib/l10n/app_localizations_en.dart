@@ -572,6 +572,52 @@ class AppLocalizationsEn extends AppLocalizations {
       'The server refuses the points of a match. They are kept on the tablet: tell the organizer.';
 
   @override
+  String get scoreSyncProblemTitle => 'Points not sent';
+
+  @override
+  String get scoreSyncProblemNotPaired =>
+      'The tablet is no longer paired with the court. Ask the organizer for a new code and pair it again: the points will then be sent.';
+
+  @override
+  String get scoreSyncProblemNotInProgress =>
+      'The match is not in progress on the server. Ask the organizer to start it, then tap Retry.';
+
+  @override
+  String get scoreSyncProblemWrongCourt =>
+      'This match is no longer assigned to the court of this tablet. Tell the organizer.';
+
+  @override
+  String get scoreSyncProblemUnknownMatch =>
+      'The server does not know this match: it may have been deleted. Tell the organizer.';
+
+  @override
+  String get scoreSyncProblemOutOfStep =>
+      'The points on the tablet no longer match those on the server. Tell the organizer to check the score.';
+
+  @override
+  String get scoreSyncProblemInvalidPoint =>
+      'The server refuses a point, for example one scored after the end of the match. Tell the organizer to check the score.';
+
+  @override
+  String get scoreSyncProblemOther =>
+      'The server refuses the points of this match. Tell the organizer.';
+
+  @override
+  String get scoreSyncProblemKept =>
+      'No point is lost: they stay kept on the tablet.';
+
+  @override
+  String scoreSyncProblemCode(String code) {
+    return 'Code for the organizer: $code';
+  }
+
+  @override
+  String get scoreSyncProblemClose => 'Close';
+
+  @override
+  String get scoreSyncRetry => 'Retry';
+
+  @override
   String get pairingTitle => 'Pair the tablet';
 
   @override

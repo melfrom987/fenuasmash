@@ -1151,6 +1151,78 @@ abstract class AppLocalizations {
   /// **'Le serveur refuse les points d\'un match. Ils sont gardés sur la tablette : prévenez l\'organisateur.'**
   String get scoreSyncBlockedTooltip;
 
+  /// Title of the dialog explaining why the server refuses the points of a match
+  ///
+  /// In fr, this message translates to:
+  /// **'Points non envoyés'**
+  String get scoreSyncProblemTitle;
+
+  /// No description provided for @scoreSyncProblemNotPaired.
+  ///
+  /// In fr, this message translates to:
+  /// **'La tablette n\'est plus associée au terrain. Demandez un nouveau code à l\'organisateur et associez-la à nouveau : les points seront alors envoyés.'**
+  String get scoreSyncProblemNotPaired;
+
+  /// No description provided for @scoreSyncProblemNotInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le match n\'est pas en cours sur le serveur. Demandez à l\'organisateur de le lancer, puis appuyez sur Réessayer.'**
+  String get scoreSyncProblemNotInProgress;
+
+  /// No description provided for @scoreSyncProblemWrongCourt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce match n\'est plus affecté au terrain de cette tablette. Prévenez l\'organisateur.'**
+  String get scoreSyncProblemWrongCourt;
+
+  /// No description provided for @scoreSyncProblemUnknownMatch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur ne connaît pas ce match : il a peut-être été supprimé. Prévenez l\'organisateur.'**
+  String get scoreSyncProblemUnknownMatch;
+
+  /// No description provided for @scoreSyncProblemOutOfStep.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les points de la tablette ne correspondent plus à ceux du serveur. Prévenez l\'organisateur pour vérifier le score.'**
+  String get scoreSyncProblemOutOfStep;
+
+  /// No description provided for @scoreSyncProblemInvalidPoint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur refuse un point, par exemple marqué après la fin du match. Prévenez l\'organisateur pour vérifier le score.'**
+  String get scoreSyncProblemInvalidPoint;
+
+  /// No description provided for @scoreSyncProblemOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur refuse les points de ce match. Prévenez l\'organisateur.'**
+  String get scoreSyncProblemOther;
+
+  /// No description provided for @scoreSyncProblemKept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun point n\'est perdu : ils restent gardés sur la tablette.'**
+  String get scoreSyncProblemKept;
+
+  /// Error code returned by the server, shown to help the organizer
+  ///
+  /// In fr, this message translates to:
+  /// **'Code pour l\'organisateur : {code}'**
+  String scoreSyncProblemCode(String code);
+
+  /// No description provided for @scoreSyncProblemClose.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get scoreSyncProblemClose;
+
+  /// No description provided for @scoreSyncRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get scoreSyncRetry;
+
   /// No description provided for @pairingTitle.
   ///
   /// In fr, this message translates to:
