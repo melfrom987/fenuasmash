@@ -209,6 +209,12 @@ public class MatchService {
 			throw courtRequired("A match is called with POST /api/matches/" + id + "/court, which sets its court");
 		}
 		MatchOutcome outcome = resolveOutcome(next, request.winner(), request.outcome());
+		Optional<Match> following = followingMatch(match);
+		boolean reopened = current == MatchStatus.FINISHED && next != MatchStatus.FINISHED;
+		if (reopened && following.isPresent() && following.get().getStatus().compareTo(MatchStatus.READY) > 0) {
+			throw new ConflictException("NEXT_MATCH_STARTED", "The winner of match " + id
+					+ " already plays the next match: it cannot be reopened");
+		}
 		if (!current.isOnCourt() && next.isOnCourt()) {
 			// Reopening a finished match puts it back on its court
 			if (match.getCourtId() == null) {
@@ -217,9 +223,44 @@ public class MatchService {
 			repository.lockTournament(match.getTournamentId());
 			checkCourtIsFree(match, match.getCourtId());
 		}
-		match.moveTo(next, request.winner(), outcome, Instant.now());
+		UUID previousWinner = (current == MatchStatus.FINISHED) ? match.sideOf(match.getWinner()) : null;
+		Instant now = Instant.now();
+		match.moveTo(next, request.winner(), outcome, now);
+		following.ifPresent((nextMatch) -> moveWinnerOn(match, nextMatch, previousWinner, now));
 		// Flushed now, so that the answer carries the new state version
 		return MatchResponse.from(repository.saveAndFlush(match));
+	}
+
+	/**
+	 * The match the winner of a knockout match plays next: positions 2k-1 and 2k of a round
+	 * feed position k of the next one. Empty for the final and for a match out of a bracket.
+	 */
+	private Optional<Match> followingMatch(Match match) {
+		if (match.getBracketPosition() == null) {
+			return Optional.empty();
+		}
+		return repository.findByEventIdAndRoundAndBracketPosition(match.getEventId(), match.getRound() + 1,
+				(match.getBracketPosition() + 1) / 2);
+	}
+
+	/**
+	 * Keeps the next match in line with the result: the winner takes its side (A from an odd
+	 * position, B from an even one), and leaves it when the match is reopened.
+	 */
+	private void moveWinnerOn(Match match, Match nextMatch, UUID previousWinner, Instant now) {
+		MatchSide side = (match.getBracketPosition() % 2 == 1) ? MatchSide.A : MatchSide.B;
+		UUID winner = match.getStatus().isEnded() && match.getWinner() != null ? match.sideOf(match.getWinner())
+				: null;
+		UUID placed = nextMatch.sideOf(side);
+		if (Objects.equals(placed, winner) || (winner == null && !Objects.equals(placed, previousWinner))) {
+			return;
+		}
+		if (nextMatch.getStatus().compareTo(MatchStatus.READY) > 0) {
+			throw new ConflictException("NEXT_MATCH_STARTED",
+					"The next match of match " + match.getId() + " has already started");
+		}
+		nextMatch.placeOn(side, winner, now);
+		repository.save(nextMatch);
 	}
 
 	/**

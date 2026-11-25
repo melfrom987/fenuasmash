@@ -126,6 +126,28 @@ class Match {
 		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
 	}
 
+	/** The registration on {@code side}, or null while unknown. */
+	UUID sideOf(MatchSide side) {
+		return (side == MatchSide.A) ? sideA : sideB;
+	}
+
+	/**
+	 * Places a registration on a side, or empties it with null, for a match not started yet:
+	 * a match left with one side only goes back to {@code SCHEDULED}.
+	 */
+	void placeOn(MatchSide side, UUID registration, Instant now) {
+		if (side == MatchSide.A) {
+			this.sideA = registration;
+		}
+		else {
+			this.sideB = registration;
+		}
+		if (registration == null && status == MatchStatus.READY) {
+			this.status = MatchStatus.SCHEDULED;
+		}
+		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
+	}
+
 	boolean hasBothSides() {
 		return sideA != null && sideB != null;
 	}

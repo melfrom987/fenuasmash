@@ -22,6 +22,8 @@ interface MatchRepository extends JpaRepository<Match, UUID> {
 			+ "ORDER BY m.round ASC NULLS LAST, m.bracketPosition ASC NULLS LAST, m.createdAt, m.id")
 	List<Match> findAllByTournamentAndStatusIn(UUID tournamentId, Collection<MatchStatus> statuses);
 
+	Optional<Match> findByEventIdAndRoundAndBracketPosition(UUID eventId, Integer round, Integer bracketPosition);
+
 	@Query("SELECT m FROM Match m WHERE m.courtId = :courtId AND m.status IN :onCourt")
 	Optional<Match> findOnCourt(UUID courtId, Collection<MatchStatus> onCourt);
 
