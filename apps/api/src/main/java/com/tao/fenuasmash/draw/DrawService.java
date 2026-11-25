@@ -17,6 +17,7 @@ import com.tao.fenuasmash.common.error.InvalidRequestException;
 import com.tao.fenuasmash.common.error.NotFoundException;
 import com.tao.fenuasmash.event.EventResponse;
 import com.tao.fenuasmash.event.EventService;
+import com.tao.fenuasmash.match.MatchService;
 import com.tao.fenuasmash.player.PlayerRankings;
 import com.tao.fenuasmash.player.PlayerSummary;
 import com.tao.fenuasmash.player.Ranking;
@@ -24,6 +25,7 @@ import com.tao.fenuasmash.registration.RegistrationResponse;
 import com.tao.fenuasmash.registration.RegistrationService;
 import com.tao.fenuasmash.registration.RegistrationStatus;
 import com.tao.fenuasmash.tournament.Discipline;
+import com.tao.fenuasmash.tournament.DrawFormat;
 import com.tao.fenuasmash.tournament.TournamentService;
 
 /**
@@ -42,14 +44,17 @@ public class DrawService {
 
 	private final RegistrationService registrationService;
 
+	private final MatchService matchService;
+
 	private final Clock clock = Clock.systemUTC();
 
 	DrawService(DrawRepository repository, EventService eventService, TournamentService tournamentService,
-			RegistrationService registrationService) {
+			RegistrationService registrationService, MatchService matchService) {
 		this.repository = repository;
 		this.eventService = eventService;
 		this.tournamentService = tournamentService;
 		this.registrationService = registrationService;
+		this.matchService = matchService;
 	}
 
 	DrawResponse find(UUID eventId) {
@@ -121,7 +126,10 @@ public class DrawService {
 		return toResponse(event, draw);
 	}
 
-	/** Locks the draw, and with it the registrations of the event. */
+	/**
+	 * Locks the draw, and with it the registrations of the event. A single elimination gets
+	 * the matches of its whole bracket (pools come with #93).
+	 */
 	@Transactional
 	DrawResponse publish(UUID eventId) {
 		EventResponse event = eventService.findById(eventId);
@@ -130,6 +138,10 @@ public class DrawService {
 			throw DrawLock.published();
 		}
 		draw.publish(clock.instant());
+		if (tournamentService.findById(event.tournamentId()).drawFormat() == DrawFormat.SINGLE_ELIMINATION) {
+			List<UUID> lines = draw.getBracket().stream().map(BracketRow::registrationId).toList();
+			matchService.createKnockout(eventId, KnockoutPlanner.plan(lines));
+		}
 		return toResponse(event, draw);
 	}
 

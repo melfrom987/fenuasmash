@@ -10,16 +10,16 @@ import org.springframework.data.jpa.repository.Query;
 
 interface MatchRepository extends JpaRepository<Match, UUID> {
 
-	/** By round, matches without a round last, then creation order. */
-	@Query("SELECT m FROM Match m WHERE m.eventId = :eventId ORDER BY m.round ASC NULLS LAST, m.createdAt, m.id")
+	/** By round (matches without a round last), position in the bracket, then creation order. */
+	@Query("SELECT m FROM Match m WHERE m.eventId = :eventId ORDER BY m.round ASC NULLS LAST, m.bracketPosition ASC NULLS LAST, m.createdAt, m.id")
 	List<Match> findAllByEvent(UUID eventId);
 
 	@Query("SELECT m FROM Match m WHERE m.tournamentId = :tournamentId "
-			+ "ORDER BY m.round ASC NULLS LAST, m.createdAt, m.id")
+			+ "ORDER BY m.round ASC NULLS LAST, m.bracketPosition ASC NULLS LAST, m.createdAt, m.id")
 	List<Match> findAllByTournament(UUID tournamentId);
 
 	@Query("SELECT m FROM Match m WHERE m.tournamentId = :tournamentId AND m.status IN :statuses "
-			+ "ORDER BY m.round ASC NULLS LAST, m.createdAt, m.id")
+			+ "ORDER BY m.round ASC NULLS LAST, m.bracketPosition ASC NULLS LAST, m.createdAt, m.id")
 	List<Match> findAllByTournamentAndStatusIn(UUID tournamentId, Collection<MatchStatus> statuses);
 
 	@Query("SELECT m FROM Match m WHERE m.courtId = :courtId AND m.status IN :onCourt")
