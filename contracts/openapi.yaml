@@ -1933,6 +1933,22 @@ components:
         startsAt: { type: string, format: date-time }
         endsAt: { type: string, format: date-time }
         minimumRestMinutes: { type: integer, minimum: 0, maximum: 1440 }
+        averageMatchMinutes:
+          type: integer
+          minimum: 10
+          maximum: 120
+          default: 25
+          x-status: planned
+          description: Planned. Average length of a match, warm-up included; used by the schedule
+        convocationLeadMinutes:
+          type: integer
+          minimum: 0
+          maximum: 120
+          default: 30
+          x-status: planned
+          description: Planned. Players are called this long before their first match
+        publicVisibility:
+          $ref: '#/components/schemas/PublicVisibility'
         competitionType: { $ref: '#/components/schemas/CompetitionType' }
         drawFormat: { $ref: '#/components/schemas/DrawFormat' }
         playMode: { $ref: '#/components/schemas/PlayMode' }
@@ -1998,6 +2014,22 @@ components:
         startsAt: { type: string, format: date-time }
         endsAt: { type: string, format: date-time }
         minimumRestMinutes: { type: integer, minimum: 0, maximum: 1440 }
+        averageMatchMinutes:
+          type: integer
+          minimum: 10
+          maximum: 120
+          default: 25
+          x-status: planned
+          description: Planned. Average length of a match, warm-up included; used by the schedule
+        convocationLeadMinutes:
+          type: integer
+          minimum: 0
+          maximum: 120
+          default: 30
+          x-status: planned
+          description: Planned. Players are called this long before their first match
+        publicVisibility:
+          $ref: '#/components/schemas/PublicVisibility'
         competitionType: { $ref: '#/components/schemas/CompetitionType' }
         drawFormat: { $ref: '#/components/schemas/DrawFormat' }
         playMode: { $ref: '#/components/schemas/PlayMode' }
@@ -2050,6 +2082,16 @@ components:
           type: [string, 'null']
           format: date-time
           description: Planned day or slot, shown at registration
+        plannedEndDate:
+          type: [string, 'null']
+          format: date-time
+          x-status: planned
+          description: Planned. End of the slot of the event; after `plannedDate`
+        thirdPlaceMatch:
+          type: boolean
+          default: false
+          x-status: planned
+          description: Planned. The two semi-final losers play for third place
         maxEntries:
           type: [integer, 'null']
           minimum: 2
@@ -2099,6 +2141,16 @@ components:
           maxLength: 50
           description: Required unless OPEN (VALIDATION_FAILED on `categoryLabel`)
         plannedDate: { type: [string, 'null'], format: date-time }
+        plannedEndDate:
+          type: [string, 'null']
+          format: date-time
+          x-status: planned
+          description: Planned. End of the slot of the event; after `plannedDate`
+        thirdPlaceMatch:
+          type: boolean
+          default: false
+          x-status: planned
+          description: Planned. The two semi-final losers play for third place
         maxEntries: { type: [integer, 'null'], minimum: 2, maximum: 256 }
         minBirthYear: { type: [integer, 'null'], x-status: planned }
         maxBirthYear: { type: [integer, 'null'], x-status: planned }
@@ -2117,6 +2169,16 @@ components:
         categoryType: { $ref: '#/components/schemas/CategoryType' }
         categoryLabel: { type: [string, 'null'], maxLength: 50 }
         plannedDate: { type: [string, 'null'], format: date-time }
+        plannedEndDate:
+          type: [string, 'null']
+          format: date-time
+          x-status: planned
+          description: Planned. End of the slot of the event; after `plannedDate`
+        thirdPlaceMatch:
+          type: boolean
+          default: false
+          x-status: planned
+          description: Planned. The two semi-final losers play for third place
         maxEntries: { type: [integer, 'null'], minimum: 2, maximum: 256 }
         minBirthYear: { type: [integer, 'null'], x-status: planned }
         maxBirthYear: { type: [integer, 'null'], x-status: planned }
@@ -3016,3 +3078,13 @@ components:
               type: integer
               minimum: 1
               description: With `SEQUENCE_GAP`, the sequence the tablet must send again from
+
+    PublicVisibility:
+      type: string
+      enum: [ON_PUBLISH, AT_START]
+      default: ON_PUBLISH
+      x-status: planned
+      description: |
+        Planned. When the public pages show draws and schedule: `ON_PUBLISH` as soon as the
+        organizer publishes them, `AT_START` only from the first day of the tournament (players
+        still get their call time).

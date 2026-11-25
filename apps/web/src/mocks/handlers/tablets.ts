@@ -5,7 +5,7 @@ import { problem } from './utils';
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const CODE_LIFETIME_MS = 10 * 60 * 1000;
-const PINGING_TABLET_IDS = new Set(['30000000-0000-4000-8000-000000000001']);
+const PINGING_TABLET_IDS = new Set(['70000000-0000-4000-8000-000000000001']);
 
 const codes = new Map<string, PairingCode>();
 
