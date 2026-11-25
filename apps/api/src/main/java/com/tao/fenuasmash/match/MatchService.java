@@ -242,7 +242,7 @@ public class MatchService {
 	}
 
 	/** To call with the tournament locked, so that the answer stays true until the commit. */
-	private void checkCourtIsFree(Match match, UUID courtId) {
+	void checkCourtIsFree(Match match, UUID courtId) {
 		Optional<Match> onCourt = repository.findOnCourt(courtId, MatchStatus.ON_COURT)
 			.filter(other -> !other.getId().equals(match.getId()));
 		if (onCourt.isPresent()) {

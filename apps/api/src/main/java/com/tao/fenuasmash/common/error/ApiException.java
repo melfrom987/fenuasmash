@@ -1,5 +1,7 @@
 package com.tao.fenuasmash.common.error;
 
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 
 public abstract class ApiException extends RuntimeException {
@@ -20,6 +22,11 @@ public abstract class ApiException extends RuntimeException {
 
 	public String getCode() {
 		return code;
+	}
+
+	/** Extra members of the Problem Details, next to {@code code}. */
+	public Map<String, Object> getProperties() {
+		return Map.of();
 	}
 
 }
