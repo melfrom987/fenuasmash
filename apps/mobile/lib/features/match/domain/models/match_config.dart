@@ -15,6 +15,10 @@ class MatchConfig {
   final String umpireName;
   final String? serviceJudgeName;
 
+  /// Id of the match in the tournament, when it was called to the court of
+  /// the tablet; null for a match created on the tablet.
+  final String? serverMatchId;
+
   const MatchConfig({
     required this.isDoubles,
     required this.teamAPlayers,
@@ -27,6 +31,7 @@ class MatchConfig {
     this.tournamentPhase,
     required this.umpireName,
     this.serviceJudgeName,
+    this.serverMatchId,
   });
 
   Map<String, dynamic> toJson() {
@@ -42,6 +47,7 @@ class MatchConfig {
       'tournamentPhase': tournamentPhase,
       'umpireName': umpireName,
       'serviceJudgeName': serviceJudgeName,
+      'serverMatchId': serverMatchId,
     };
   }
 
@@ -68,6 +74,8 @@ class MatchConfig {
       umpireName: json['umpireName'] as String,
 
       serviceJudgeName: json['serviceJudgeName'] as String?,
+
+      serverMatchId: json['serverMatchId'] as String?,
     );
   }
 }

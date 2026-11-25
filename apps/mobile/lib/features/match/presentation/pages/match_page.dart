@@ -5,6 +5,7 @@ import 'package:badminton_umpire/core/utils/app_haptics.dart';
 import 'package:badminton_umpire/features/history/domain/models/match_history_entry.dart';
 import 'package:badminton_umpire/features/history/data/services/match_history_service.dart';
 import 'package:badminton_umpire/features/match/application/controllers/match_controller.dart';
+import 'package:badminton_umpire/features/match/application/score_sync.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_config.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_draft.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_event.dart';
@@ -48,6 +49,13 @@ class MatchPage extends StatefulWidget {
   final bool autoStartWarmup;
   final Map<String, Color>? initialPlayerColors;
 
+  /// The queue of events to send; the app-wide one when null.
+  final ScoreEventOutbox? scoreEventOutbox;
+
+  /// Sends the queued events; the app-wide one when null. Only used for a
+  /// match called to the court ([MatchConfig.serverMatchId]).
+  final ScoreEventSyncScheduler? scoreSync;
+
   const MatchPage({
     super.key,
     required this.config,
@@ -57,6 +65,8 @@ class MatchPage extends StatefulWidget {
     this.autoStartWarmup = false,
     this.draft,
     this.initialPlayerColors,
+    this.scoreEventOutbox,
+    this.scoreSync,
   });
 
   @override
@@ -89,11 +99,16 @@ class _MatchPageState extends State<MatchPage> {
   DateTime? _matchFinishedAt;
 
   final MatchDraftService _draftService = MatchDraftService();
-  final ScoreEventOutbox _scoreEventOutbox = ScoreEventOutbox();
+  late final ScoreEventOutbox _scoreEventOutbox =
+      widget.scoreEventOutbox ?? scoreEventOutbox;
 
-  /// Sends the queued points to the server. Null while the app has no server
-  /// to send to: the points then stay in the queue and no indicator is shown.
-  ScoreEventSyncScheduler? _scoreSync;
+  /// Sends the queued points to the server. Null for a match created on the
+  /// tablet: the server does not know it, so nothing is sent and no
+  /// indicator is shown.
+  late final ScoreEventSyncScheduler? _scoreSync =
+      widget.config.serverMatchId == null
+      ? null
+      : widget.scoreSync ?? scoreSync;
 
   DateTime? _warmupEndsAt;
 
@@ -234,7 +249,6 @@ class _MatchPageState extends State<MatchPage> {
     _warmupTimer?.cancel();
     _matchTimer?.cancel();
     _draftDebounceTimer?.cancel();
-    _scoreSync?.dispose();
 
     matchController.removeListener(_refreshMatchPage);
     matchController.removeListener(_handleMatchControllerChanged);

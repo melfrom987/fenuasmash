@@ -326,6 +326,29 @@
   "scoreSyncPendingTooltip": "Les points sont gardés sur la tablette et envoyés au serveur.",
   "scoreSyncOfflineTooltip": "Le serveur est injoignable. Les points sont gardés sur la tablette et seront envoyés au retour du réseau.",
   "scoreSyncBlockedTooltip": "Le serveur refuse les points d'un match. Ils sont gardés sur la tablette : prévenez l'organisateur.",
+  "scoreSyncProblemTitle": "Points non envoyés",
+  "@scoreSyncProblemTitle": {
+    "description": "Title of the dialog explaining why the server refuses the points of a match"
+  },
+  "scoreSyncProblemNotPaired": "La tablette n'est plus associée au terrain. Demandez un nouveau code à l'organisateur et associez-la à nouveau : les points seront alors envoyés.",
+  "scoreSyncProblemNotInProgress": "Le match n'est pas en cours sur le serveur. Demandez à l'organisateur de le lancer, puis appuyez sur Réessayer.",
+  "scoreSyncProblemWrongCourt": "Ce match n'est plus affecté au terrain de cette tablette. Prévenez l'organisateur.",
+  "scoreSyncProblemUnknownMatch": "Le serveur ne connaît pas ce match : il a peut-être été supprimé. Prévenez l'organisateur.",
+  "scoreSyncProblemOutOfStep": "Les points de la tablette ne correspondent plus à ceux du serveur. Prévenez l'organisateur pour vérifier le score.",
+  "scoreSyncProblemInvalidPoint": "Le serveur refuse un point, par exemple marqué après la fin du match. Prévenez l'organisateur pour vérifier le score.",
+  "scoreSyncProblemOther": "Le serveur refuse les points de ce match. Prévenez l'organisateur.",
+  "scoreSyncProblemKept": "Aucun point n'est perdu : ils restent gardés sur la tablette.",
+  "scoreSyncProblemCode": "Code pour l'organisateur : {code}",
+  "@scoreSyncProblemCode": {
+    "description": "Error code returned by the server, shown to help the organizer",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "scoreSyncProblemClose": "Fermer",
+  "scoreSyncRetry": "Réessayer",
 
   "pairingTitle": "Associer la tablette",
   "pairingDescription": "Saisis le code à 6 caractères affiché par l’organisateur sur la page du terrain. Il est valable 10 minutes.",
@@ -355,5 +378,23 @@
   "tabletPairAgain": "Associer à un autre terrain",
   "tabletUnpair": "Dissocier",
   "tabletUnpairTitle": "Dissocier la tablette ?",
-  "tabletUnpairMessage": "La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code."
+  "tabletUnpairMessage": "La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code.",
+
+  "courtMatchLoading": "Recherche du match du terrain…",
+  "courtMatchFreeTitle": "Aucun match sur le terrain",
+  "courtMatchFreeDescription": "Le match appelé par l’organisateur s’affichera ici tout seul.",
+  "courtMatchCalled": "Match appelé",
+  "courtMatchWarmup": "Échauffement",
+  "courtMatchInProgress": "Match en cours",
+  "courtMatchUnknownEvent": "Match du tournoi",
+  "courtMatchRound": "Tour {round}",
+  "@courtMatchRound": {"placeholders": {"round": {"type": "int"}}},
+  "courtMatchOpenHint": "Touche pour saisir les joueurs et commencer.",
+  "courtMatchResumeHint": "Touche pour reprendre le match.",
+  "courtMatchOffline": "Hors ligne : affiché tel qu’à {time}.",
+  "@courtMatchOffline": {"placeholders": {"time": {"type": "String"}}},
+  "courtMatchOfflineNever": "Hors ligne : le serveur ne répond pas.",
+  "courtMatchReplaceTitle": "Un autre match est en cours",
+  "courtMatchReplaceMessage": "Ouvrir le match du terrain remplace le match en cours sur la tablette. Ses points déjà joués seront quand même envoyés.",
+  "courtMatchReplace": "Ouvrir"
 }

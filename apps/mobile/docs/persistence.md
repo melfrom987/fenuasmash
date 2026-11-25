@@ -126,7 +126,10 @@ flowchart LR
 - `HttpScoreEventApi` is the HTTP client: it sends the tablet token and turns every answer into a result. No answer, a timeout, 408, 429 or 5xx means "try again later"; `SEQUENCE_GAP` gives the sequence to send again from; any other refusal (`TABLET_REVOKED`, `MATCH_NOT_IN_PROGRESS`, `SEQUENCE_ALREADY_USED`...) blocks the match until someone looks at it.
 - The backend ignores an event it already received, so sending again after a lost answer or a crash never counts a point twice.
 
-The match page does not send anything yet (`_scoreSync` stays null and the indicator is hidden): the tablet token comes from pairing (below), but the match still needs its backend id (#101, #105). The events wait in the queue meanwhile.
+Only a match called to the court (with `MatchConfig.serverMatchId`, see below) is sent: its events are queued under its server id. A match created on the tablet is unknown to the server, so its events are not queued and the indicator is hidden.
+
+- `scoreEventOutbox` and `scoreSync` (`lib/features/match/application/score_sync.dart`) are shared by the whole app, so that points left unsent keep being sent after the match page is closed. `startScoreSync()`, called at startup, sends what a previous run left, then again each time the tablet is paired.
+- `PairedScoreEventApi` reads the address and the token of the current pairing at each send. While the tablet is not paired, the events wait as when offline. A refused token (`TABLET_REVOKED`, 401) makes the pairing check the tablet, which ends the session if it was revoked.
 
 ## Tablet pairing
 
@@ -138,3 +141,12 @@ The umpire pairs the tablet with a court by typing the one-time code shown by th
 - The API address comes from `--dart-define=API_URL=...` at build time and can be changed on the pairing page; `/api` is added when missing.
 - Android allows plain HTTP (`usesCleartextTraffic`), as the API is often served on the local network of the venue.
 
+
+## Match of the court
+
+Once paired, the home page shows the match the organizer called to the court of the tablet (`GET /tablets/me/match`: `CALLED`, `WARMUP` or `IN_PROGRESS`, or **204** when the court is free).
+
+- `CourtMatchController` (`courtMatchController` for the whole app) reads the court every 10 seconds while the app is in the foreground (the home page stays open under the match screen), until the server pushes the changes in real time (#108). It is not stored: it is read again at startup.
+- The names of the tournament and the event come from `GET /tournaments/{id}` and `GET /events/{id}`, read once per match. The tablet does not get the names of the players: the umpire types them in on the setup screen, which is filled in with the court, the tournament, the discipline, the category and the round.
+- Without network, the last match read stays shown, marked offline. A **401** asks the pairing to check the tablet, which ends the session if it was revoked.
+- A match opened from the court keeps its server id in `MatchConfig.serverMatchId`, saved with the draft, so its score events can be sent to that match (#105). Opening it again resumes the match already started on the tablet.
