@@ -1339,6 +1339,10 @@ paths:
           are split as evenly as possible (13 entries in 3 pools → 5, 4, 4), 3 to 8 per pool.
         - `qualifiersPerPool`: 2, less than the smallest pool.
         - `seedCount`: 2 up to a draw of 8, 4 up to 16, 8 up to 32, 16 beyond.
+        - `randomSeed`: a new random value.
+
+        The draw is reproducible: the same confirmed registrations, settings and `randomSeed`
+        always give the same draw. Send the `randomSeed` of a previous draw to replay it.
 
         See "Pools and Draw" in `docs/competition-rules.md` for the placement rules.
       requestBody:
@@ -2834,12 +2838,19 @@ components:
         - pools
         - bracket
         - excludedRegistrationIds
+        - randomSeed
         - createdAt
         - publishedAt
       properties:
         eventId: { type: string, format: uuid }
         status: { $ref: '#/components/schemas/DrawStatus' }
         seedCount: { type: integer, minimum: 0 }
+        randomSeed:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: Seed of the random draw, to replay it (see `createDraw`)
         pools:
           type: array
           description: Empty for single elimination
@@ -2863,6 +2874,12 @@ components:
         poolCount: { type: [integer, 'null'], minimum: 1, maximum: 16 }
         qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
         seedCount: { type: [integer, 'null'], minimum: 0 }
+        randomSeed:
+          type: [integer, 'null']
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: Seed of the random draw (at most 2^53 - 1, read exactly in JavaScript); null = a new random value
 
     DrawSlotRef:
       oneOf:
