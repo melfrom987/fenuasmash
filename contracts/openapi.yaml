@@ -1073,7 +1073,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  # ---------------------------------------------------------------- Registrations (planned)
+  # ---------------------------------------------------------------- Registrations
   /tournaments/{tournamentId}/registrations:
     parameters:
       - $ref: '#/components/parameters/TournamentId'
@@ -1081,7 +1081,6 @@ paths:
       tags: [Registrations]
       operationId: listTournamentRegistrations
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: List the registrations of a tournament
       parameters:
         - name: eventId
@@ -1112,7 +1111,6 @@ paths:
       tags: [Registrations]
       operationId: listEventRegistrations
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: List the registrations of an event
       responses:
         '200':
@@ -1129,7 +1127,6 @@ paths:
       tags: [Registrations]
       operationId: createRegistration
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Register a player (and a partner for doubles) in an event
       description: |
         Entered by the organizer in the MVP, so a pair is confirmed at once.
@@ -1166,7 +1163,7 @@ paths:
     post:
       tags: [Registrations]
       operationId: transferRegistrations
-      x-status: planned
+      x-roles: [ORGANIZER]
       summary: Move registrations into this event
       description: |
         Moves registrations from another event of the same tournament and the same discipline
@@ -1193,7 +1190,6 @@ paths:
       tags: [Registrations]
       operationId: listEligiblePlayers
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: Players who can register in this event (or partner someone in it)
       description: |
         Used for the player and partner pickers: right gender for the discipline (for a
@@ -1226,7 +1222,6 @@ paths:
       tags: [Registrations]
       operationId: updateRegistration
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Set or change the partner, or confirm a pending pair
       description: |
         - `partnerId` set → the pair is `CONFIRMED` (organizer action).
@@ -1252,7 +1247,6 @@ paths:
       tags: [Registrations]
       operationId: deleteRegistration
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Withdraw a registration
       responses:
         '204': { description: Deleted }
@@ -2050,14 +2044,13 @@ components:
         minBirthYear:
           type: [integer, 'null']
           description: |
-            Planned. Oldest birth year allowed (youth categories: younger players may play up).
-            Only for AGE events.
-          x-status: planned
+            Oldest birth year allowed (youth categories: younger players may play up).
+            Only for AGE events (VALIDATION_FAILED otherwise); cleared when the event stops being one.
         maxBirthYear:
           type: [integer, 'null']
           description: |
-            Planned. Most recent birth year allowed (veterans). Only for AGE events.
-          x-status: planned
+            Most recent birth year allowed (veterans). Only for AGE events; not before
+            `minBirthYear`.
         poolCount: { type: [integer, 'null'], minimum: 1, maximum: 16 }
         poolSize:
           type: [integer, 'null']
@@ -2092,8 +2085,8 @@ components:
           description: Required unless OPEN (VALIDATION_FAILED on `categoryLabel`)
         plannedDate: { type: [string, 'null'], format: date-time }
         maxEntries: { type: [integer, 'null'], minimum: 2, maximum: 256 }
-        minBirthYear: { type: [integer, 'null'], x-status: planned }
-        maxBirthYear: { type: [integer, 'null'], x-status: planned }
+        minBirthYear: { type: [integer, 'null'], minimum: 1900, maximum: 2100 }
+        maxBirthYear: { type: [integer, 'null'], minimum: 1900, maximum: 2100 }
         poolCount: { type: [integer, 'null'], minimum: 1 }
         poolSize: { type: [integer, 'null'], minimum: 3, maximum: 8 }
         qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
@@ -2110,8 +2103,8 @@ components:
         categoryLabel: { type: [string, 'null'], maxLength: 50 }
         plannedDate: { type: [string, 'null'], format: date-time }
         maxEntries: { type: [integer, 'null'], minimum: 2, maximum: 256 }
-        minBirthYear: { type: [integer, 'null'], x-status: planned }
-        maxBirthYear: { type: [integer, 'null'], x-status: planned }
+        minBirthYear: { type: [integer, 'null'], minimum: 1900, maximum: 2100 }
+        maxBirthYear: { type: [integer, 'null'], minimum: 1900, maximum: 2100 }
         poolCount: { type: [integer, 'null'], minimum: 1 }
         poolSize: { type: [integer, 'null'], minimum: 3, maximum: 8 }
         qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
@@ -2501,7 +2494,7 @@ components:
           $ref: '#/components/schemas/PlayerRankings'
           description: Replaces the three rankings; missing on creation = no ranking
 
-    # ------------------------------------------------------------ Registrations (planned)
+    # ------------------------------------------------------------ Registrations
     Registration:
       type: object
       required: [id, tournamentId, eventId, status, player, partner, registeredAt, createdAt]
