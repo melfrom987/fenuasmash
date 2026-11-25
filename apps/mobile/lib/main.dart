@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:badminton_umpire/core/settings/settings.dart';
+import 'package:badminton_umpire/features/match/application/score_sync.dart';
 import 'package:badminton_umpire/features/pairing/application/tablet_session_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -13,6 +14,8 @@ Future<void> main() async {
   // The saved pairing is used at once, then checked with the server
   await tabletSessionController.load();
   unawaited(tabletSessionController.verify());
+  // Points left unsent by a previous run
+  startScoreSync();
 
   runApp(const BadmintonUmpireApp());
 }

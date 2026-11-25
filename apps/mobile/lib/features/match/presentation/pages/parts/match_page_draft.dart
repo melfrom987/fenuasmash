@@ -65,12 +65,23 @@ extension _MatchPageDraft on _MatchPageState {
     }
   }
 
-  /// Puts the new points and undos in the queue of events to send. They stay
-  /// there after the current match is cleared, until the backend confirms
-  /// them. A failure is retried with the next save, as queuing is idempotent.
+  /// Puts the new points and undos of a match called to the court in the
+  /// queue of events to send, under its server id. They stay there after the
+  /// current match is cleared, until the backend confirms them. A failure is
+  /// retried with the next save, as queuing is idempotent.
+  ///
+  /// A match created on the tablet is unknown to the server: its events are
+  /// not queued.
   Future<void> _queueScoreEvents() async {
+    final serverMatchId = widget.config.serverMatchId;
+    if (serverMatchId == null) {
+      return;
+    }
     try {
-      await _scoreEventOutbox.enqueue(_matchId, matchController.scoreEvents);
+      await _scoreEventOutbox.enqueue(
+        serverMatchId,
+        matchController.scoreEvents,
+      );
     } catch (error) {
       debugPrint('Could not queue score events: $error');
       return;
@@ -81,8 +92,8 @@ extension _MatchPageDraft on _MatchPageState {
     }
   }
 
-  /// Badge showing whether the points reached the server, or null when the
-  /// app has no server to send to.
+  /// Badge showing whether the points reached the server, or null for a
+  /// match created on the tablet.
   Widget? _buildSyncIndicator() {
     final scoreSync = _scoreSync;
     if (scoreSync == null) {
@@ -94,7 +105,11 @@ extension _MatchPageDraft on _MatchPageState {
         if (report == null) {
           return const SizedBox.shrink();
         }
-        return ScoreSyncIndicator.fromReport(report);
+        return ScoreSyncIndicator.fromReport(
+          report,
+          matchId: widget.config.serverMatchId,
+          onRetry: () => unawaited(scoreSync.syncNow()),
+        );
       },
     );
   }

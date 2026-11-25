@@ -572,6 +572,52 @@ class AppLocalizationsEn extends AppLocalizations {
       'The server refuses the points of a match. They are kept on the tablet: tell the organizer.';
 
   @override
+  String get scoreSyncProblemTitle => 'Points not sent';
+
+  @override
+  String get scoreSyncProblemNotPaired =>
+      'The tablet is no longer paired with the court. Ask the organizer for a new code and pair it again: the points will then be sent.';
+
+  @override
+  String get scoreSyncProblemNotInProgress =>
+      'The match is not in progress on the server. Ask the organizer to start it, then tap Retry.';
+
+  @override
+  String get scoreSyncProblemWrongCourt =>
+      'This match is no longer assigned to the court of this tablet. Tell the organizer.';
+
+  @override
+  String get scoreSyncProblemUnknownMatch =>
+      'The server does not know this match: it may have been deleted. Tell the organizer.';
+
+  @override
+  String get scoreSyncProblemOutOfStep =>
+      'The points on the tablet no longer match those on the server. Tell the organizer to check the score.';
+
+  @override
+  String get scoreSyncProblemInvalidPoint =>
+      'The server refuses a point, for example one scored after the end of the match. Tell the organizer to check the score.';
+
+  @override
+  String get scoreSyncProblemOther =>
+      'The server refuses the points of this match. Tell the organizer.';
+
+  @override
+  String get scoreSyncProblemKept =>
+      'No point is lost: they stay kept on the tablet.';
+
+  @override
+  String scoreSyncProblemCode(String code) {
+    return 'Code for the organizer: $code';
+  }
+
+  @override
+  String get scoreSyncProblemClose => 'Close';
+
+  @override
+  String get scoreSyncRetry => 'Retry';
+
+  @override
   String get pairingTitle => 'Pair the tablet';
 
   @override
@@ -662,4 +708,55 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tabletUnpairMessage =>
       'The tablet will not send scores until it gets a new code.';
+
+  @override
+  String get courtMatchLoading => 'Looking for the match of the court…';
+
+  @override
+  String get courtMatchFreeTitle => 'No match on the court';
+
+  @override
+  String get courtMatchFreeDescription =>
+      'The match called by the organizer will show up here by itself.';
+
+  @override
+  String get courtMatchCalled => 'Match called';
+
+  @override
+  String get courtMatchWarmup => 'Warm-up';
+
+  @override
+  String get courtMatchInProgress => 'Match in progress';
+
+  @override
+  String get courtMatchUnknownEvent => 'Tournament match';
+
+  @override
+  String courtMatchRound(int round) {
+    return 'Round $round';
+  }
+
+  @override
+  String get courtMatchOpenHint => 'Tap to type the players and start.';
+
+  @override
+  String get courtMatchResumeHint => 'Tap to resume the match.';
+
+  @override
+  String courtMatchOffline(String time) {
+    return 'Offline: shown as of $time.';
+  }
+
+  @override
+  String get courtMatchOfflineNever => 'Offline: the server does not answer.';
+
+  @override
+  String get courtMatchReplaceTitle => 'Another match is in progress';
+
+  @override
+  String get courtMatchReplaceMessage =>
+      'Opening the match of the court replaces the match in progress on the tablet. Its points already played will still be sent.';
+
+  @override
+  String get courtMatchReplace => 'Open';
 }

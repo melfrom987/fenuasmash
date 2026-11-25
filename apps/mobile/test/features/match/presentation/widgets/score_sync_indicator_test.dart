@@ -122,6 +122,140 @@ void main() {
       );
       semantics.dispose();
     });
+
+    testWidgets('tells why the sending is blocked', (tester) async {
+      useScreen(tester, narrowScreen);
+      final semantics = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        app(
+          const ScoreSyncIndicator(
+            status: ScoreSyncStatus.blocked,
+            pendingCount: 1,
+            problem: ScoreSyncProblem.rejected('MATCH_NOT_IN_PROGRESS'),
+          ),
+        ),
+      );
+
+      expect(
+        find.bySemanticsLabel(
+          RegExp("^Envoi bloqué. Le match n'est pas en cours sur le serveur"),
+        ),
+        findsOneWidget,
+      );
+      semantics.dispose();
+    });
+
+    testWidgets('explains a blocked sending and sends again on a tap', (
+      tester,
+    ) async {
+      useScreen(tester, wideScreen);
+      var retries = 0;
+
+      await tester.pumpWidget(
+        app(
+          ScoreSyncIndicator(
+            status: ScoreSyncStatus.blocked,
+            pendingCount: 2,
+            problem: const ScoreSyncProblem.rejected('MATCH_NOT_IN_PROGRESS'),
+            onRetry: () => retries++,
+          ),
+        ),
+      );
+      await tester.tap(find.byType(ScoreSyncIndicator));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Points non envoyés'), findsOneWidget);
+      expect(
+        find.textContaining("Le match n'est pas en cours sur le serveur"),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Aucun point n'), findsOneWidget);
+      expect(
+        find.text("Code pour l'organisateur : MATCH_NOT_IN_PROGRESS"),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Réessayer'));
+      await tester.pumpAndSettle();
+
+      expect(retries, 1);
+      expect(find.text('Points non envoyés'), findsNothing);
+    });
+
+    testWidgets('closes the explanation without sending', (tester) async {
+      useScreen(tester, wideScreen);
+
+      await tester.pumpWidget(
+        app(
+          const ScoreSyncIndicator(
+            status: ScoreSyncStatus.blocked,
+            pendingCount: 2,
+            problem: ScoreSyncProblem.rejected('TABLET_REVOKED'),
+          ),
+        ),
+      );
+      await tester.tap(find.byType(ScoreSyncIndicator));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Réessayer'), findsNothing);
+      await tester.tap(find.text('Fermer'));
+      await tester.pumpAndSettle();
+      expect(find.text('Points non envoyés'), findsNothing);
+    });
+
+    testWidgets('opens nothing when the sending is not blocked', (
+      tester,
+    ) async {
+      useScreen(tester, wideScreen);
+
+      await tester.pumpWidget(
+        app(
+          const ScoreSyncIndicator(
+            status: ScoreSyncStatus.offline,
+            pendingCount: 2,
+            problem: ScoreSyncProblem.rejected('MATCH_NOT_IN_PROGRESS'),
+          ),
+        ),
+      );
+      await tester.tap(find.byType(ScoreSyncIndicator));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AlertDialog), findsNothing);
+    });
+
+    testWidgets('shows the problem of the current match first', (tester) async {
+      useScreen(tester, wideScreen);
+      const report = ScoreSyncReport(
+        confirmedCount: 0,
+        pendingCount: 3,
+        reachable: true,
+        problems: {
+          'previous': ScoreSyncProblem.rejected('MATCH_NOT_FOUND'),
+          'current': ScoreSyncProblem.rejected('MATCH_NOT_IN_PROGRESS'),
+        },
+      );
+
+      await tester.pumpWidget(
+        app(ScoreSyncIndicator.fromReport(report, matchId: 'current')),
+      );
+      expect(
+        tester
+            .widget<ScoreSyncIndicator>(find.byType(ScoreSyncIndicator))
+            .problem,
+        const ScoreSyncProblem.rejected('MATCH_NOT_IN_PROGRESS'),
+      );
+
+      await tester.pumpWidget(
+        app(ScoreSyncIndicator.fromReport(report, matchId: 'other')),
+      );
+      expect(
+        tester
+            .widget<ScoreSyncIndicator>(find.byType(ScoreSyncIndicator))
+            .problem,
+        const ScoreSyncProblem.rejected('MATCH_NOT_FOUND'),
+      );
+    });
   });
 
   group('MatchHeader', () {

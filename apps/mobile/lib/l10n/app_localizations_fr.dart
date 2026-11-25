@@ -573,6 +573,52 @@ class AppLocalizationsFr extends AppLocalizations {
       'Le serveur refuse les points d\'un match. Ils sont gardés sur la tablette : prévenez l\'organisateur.';
 
   @override
+  String get scoreSyncProblemTitle => 'Points non envoyés';
+
+  @override
+  String get scoreSyncProblemNotPaired =>
+      'La tablette n\'est plus associée au terrain. Demandez un nouveau code à l\'organisateur et associez-la à nouveau : les points seront alors envoyés.';
+
+  @override
+  String get scoreSyncProblemNotInProgress =>
+      'Le match n\'est pas en cours sur le serveur. Demandez à l\'organisateur de le lancer, puis appuyez sur Réessayer.';
+
+  @override
+  String get scoreSyncProblemWrongCourt =>
+      'Ce match n\'est plus affecté au terrain de cette tablette. Prévenez l\'organisateur.';
+
+  @override
+  String get scoreSyncProblemUnknownMatch =>
+      'Le serveur ne connaît pas ce match : il a peut-être été supprimé. Prévenez l\'organisateur.';
+
+  @override
+  String get scoreSyncProblemOutOfStep =>
+      'Les points de la tablette ne correspondent plus à ceux du serveur. Prévenez l\'organisateur pour vérifier le score.';
+
+  @override
+  String get scoreSyncProblemInvalidPoint =>
+      'Le serveur refuse un point, par exemple marqué après la fin du match. Prévenez l\'organisateur pour vérifier le score.';
+
+  @override
+  String get scoreSyncProblemOther =>
+      'Le serveur refuse les points de ce match. Prévenez l\'organisateur.';
+
+  @override
+  String get scoreSyncProblemKept =>
+      'Aucun point n\'est perdu : ils restent gardés sur la tablette.';
+
+  @override
+  String scoreSyncProblemCode(String code) {
+    return 'Code pour l\'organisateur : $code';
+  }
+
+  @override
+  String get scoreSyncProblemClose => 'Fermer';
+
+  @override
+  String get scoreSyncRetry => 'Réessayer';
+
+  @override
   String get pairingTitle => 'Associer la tablette';
 
   @override
@@ -663,4 +709,56 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get tabletUnpairMessage =>
       'La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code.';
+
+  @override
+  String get courtMatchLoading => 'Recherche du match du terrain…';
+
+  @override
+  String get courtMatchFreeTitle => 'Aucun match sur le terrain';
+
+  @override
+  String get courtMatchFreeDescription =>
+      'Le match appelé par l’organisateur s’affichera ici tout seul.';
+
+  @override
+  String get courtMatchCalled => 'Match appelé';
+
+  @override
+  String get courtMatchWarmup => 'Échauffement';
+
+  @override
+  String get courtMatchInProgress => 'Match en cours';
+
+  @override
+  String get courtMatchUnknownEvent => 'Match du tournoi';
+
+  @override
+  String courtMatchRound(int round) {
+    return 'Tour $round';
+  }
+
+  @override
+  String get courtMatchOpenHint =>
+      'Touche pour saisir les joueurs et commencer.';
+
+  @override
+  String get courtMatchResumeHint => 'Touche pour reprendre le match.';
+
+  @override
+  String courtMatchOffline(String time) {
+    return 'Hors ligne : affiché tel qu’à $time.';
+  }
+
+  @override
+  String get courtMatchOfflineNever => 'Hors ligne : le serveur ne répond pas.';
+
+  @override
+  String get courtMatchReplaceTitle => 'Un autre match est en cours';
+
+  @override
+  String get courtMatchReplaceMessage =>
+      'Ouvrir le match du terrain remplace le match en cours sur la tablette. Ses points déjà joués seront quand même envoyés.';
+
+  @override
+  String get courtMatchReplace => 'Ouvrir';
 }

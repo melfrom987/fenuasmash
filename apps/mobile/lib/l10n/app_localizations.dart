@@ -1151,6 +1151,78 @@ abstract class AppLocalizations {
   /// **'Le serveur refuse les points d\'un match. Ils sont gardés sur la tablette : prévenez l\'organisateur.'**
   String get scoreSyncBlockedTooltip;
 
+  /// Title of the dialog explaining why the server refuses the points of a match
+  ///
+  /// In fr, this message translates to:
+  /// **'Points non envoyés'**
+  String get scoreSyncProblemTitle;
+
+  /// No description provided for @scoreSyncProblemNotPaired.
+  ///
+  /// In fr, this message translates to:
+  /// **'La tablette n\'est plus associée au terrain. Demandez un nouveau code à l\'organisateur et associez-la à nouveau : les points seront alors envoyés.'**
+  String get scoreSyncProblemNotPaired;
+
+  /// No description provided for @scoreSyncProblemNotInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le match n\'est pas en cours sur le serveur. Demandez à l\'organisateur de le lancer, puis appuyez sur Réessayer.'**
+  String get scoreSyncProblemNotInProgress;
+
+  /// No description provided for @scoreSyncProblemWrongCourt.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ce match n\'est plus affecté au terrain de cette tablette. Prévenez l\'organisateur.'**
+  String get scoreSyncProblemWrongCourt;
+
+  /// No description provided for @scoreSyncProblemUnknownMatch.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur ne connaît pas ce match : il a peut-être été supprimé. Prévenez l\'organisateur.'**
+  String get scoreSyncProblemUnknownMatch;
+
+  /// No description provided for @scoreSyncProblemOutOfStep.
+  ///
+  /// In fr, this message translates to:
+  /// **'Les points de la tablette ne correspondent plus à ceux du serveur. Prévenez l\'organisateur pour vérifier le score.'**
+  String get scoreSyncProblemOutOfStep;
+
+  /// No description provided for @scoreSyncProblemInvalidPoint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur refuse un point, par exemple marqué après la fin du match. Prévenez l\'organisateur pour vérifier le score.'**
+  String get scoreSyncProblemInvalidPoint;
+
+  /// No description provided for @scoreSyncProblemOther.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le serveur refuse les points de ce match. Prévenez l\'organisateur.'**
+  String get scoreSyncProblemOther;
+
+  /// No description provided for @scoreSyncProblemKept.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun point n\'est perdu : ils restent gardés sur la tablette.'**
+  String get scoreSyncProblemKept;
+
+  /// Error code returned by the server, shown to help the organizer
+  ///
+  /// In fr, this message translates to:
+  /// **'Code pour l\'organisateur : {code}'**
+  String scoreSyncProblemCode(String code);
+
+  /// No description provided for @scoreSyncProblemClose.
+  ///
+  /// In fr, this message translates to:
+  /// **'Fermer'**
+  String get scoreSyncProblemClose;
+
+  /// No description provided for @scoreSyncRetry.
+  ///
+  /// In fr, this message translates to:
+  /// **'Réessayer'**
+  String get scoreSyncRetry;
+
   /// No description provided for @pairingTitle.
   ///
   /// In fr, this message translates to:
@@ -1300,6 +1372,96 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code.'**
   String get tabletUnpairMessage;
+
+  /// No description provided for @courtMatchLoading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherche du match du terrain…'**
+  String get courtMatchLoading;
+
+  /// No description provided for @courtMatchFreeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun match sur le terrain'**
+  String get courtMatchFreeTitle;
+
+  /// No description provided for @courtMatchFreeDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le match appelé par l’organisateur s’affichera ici tout seul.'**
+  String get courtMatchFreeDescription;
+
+  /// No description provided for @courtMatchCalled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Match appelé'**
+  String get courtMatchCalled;
+
+  /// No description provided for @courtMatchWarmup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échauffement'**
+  String get courtMatchWarmup;
+
+  /// No description provided for @courtMatchInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Match en cours'**
+  String get courtMatchInProgress;
+
+  /// No description provided for @courtMatchUnknownEvent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Match du tournoi'**
+  String get courtMatchUnknownEvent;
+
+  /// No description provided for @courtMatchRound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tour {round}'**
+  String courtMatchRound(int round);
+
+  /// No description provided for @courtMatchOpenHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touche pour saisir les joueurs et commencer.'**
+  String get courtMatchOpenHint;
+
+  /// No description provided for @courtMatchResumeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touche pour reprendre le match.'**
+  String get courtMatchResumeHint;
+
+  /// No description provided for @courtMatchOffline.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne : affiché tel qu’à {time}.'**
+  String courtMatchOffline(String time);
+
+  /// No description provided for @courtMatchOfflineNever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne : le serveur ne répond pas.'**
+  String get courtMatchOfflineNever;
+
+  /// No description provided for @courtMatchReplaceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre match est en cours'**
+  String get courtMatchReplaceTitle;
+
+  /// No description provided for @courtMatchReplaceMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir le match du terrain remplace le match en cours sur la tablette. Ses points déjà joués seront quand même envoyés.'**
+  String get courtMatchReplaceMessage;
+
+  /// No description provided for @courtMatchReplace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir'**
+  String get courtMatchReplace;
 }
 
 class _AppLocalizationsDelegate

@@ -16,6 +16,7 @@ void main() {
         tournamentPhase: 'Pool match',
         umpireName: 'Melissa',
         serviceJudgeName: 'John',
+        serverMatchId: '9b2f6a52-7c1e-4d5e-8a3b-1f0c2d4e6a8b',
       );
 
       final json = config.toJson();
@@ -36,6 +37,7 @@ void main() {
       expect(restored.tournamentPhase, 'Pool match');
       expect(restored.umpireName, 'Melissa');
       expect(restored.serviceJudgeName, 'John');
+      expect(restored.serverMatchId, '9b2f6a52-7c1e-4d5e-8a3b-1f0c2d4e6a8b');
     });
 
     test('optional classification fields may be null', () {
@@ -55,6 +57,21 @@ void main() {
       expect(restored.poolGroup, isNull);
       expect(restored.tournamentPhase, isNull);
       expect(restored.serviceJudgeName, isNull);
+      expect(restored.serverMatchId, isNull);
+    });
+
+    test('a match saved before the court matches has no server id', () {
+      final json = const MatchConfig(
+        isDoubles: false,
+        teamAPlayers: ['Alice'],
+        teamBPlayers: ['Bob'],
+        tournamentName: 'Tournament',
+        courtNumber: '1',
+        category: 'Women Singles',
+        umpireName: 'Melissa',
+      ).toJson()..remove('serverMatchId');
+
+      expect(MatchConfig.fromJson(json).serverMatchId, isNull);
     });
   });
 }
