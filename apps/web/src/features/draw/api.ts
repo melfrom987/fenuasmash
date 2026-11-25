@@ -1,10 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Draw, DrawSettings, DrawSlotRef } from '@/api/models';
 import { api, ApiError } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
 
-export function useDraw(eventId: string) {
-  return useQuery({
+export const drawQuery = (eventId: string) =>
+  queryOptions({
     queryKey: queryKeys.draw(eventId),
     queryFn: async () => {
       try {
@@ -14,8 +14,10 @@ export function useDraw(eventId: string) {
         throw error;
       }
     },
-    enabled: eventId !== '',
   });
+
+export function useDraw(eventId: string) {
+  return useQuery({ ...drawQuery(eventId), enabled: eventId !== '' });
 }
 
 function useDrawMutation<TInput>(

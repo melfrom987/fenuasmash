@@ -324,13 +324,35 @@ Suggested number of pools: entries / 4, rounded. One pool means a single pool (r
 
 **Draft, then published**: the draw is first a **draft**. The organizer can run it again, change the settings or swap two entries (in pools or in the bracket). Remaining same-club conflicts are shown as a warning. Once **published**, the draw is locked, and so are the registrations of the event (`DRAW_PUBLISHED`): no addition, change, withdrawal or move.
 
+## Schedule
+
+The schedule gives the order of matches and their planned time, from the published draws. It is computed by the backend, checked and adjusted by the organizer, then published.
+
+**Settings (tournament)**:
+
+| Setting | Default | Use |
+|---|---|---|
+| Average match length | 25 min (best of 3 games to 15, warm-up included) | Length of a slot on a court |
+| Minimum rest | 20 min (rules), editable | Between two matches of the same player |
+| Call time | 30 min (usually 30 to 60) | Players are called this long before their first match |
+| Public visibility | As soon as published | Or only from the first day of the tournament (players still get their call time) |
+
+**Settings (event)**: planned slot (start and end, e.g. youth singles on Saturday, doubles on Sunday morning, mixed on Sunday afternoon) and whether the third place match is played.
+
+**Capacity**: with *n* active courts and matches of *d* minutes, about *n × 60 / d* matches per hour (6 courts, 25 min → 14 matches per hour).
+
+**Rules for placing a match** (details to come with the schedule):
+1. The match is inside the slot of its event.
+2. Each player has finished the previous match and rested the minimum time.
+3. A knockout match comes after the matches it depends on (pool results, previous round).
+
 ## Data Model
 
 The full definition of each entity is in [`contracts/openapi.yaml`](../contracts/openapi.yaml). Main entities:
 
 | Entity | Main fields | Role |
 |---|---|---|
-| `Tournament` | Dates, minimum rest, rules (competition type, format, play mode, scoring, relay step, disciplines, forbidden combinations) | A competition and its rules |
+| `Tournament` | Dates, minimum rest, average match length, call time, public visibility, rules (competition type, format, play mode, scoring, relay step, disciplines, forbidden combinations) | A competition and its rules |
 | `Event` | Discipline, category type and label, birth year bounds, planned date, maximum entries, pool structure, source event (series) | An event, created before registrations |
 | `Court` | Number, active | A court of a tournament |
 | `Club` | Name, city, address, contact, logo | A player's club |
