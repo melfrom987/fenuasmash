@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static com.tao.fenuasmash.TestTokens.club;
 import static com.tao.fenuasmash.TestTokens.organizer;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,10 @@ import com.jayway.jsonpath.JsonPath;
 import com.tao.fenuasmash.TestcontainersConfiguration;
 import com.tao.fenuasmash.registration.RegistrationTestSupport;
 
-/** The tournament of {@link RegistrationTestSupport} is a single elimination. */
+/**
+ * The tournament of {@link RegistrationTestSupport} is a single elimination. The draws are of men's
+ * singles, whose registrations are confirmed at once.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -31,10 +35,10 @@ class DrawControllerTests extends RegistrationTestSupport {
 
 	@Test
 	void drawsTheConfirmedEntriesWithSeedsAndByes() throws Exception {
-		UUID event = createEvent("Double Open", "OD");
+		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
-		registered(event, hina, null);
-		registered(event, moana, null);
+		registered(event, manu, null);
+		registered(event, tama(), null);
 
 		// Teva has the most points: seed 1, on line 1, facing the bye
 		draw(event, "{}").andExpect(status().isCreated())
@@ -65,8 +69,8 @@ class DrawControllerTests extends RegistrationTestSupport {
 
 	@Test
 	void givesTheSameDrawForTheSameRandomSeed() throws Exception {
-		UUID event = createEvent("Double Open", "OD");
-		for (UUID player : new UUID[] { teva, manu, hina, moana }) {
+		UUID event = createEvent("Simple Homme", "MS");
+		for (UUID player : new UUID[] { teva, manu, tama(), toa() }) {
 			registered(event, player, null);
 		}
 
@@ -101,9 +105,9 @@ class DrawControllerTests extends RegistrationTestSupport {
 
 	@Test
 	void swapsTwoBracketLinesButNotALineWithAPoolSlot() throws Exception {
-		UUID event = createEvent("Double Open", "OD");
+		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
-		registered(event, hina, null);
+		registered(event, manu, null);
 		draw(event, "{}").andExpect(status().isCreated());
 
 		swap(event, "{\"a\": {\"position\": 1}, \"b\": {\"position\": 2}}").andExpect(status().isOk())
@@ -118,12 +122,12 @@ class DrawControllerTests extends RegistrationTestSupport {
 
 	@Test
 	void deletesTheDraftWhenTheRegistrationsChange() throws Exception {
-		UUID event = createEvent("Double Open", "OD");
+		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
-		registered(event, hina, null);
+		registered(event, manu, null);
 		draw(event, "{}").andExpect(status().isCreated());
 
-		registered(event, moana, null);
+		registered(event, tama(), null);
 
 		mvc.perform(get("/api/events/{id}/draw", event).with(organizer(jwtService)))
 			.andExpect(status().isNotFound())
@@ -132,11 +136,12 @@ class DrawControllerTests extends RegistrationTestSupport {
 
 	@Test
 	void publishingLocksTheDrawAndTheRegistrations() throws Exception {
-		UUID event = createEvent("Double Open", "OD");
+		UUID event = createEvent("Simple Homme", "MS");
 		UUID first = registered(event, teva, null);
-		registered(event, hina, null);
-		UUID other = createEvent("Double Open Série 2", "OD");
-		UUID elsewhere = registered(other, moana, null);
+		registered(event, manu, null);
+		UUID other = createEvent("Simple Homme Série 2", "MS");
+		UUID elsewhere = registered(other, tama(), null);
+		UUID late = toa();
 		draw(event, "{}").andExpect(status().isCreated());
 
 		mvc.perform(post("/api/events/{id}/draw/publish", event).with(organizer(jwtService)))
@@ -148,7 +153,7 @@ class DrawControllerTests extends RegistrationTestSupport {
 				swap(event, "{\"a\": {\"position\": 1}, \"b\": {\"position\": 2}}"),
 				mvc.perform(delete("/api/events/{id}/draw", event).with(organizer(jwtService))),
 				mvc.perform(post("/api/events/{id}/draw/publish", event).with(organizer(jwtService))),
-				register(event, moana, null), update(first, "{\"partnerId\": \"" + manu + "\"}"),
+				register(event, late, null), update(first, "{\"partnerId\": null}"),
 				mvc.perform(delete("/api/registrations/{id}", first).with(organizer(jwtService))),
 				transfer(event, java.util.List.of(elsewhere)) }) {
 			refused.andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DRAW_PUBLISHED"));
@@ -159,9 +164,9 @@ class DrawControllerTests extends RegistrationTestSupport {
 
 	@Test
 	void deletesADraft() throws Exception {
-		UUID event = createEvent("Double Open", "OD");
+		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
-		registered(event, hina, null);
+		registered(event, manu, null);
 		draw(event, "{}").andExpect(status().isCreated());
 
 		mvc.perform(delete("/api/events/{id}/draw", event).with(organizer(jwtService)))
@@ -169,6 +174,14 @@ class DrawControllerTests extends RegistrationTestSupport {
 		mvc.perform(delete("/api/events/{id}/draw", event).with(organizer(jwtService)))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("DRAW_NOT_FOUND"));
+	}
+
+	private UUID tama() {
+		return insertPlayer("Tama", "Roa", "MALE", LocalDate.of(1990, 1, 1), 500);
+	}
+
+	private UUID toa() {
+		return insertPlayer("Toa", "Faua", "MALE", LocalDate.of(1992, 1, 1), 100);
 	}
 
 	private ResultActions draw(UUID eventId, String settings) throws Exception {

@@ -135,7 +135,7 @@ public abstract class RegistrationTestSupport {
 		return id;
 	}
 
-	private UUID insertPlayer(String firstName, String lastName, String gender, LocalDate birthDate,
+	protected UUID insertPlayer(String firstName, String lastName, String gender, LocalDate birthDate,
 			Integer singlesPoints) {
 		UUID id = UUID.randomUUID();
 		String key = TextKeys.of(lastName + " " + firstName + " | " + firstName + " " + lastName);
