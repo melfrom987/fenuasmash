@@ -2,6 +2,8 @@ package com.tao.fenuasmash.match;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -11,6 +13,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * A match of an event, between two registrations. Its status only changes
@@ -37,6 +42,14 @@ class Match {
 
 	private Integer round;
 
+	/** Position in its round for a knockout match, from 1 at the top; null otherwise. */
+	@Column(name = "bracket_position", updatable = false)
+	private Integer bracketPosition;
+
+	/** The pool of a pool match; null otherwise. */
+	@Column(name = "pool_name", updatable = false)
+	private String pool;
+
 	@Column(name = "side_a_id")
 	private UUID sideA;
 
@@ -55,6 +68,20 @@ class Match {
 
 	@Enumerated(EnumType.STRING)
 	private MatchOutcome outcome;
+
+	/** Points of side A in each game, counted from the score events. */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "games_a", nullable = false)
+	private int[] gamesA = new int[0];
+
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "games_b", nullable = false)
+	private int[] gamesB = new int[0];
+
+	/** The side that won on points; null while nobody has. */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "score_winner")
+	private MatchSide scoreWinner;
 
 	@Version
 	@Column(name = "state_version", nullable = false)
@@ -76,7 +103,13 @@ class Match {
 	}
 
 	Match(UUID tournamentId, UUID eventId, Integer round, UUID sideA, UUID sideB, Instant now) {
+		this(tournamentId, eventId, round, null, sideA, sideB, now);
+	}
+
+	Match(UUID tournamentId, UUID eventId, Integer round, Integer bracketPosition, UUID sideA, UUID sideB,
+			Instant now) {
 		this.id = UUID.randomUUID();
+		this.bracketPosition = bracketPosition;
 		this.tournamentId = tournamentId;
 		this.eventId = eventId;
 		this.round = round;
@@ -116,6 +149,43 @@ class Match {
 		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
 	}
 
+	/** The registration on {@code side}, or null while unknown. */
+	UUID sideOf(MatchSide side) {
+		return (side == MatchSide.A) ? sideA : sideB;
+	}
+
+	/**
+	 * Places a registration on a side, or empties it with null, for a match not started yet:
+	 * a match left with one side only goes back to {@code SCHEDULED}.
+	 */
+	void placeOn(MatchSide side, UUID registration, Instant now) {
+		if (side == MatchSide.A) {
+			this.sideA = registration;
+		}
+		else {
+			this.sideB = registration;
+		}
+		if (registration == null && status == MatchStatus.READY) {
+			this.status = MatchStatus.SCHEDULED;
+		}
+		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
+	}
+
+	void updateScore(ScoreSheet sheet, Instant now) {
+		this.gamesA = sheet.games().stream().mapToInt(GameScore::a).toArray();
+		this.gamesB = sheet.games().stream().mapToInt(GameScore::b).toArray();
+		this.scoreWinner = sheet.winner();
+		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
+	}
+
+	MatchScore getScore() {
+		List<GameScore> games = new ArrayList<>();
+		for (int i = 0; i < gamesA.length; i++) {
+			games.add(new GameScore(gamesA[i], gamesB[i]));
+		}
+		return new MatchScore(games, scoreWinner);
+	}
+
 	boolean hasBothSides() {
 		return sideA != null && sideB != null;
 	}
@@ -134,6 +204,20 @@ class Match {
 
 	Integer getRound() {
 		return round;
+	}
+
+	Integer getBracketPosition() {
+		return bracketPosition;
+	}
+
+	String getPool() {
+		return pool;
+	}
+
+	/** Makes this match a pool match, right after it is built. */
+	Match inPool(String pool) {
+		this.pool = pool;
+		return this;
 	}
 
 	UUID getSideA() {

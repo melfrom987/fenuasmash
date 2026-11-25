@@ -21,8 +21,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * Reads are public, except player records and registrations, which only
  * organizers and clubs can read. Organizers manage tournaments, events, courts,
  * matches, clubs, players, registrations and umpire tablets; the admin manages
- * accounts and organizations. A paired tablet reads its court and moves the
- * match on it. Routes added later are closed until a rule lets them in.
+ * accounts and organizations. A paired tablet reads its court, moves the match
+ * on it and sends its score. Routes added later are closed until a rule lets them in.
  */
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -55,7 +55,10 @@ class SecurityConfig {
 				.hasAnyRole("ADMIN", "ORGANIZER", "CLUB", "PLAYER")
 				.requestMatchers(HttpMethod.GET, "/api/tablets/me", "/api/tablets/me/match")
 				.hasRole(TabletPrincipal.ROLE)
-				// The service checks that a tablet only moves the match on its court
+				// The service checks that a tablet only acts on the match of its court
+				.requestMatchers(HttpMethod.POST, "/api/matches/*/events")
+				.hasRole(TabletPrincipal.ROLE)
+				// Same check for status changes
 				.requestMatchers(HttpMethod.POST, "/api/matches/*/status")
 				.hasAnyRole("ORGANIZER", TabletPrincipal.ROLE)
 				// When each tablet was last seen is for organizers only
@@ -70,7 +73,7 @@ class SecurityConfig {
 				// Player records hold birth dates and contact details: only organizers and clubs read them
 				.requestMatchers(HttpMethod.GET, "/api/players", "/api/players/**", "/api/registrations/**",
 						"/api/tournaments/*/registrations", "/api/tournaments/*/registrations/**",
-						"/api/events/*/registrations", "/api/events/*/eligible-players")
+						"/api/events/*/registrations", "/api/events/*/eligible-players", "/api/events/*/draw")
 				.hasAnyRole("ORGANIZER", "CLUB")
 				// Tournaments, events, courts, clubs and organizations are public to read
 				.requestMatchers(HttpMethod.GET, "/api/**")

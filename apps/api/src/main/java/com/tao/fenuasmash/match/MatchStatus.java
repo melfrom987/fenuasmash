@@ -79,7 +79,7 @@ public enum MatchStatus {
 	}
 
 	/** The match is over: no status change will start it again, except reopening a finished match. */
-	boolean isEnded() {
+	public boolean isEnded() {
 		return this == FINISHED || this == CANCELLED || this == WALKOVER;
 	}
 
