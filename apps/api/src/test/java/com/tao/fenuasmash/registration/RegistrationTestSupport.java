@@ -22,6 +22,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.jayway.jsonpath.JsonPath;
 import com.tao.fenuasmash.DatabaseCleaner;
 import com.tao.fenuasmash.common.security.JwtService;
+import com.tao.fenuasmash.common.text.TextKeys;
 
 /**
  * A tournament with all disciplines, one club and four players: Teva (man, 1995), Manu (man,
@@ -137,7 +138,7 @@ abstract class RegistrationTestSupport {
 	private UUID insertPlayer(String firstName, String lastName, String gender, LocalDate birthDate,
 			Integer singlesPoints) {
 		UUID id = UUID.randomUUID();
-		String key = (lastName + " " + firstName + " | " + firstName + " " + lastName).toLowerCase();
+		String key = TextKeys.of(lastName + " " + firstName + " | " + firstName + " " + lastName);
 		jdbc.update("""
 				INSERT INTO player (id, first_name, last_name, gender, birth_date, club_id, singles_points, search_key)
 				VALUES (?, ?, ?, ?, ?, ?, ?, ?)""", id, firstName, lastName, gender, birthDate, clubId, singlesPoints,

@@ -13,4 +13,10 @@ class TextKeysTests {
 		assertThat(TextKeys.of("Faa'a Badminton Club")).isEqualTo("faa'a badminton club");
 	}
 
+	@Test
+	void treatsDashesAsSpaces() {
+		assertThat(TextKeys.of("Ah-Sing")).isEqualTo(TextKeys.of("ah sing"));
+		assertThat(TextKeys.of("Jean – Paul")).isEqualTo("jean paul");
+	}
+
 }
