@@ -26,8 +26,11 @@ class MatchController {
 
 	private final MatchService service;
 
-	MatchController(MatchService service) {
+	private final ScoreService scoreService;
+
+	MatchController(MatchService service, ScoreService scoreService) {
 		this.service = service;
+		this.scoreService = scoreService;
 	}
 
 	@GetMapping("/events/{eventId}/matches")
@@ -62,6 +65,12 @@ class MatchController {
 		return service.findOnCourt(tablet.courtId())
 			.map(ResponseEntity::ok)
 			.orElseGet(() -> ResponseEntity.noContent().build());
+	}
+
+	@PostMapping("/matches/{id}/events")
+	ScoreEventAck recordScoreEvents(@PathVariable UUID id, @Valid @RequestBody ScoreEventBatchRequest request,
+			@AuthenticationPrincipal TabletPrincipal tablet) {
+		return scoreService.record(id, request, tablet);
 	}
 
 	@GetMapping("/matches/{id}")

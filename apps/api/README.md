@@ -99,7 +99,7 @@ Use the `organization` package as the template. For a new feature (for example, 
 ### Security
 
 - Clients log in with `POST /api/auth/login` and send the token as `Authorization: Bearer <token>`. Tokens are valid for 12 hours.
-- Reads are public, except player records and registrations (organizers and clubs only). Organizers manage tournaments, events, courts, matches, clubs, players and registrations. The admin creates accounts and organizations. A paired umpire tablet only moves the match on its own court: warm-up, start, finish and reopen.
+- Reads are public, except player records and registrations (organizers and clubs only). Organizers manage tournaments, events, courts, matches, clubs, players and registrations. The admin creates accounts and organizations. A paired umpire tablet only acts on the match of its own court: it moves it (warm-up, start, finish, reopen) and sends its points.
 - Access rules live in `common/security/SecurityConfig`. **A new route is closed until a rule lets it in**: add one when adding an endpoint.
 - Missing or invalid tokens return **401** (`UNAUTHORIZED`), a wrong role returns **403** (`FORBIDDEN`).
 - After 5 failed logins for one email, or 20 from one IP, logins are refused for 15 minutes (**429**, `TOO_MANY_LOGIN_ATTEMPTS`, with `Retry-After`).
@@ -117,6 +117,12 @@ Use the `organization` package as the template. For a new feature (for example, 
 - A match is on its court while `CALLED`, `WARMUP` or `IN_PROGRESS`. A partial unique index keeps one match per court.
 - Calls to a court lock the tournament row (`SELECT ... FOR UPDATE`) until the commit, so two calls made at the same moment cannot put one side on two courts.
 - A court keeps the matches it received as history: it cannot be deleted afterwards (`COURT_IN_USE`), only disabled.
+
+### Scores
+
+- The tablet sends each point and undo as an event (`POST /api/matches/{id}/events`), with an id it generates and a sequence number. An event sent again is confirmed without being counted twice; events are applied in sequence order, and a missing one is asked again (`SEQUENCE_GAP`).
+- The score is counted by `ScoreSheet` from the points, with the scoring rules of the tournament, and kept on the match (`games_a`, `games_b`). The winning point finishes the match; its undo reopens it.
+- A batch locks the tournament, then the match, like a call to a court: locks are always taken in this order.
 
 ### Code Style
 

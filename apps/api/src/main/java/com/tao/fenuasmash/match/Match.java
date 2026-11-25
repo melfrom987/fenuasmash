@@ -2,6 +2,8 @@ package com.tao.fenuasmash.match;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -11,6 +13,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * A match of an event, between two registrations. Its status only changes
@@ -59,6 +64,20 @@ class Match {
 
 	@Enumerated(EnumType.STRING)
 	private MatchOutcome outcome;
+
+	/** Points of side A in each game, counted from the score events. */
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "games_a", nullable = false)
+	private int[] gamesA = new int[0];
+
+	@JdbcTypeCode(SqlTypes.ARRAY)
+	@Column(name = "games_b", nullable = false)
+	private int[] gamesB = new int[0];
+
+	/** The side that won on points; null while nobody has. */
+	@Enumerated(EnumType.STRING)
+	@Column(name = "score_winner")
+	private MatchSide scoreWinner;
 
 	@Version
 	@Column(name = "state_version", nullable = false)
@@ -146,6 +165,21 @@ class Match {
 			this.status = MatchStatus.SCHEDULED;
 		}
 		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
+	}
+
+	void updateScore(ScoreSheet sheet, Instant now) {
+		this.gamesA = sheet.games().stream().mapToInt(GameScore::a).toArray();
+		this.gamesB = sheet.games().stream().mapToInt(GameScore::b).toArray();
+		this.scoreWinner = sheet.winner();
+		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
+	}
+
+	MatchScore getScore() {
+		List<GameScore> games = new ArrayList<>();
+		for (int i = 0; i < gamesA.length; i++) {
+			games.add(new GameScore(gamesA[i], gamesB[i]));
+		}
+		return new MatchScore(games, scoreWinner);
 	}
 
 	boolean hasBothSides() {
