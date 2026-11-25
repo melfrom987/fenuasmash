@@ -1431,8 +1431,12 @@ paths:
       summary: Publish the draw
       description: |
         Locks the draw and the registrations of the event: adding, changing, withdrawing or
-        moving a registration is then refused with `DRAW_PUBLISHED`. Planned: matches are
-        generated from the published draw (#92, #93).
+        moving a registration is then refused with `DRAW_PUBLISHED`.
+
+        A single elimination gets every match of its bracket, `SCHEDULED` (see
+        `listEventMatches`): one per pair of first-round lines that are not a bye, then every
+        later round with the sides known so far. An entry facing a bye is placed straight into
+        the second round. The winners move on with #96; pools get their matches with #93.
       responses:
         '200':
           description: Published draw
@@ -2169,8 +2173,8 @@ components:
 
     Match:
       type: object
-      required: [id, tournamentId, eventId, round, sideA, sideB, courtId, status, winner,
-        outcome, stateVersion, startedAt, endedAt, createdAt, updatedAt]
+      required: [id, tournamentId, eventId, round, bracketPosition, sideA, sideB, courtId, status,
+        winner, outcome, stateVersion, startedAt, endedAt, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         tournamentId: { type: string, format: uuid }
@@ -2179,6 +2183,13 @@ components:
           type: [integer, 'null']
           minimum: 1
           description: Round in the draw, from 1; null when the match is not part of a draw
+        bracketPosition:
+          type: [integer, 'null']
+          minimum: 1
+          description: |
+            Position of a knockout match in its round, from 1 at the top of the bracket: the
+            winners of positions 2k-1 and 2k meet at position k of the next round (as sides A
+            and B). Null for a match out of a knockout bracket.
         sideA:
           type: [string, 'null']
           format: uuid
