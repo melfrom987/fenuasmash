@@ -3,14 +3,17 @@ import { useTranslation } from 'react-i18next';
 import type { Event } from '@/api/models';
 import { Button } from '@/components/ui/Button';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
-import { secondaryButtonClass } from '@/components/ui/styles';
+import { inputClass, secondaryButtonClass } from '@/components/ui/styles';
 import { StatusBadge } from '@/features/registrations/components/StatusBadge';
 import { formatBirthDate } from '@/lib/dates';
-import type { RowProblem } from '../build-rows';
+import type { RowFix, RowProblem } from '../build-rows';
+import type { EntryMove } from '../entry-moves';
 import type { ImportReport, ImportRow, ImportRowReport } from '../types';
 import { useIssueMessage } from '../use-issue-message';
+import { IncompleteRows } from './IncompleteRows';
 import { MatchBadge, MatchSelect } from './MatchSelect';
 import { partnerKey, type Decisions } from '../decisions';
+import { closestAgeEvent, possibleEvents } from '@/features/registrations/category-switch';
 
 const needsAttention = (row: ImportRowReport) =>
   row.issues.length > 0 ||
@@ -29,6 +32,8 @@ export function PreviewStep({
   error,
   onDecide,
   onSwapName,
+  onFix,
+  onMoveEntries,
   onRefresh,
   onImport,
   onBack,
@@ -43,6 +48,8 @@ export function PreviewStep({
   error: string | null;
   onDecide: (decisions: Decisions) => void;
   onSwapName: (row: ImportRow) => void;
+  onFix: (rowNumber: number, fix: RowFix) => void;
+  onMoveEntries: (moves: EntryMove[]) => void;
   onRefresh: () => void;
   onImport: () => void;
   onBack: () => void;
@@ -55,6 +62,24 @@ export function PreviewStep({
   const eventName = (eventId: string) => events.find((e) => e.id === eventId)?.name ?? eventId;
   const shown = onlyToCheck ? report.rows.filter(needsAttention) : report.rows;
   const importable = report.rows.filter((r) => r.issues.length === 0).length;
+
+  const ineligible = (entry: ImportRowReport['entries'][number]) =>
+    entry.status === null && entry.issues.some((i) => i.code === 'PLAYER_NOT_ELIGIBLE');
+  const candidate = (row: ImportRow) => [{ birthDate: row.birthDate, gender: row.gender }];
+  const suggestionFor = (row: ImportRow, eventId: string) => {
+    const event = events.find((e) => e.id === eventId);
+    return event ? closestAgeEvent(candidate(row), event, events) : undefined;
+  };
+  const autoMoves: EntryMove[] = report.rows.flatMap((rowReport) => {
+    const row = rowsByNumber.get(rowReport.rowNumber);
+    if (!row) return [];
+    return rowReport.entries.flatMap((entry) => {
+      const target = ineligible(entry) ? suggestionFor(row, entry.eventId) : undefined;
+      return target
+        ? [{ rowNumber: row.rowNumber, eventId: entry.eventId, targetEventId: target.id }]
+        : [];
+    });
+  });
 
   const counters = [
     ['rows', report.summary.rows],
@@ -78,21 +103,7 @@ export function PreviewStep({
         ))}
       </dl>
 
-      {problems.length > 0 && (
-        <section className="space-y-2 rounded-lg border border-red-200 bg-white p-4">
-          <h2 className="font-medium text-red-800">
-            {t('registrationImport.preview.unreadableTitle', { count: problems.length })}
-          </h2>
-          <ul className="space-y-1 text-sm">
-            {problems.map((problem) => (
-              <li key={problem.rowNumber}>
-                {t('registrationImport.preview.line', { n: problem.rowNumber })} —{' '}
-                {t(`registrationImport.problems.${problem.code}`, { value: problem.value })}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <IncompleteRows problems={problems} onFix={onFix} />
 
       {stale && (
         <p className="bg-sunset-50 text-sunset-800 rounded-md p-3 text-sm">
@@ -111,6 +122,16 @@ export function PreviewStep({
           />
           {t('registrationImport.preview.onlyToCheck')}
         </label>
+        {autoMoves.length > 0 && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => onMoveEntries(autoMoves)}
+            className="text-lagon-700 text-sm font-medium hover:underline"
+          >
+            {t('registrationImport.preview.switchAll', { count: autoMoves.length })}
+          </button>
+        )}
         <button
           type="button"
           onClick={onRefresh}
@@ -229,6 +250,61 @@ export function PreviewStep({
                                 {issueMessage(issue)}
                               </p>
                             ))}
+                            {entry.status === null &&
+                              (() => {
+                                const current = events.find((e) => e.id === entry.eventId);
+                                const suggestion = ineligible(entry)
+                                  ? suggestionFor(row, entry.eventId)
+                                  : undefined;
+                                const others = current
+                                  ? possibleEvents(candidate(row), current, events)
+                                  : [];
+                                const move = (targetEventId: string) =>
+                                  onMoveEntries([
+                                    {
+                                      rowNumber: row.rowNumber,
+                                      eventId: entry.eventId,
+                                      targetEventId,
+                                    },
+                                  ]);
+                                return (
+                                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                                    {suggestion && (
+                                      <button
+                                        type="button"
+                                        disabled={pending}
+                                        onClick={() => move(suggestion.id)}
+                                        className="text-lagon-700 text-xs font-medium hover:underline"
+                                      >
+                                        {t('registrationImport.preview.switchTo', {
+                                          event: suggestion.name,
+                                        })}
+                                      </button>
+                                    )}
+                                    {others.length === 0 && (
+                                      <span className="text-sable-600 text-xs">
+                                        {t('registrationImport.preview.noPossibleEvent')}
+                                      </span>
+                                    )}
+                                    {others.length > 0 && (
+                                      <select
+                                        value=""
+                                        onChange={(e) => move(e.target.value)}
+                                        className={`${inputClass} mt-0 w-auto py-1 text-xs`}
+                                      >
+                                        <option value="" disabled>
+                                          {t('registrationImport.preview.moveTo')}
+                                        </option>
+                                        {others.map((other) => (
+                                          <option key={other.id} value={other.id}>
+                                            {other.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                           </li>
                         );
                       })}
@@ -245,7 +321,7 @@ export function PreviewStep({
         <button type="button" onClick={onBack} className={secondaryButtonClass}>
           {t('registrationImport.back')}
         </button>
-        <Button type="button" disabled={pending || importable === 0} onClick={onImport}>
+        <Button type="button" disabled={pending || stale || importable === 0} onClick={onImport}>
           {pending
             ? t('registrationImport.preview.importing')
             : t('registrationImport.preview.import', { count: importable })}

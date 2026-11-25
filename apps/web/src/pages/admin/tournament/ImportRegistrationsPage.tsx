@@ -4,8 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { useClubs } from '@/features/clubs/api';
 import { useEvents } from '@/features/events/api';
+import { DISCIPLINES } from '@/features/events/constants';
+import { seasonReferenceYear } from '@/features/players/age-category';
+import { useTournament } from '@/features/tournaments/api';
 import { useImportRegistrations } from '@/features/registration-import/api';
-import { buildImportRows, type NameOverrides } from '@/features/registration-import/build-rows';
+import { buildImportRows, type RowFixes } from '@/features/registration-import/build-rows';
 import { ColumnsStep } from '@/features/registration-import/components/ColumnsStep';
 import { DoneStep } from '@/features/registration-import/components/DoneStep';
 import { FileStep } from '@/features/registration-import/components/FileStep';
@@ -24,6 +27,11 @@ import type {
   ValueMapping,
 } from '@/features/registration-import/types';
 import { useErrorMessage } from '@/lib/use-error-message';
+import {
+  applyMoves,
+  recordMoves,
+  type EntryMoves,
+} from '@/features/registration-import/entry-moves';
 
 const noDecisions: Decisions = { players: {}, partners: {} };
 
@@ -32,6 +40,7 @@ export function ImportRegistrationsPage() {
   const errorMessage = useErrorMessage();
   const { tournamentId = '' } = useParams();
   const events = useEvents(tournamentId);
+  const tournament = useTournament(tournamentId);
   const clubs = useClubs();
   const importRegistrations = useImportRegistrations(tournamentId);
 
@@ -39,7 +48,8 @@ export function ImportRegistrationsPage() {
   const [table, setTable] = useState<Table | null>(null);
   const [mapping, setMapping] = useState<ColumnMapping | null>(null);
   const [values, setValues] = useState<ValueMapping | null>(null);
-  const [nameOverrides, setNameOverrides] = useState<NameOverrides>({});
+  const [fixes, setFixes] = useState<RowFixes>({});
+  const [moves, setMoves] = useState<EntryMoves>({});
   const [decisions, setDecisions] = useState<Decisions>(noDecisions);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [stale, setStale] = useState(false);
@@ -53,26 +63,28 @@ export function ImportRegistrationsPage() {
             values,
             events: events.data,
             clubs: clubs.data,
-            nameOverrides,
+            fixes,
           })
         : null,
-    [table, mapping, values, events.data, clubs.data, nameOverrides],
+    [table, mapping, values, events.data, clubs.data, fixes],
   );
+
+  const rows = useMemo(() => (built ? applyMoves(built.rows, moves) : []), [built, moves]);
 
   const withDecisions = (rows: ImportRow[]): ImportRow[] =>
     rows.map((row) => ({
       ...row,
-      playerDecision: decisions.players[row.rowNumber],
+      playerDecision: decisions.players[row.rowNumber] ?? row.playerDecision,
       entries: row.entries.map((entry) => ({
         ...entry,
         partnerDecision: decisions.partners[partnerKey(row.rowNumber, entry.eventId)],
       })),
     }));
 
-  const send = (dryRun: boolean) => {
-    if (!built || built.rows.length === 0) return;
+  const send = (dryRun: boolean, source: ImportRow[] = rows) => {
+    if (source.length === 0) return;
     importRegistrations.mutate(
-      { rows: withDecisions(built.rows), dryRun },
+      { rows: withDecisions(source), dryRun },
       {
         onSuccess: (result) => {
           setReport(result);
@@ -88,7 +100,8 @@ export function ImportRegistrationsPage() {
     setTable(null);
     setMapping(null);
     setValues(null);
-    setNameOverrides({});
+    setFixes({});
+    setMoves({});
     setDecisions(noDecisions);
     setReport(null);
     importRegistrations.reset();
@@ -117,7 +130,8 @@ export function ImportRegistrationsPage() {
             setTable(loaded);
             setMapping(suggestColumnMapping(loaded));
             setValues(null);
-            setNameOverrides({});
+            setFixes({});
+            setMoves({});
             setDecisions(noDecisions);
             setStep('columns');
           }}
@@ -146,6 +160,11 @@ export function ImportRegistrationsPage() {
             <ErrorMessage>{t('registrationImport.values.noReadableRow')}</ErrorMessage>
           )}
           <ValuesStep
+            tournamentId={tournamentId}
+            offeredDisciplines={tournament.data?.disciplines ?? DISCIPLINES}
+            seasonYear={seasonReferenceYear(
+              tournament.data ? new Date(tournament.data.startsAt) : new Date(),
+            )}
             table={table}
             mapping={mapping}
             values={values}
@@ -162,7 +181,7 @@ export function ImportRegistrationsPage() {
       {step === 'preview' && report && built && (
         <PreviewStep
           report={report}
-          rows={built.rows}
+          rows={rows}
           problems={built.problems}
           events={events.data ?? []}
           decisions={decisions}
@@ -171,15 +190,29 @@ export function ImportRegistrationsPage() {
           error={error}
           onDecide={(next) => setDecisions(next)}
           onSwapName={(row) => {
-            setNameOverrides({
-              ...nameOverrides,
-              [row.rowNumber]: { firstName: row.lastName, lastName: row.firstName },
+            setFixes({
+              ...fixes,
+              [row.rowNumber]: {
+                ...fixes[row.rowNumber],
+                firstName: row.lastName,
+                lastName: row.firstName,
+              },
             });
+            setStale(true);
+          }}
+          onFix={(rowNumber, fix) => {
+            setFixes({ ...fixes, [rowNumber]: fix });
             setStale(true);
           }}
           onRefresh={() => send(true)}
           onImport={() => send(false)}
           onBack={() => setStep('values')}
+          onMoveEntries={(list) => {
+            if (!built) return;
+            const next = recordMoves(built.rows, moves, list);
+            setMoves(next);
+            send(true, applyMoves(built.rows, next));
+          }}
         />
       )}
 

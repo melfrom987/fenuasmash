@@ -88,15 +88,18 @@ export function PlayerPicker({
 export function PlayerLine({
   player,
   clubName,
+  referenceYear,
 }: {
   player: Pick<Player, 'firstName' | 'lastName' | 'birthDate'>;
   clubName: string;
+  referenceYear?: number;
 }) {
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       <span className="font-medium">{playerName(player)}</span>
       <span className="text-sable-600">{clubName}</span>
-      <AgeCategoryBadge birthDate={player.birthDate} />
+      <AgeCategoryBadge birthDate={player.birthDate} referenceYear={referenceYear} />
+      <span className="text-sable-500 text-xs tabular-nums">{player.birthDate.slice(0, 4)}</span>
     </span>
   );
 }

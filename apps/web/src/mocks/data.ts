@@ -1,4 +1,4 @@
-import type { Court, Organization, Tournament, Event } from '@/api/models';
+import type { Court, Draw, Organization, Tablet, Tournament, Event } from '@/api/models';
 import { clubs, players } from './people';
 import { seedRegistrations } from './registrations';
 
@@ -64,9 +64,12 @@ const events: Event[] = [
     categoryLabel: null,
     plannedDate: '2026-11-14T18:00:00.000Z',
     maxEntries: 24,
+    minBirthYear: null,
+    maxBirthYear: null,
     poolCount: null,
     poolSize: null,
     qualifiersPerPool: null,
+    parentEventId: null,
   },
   {
     id: '30000000-0000-4000-8000-000000000002',
@@ -74,12 +77,15 @@ const events: Event[] = [
     name: 'Simple Homme Cadet',
     discipline: 'MS',
     categoryType: 'AGE',
-    categoryLabel: 'Cadet',
+    categoryLabel: 'Cadet U17',
     plannedDate: '2026-11-14T18:00:00.000Z',
     maxEntries: null,
+    minBirthYear: 2011,
+    maxBirthYear: null,
     poolCount: null,
     poolSize: null,
     qualifiersPerPool: null,
+    parentEventId: null,
   },
   {
     id: '30000000-0000-4000-8000-000000000003',
@@ -90,12 +96,59 @@ const events: Event[] = [
     categoryLabel: null,
     plannedDate: '2026-11-16T00:00:00.000Z',
     maxEntries: 16,
+    minBirthYear: null,
+    maxBirthYear: null,
     poolCount: null,
     poolSize: null,
     qualifiersPerPool: null,
+    parentEventId: null,
   },
 ];
 
 const registrations = seedRegistrations(events, players);
 
-export const db = { organizations, tournaments, courts, events, clubs, players, registrations };
+const draws: Draw[] = [];
+
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+const tablets: Tablet[] = [
+  {
+    id: '30000000-0000-4000-8000-000000000001',
+    courtId: courts[0].id,
+    courtNumber: 1,
+    deviceName: 'Galaxy Tab A8',
+    pairedAt: minutesAgo(90),
+    lastSeenAt: minutesAgo(0),
+    revokedAt: null,
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000002',
+    courtId: courts[1].id,
+    courtNumber: 2,
+    deviceName: 'iPad 9',
+    pairedAt: minutesAgo(80),
+    lastSeenAt: minutesAgo(25),
+    revokedAt: null,
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000003',
+    courtId: courts[1].id,
+    courtNumber: 2,
+    deviceName: null,
+    pairedAt: minutesAgo(200),
+    lastSeenAt: minutesAgo(150),
+    revokedAt: minutesAgo(120),
+  },
+];
+
+export const db = {
+  organizations,
+  tournaments,
+  courts,
+  events,
+  clubs,
+  players,
+  registrations,
+  draws,
+  tablets,
+};

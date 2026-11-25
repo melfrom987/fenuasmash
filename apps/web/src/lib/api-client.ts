@@ -1,3 +1,5 @@
+import { notifyUnauthorized, readSession } from './session';
+
 export type FieldError = { field: string; message: string };
 
 export class ApiError extends Error {
@@ -15,12 +17,15 @@ export class ApiError extends Error {
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const isFormData = init?.body instanceof FormData;
-  const res = await fetch(`/api${path}`, {
-    headers: isFormData ? undefined : { 'Content-Type': 'application/json' },
-    ...init,
-  });
+  const session = readSession();
+  const headers = new Headers(init?.headers);
+  if (!isFormData && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+  if (session) headers.set('Authorization', `Bearer ${session.accessToken}`);
+
+  const res = await fetch(`/api${path}`, { ...init, headers });
   const body = await res.json().catch(() => null);
   if (!res.ok) {
+    if (res.status === 401 && session) notifyUnauthorized();
     throw new ApiError(
       res.status,
       body?.detail ?? `HTTP ${res.status}`,

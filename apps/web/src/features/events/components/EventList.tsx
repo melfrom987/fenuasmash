@@ -11,6 +11,14 @@ export function EventList({ events }: { events: Event[] }) {
       ? t('events.categoryTypes.OPEN')
       : `${t(`events.categoryTypes.${event.categoryType}`)} : ${event.categoryLabel}`;
 
+  const birthYears = (event: Event) => {
+    const { minBirthYear: min, maxBirthYear: max } = event;
+    if (min !== null && max !== null) return t('events.birthYears.between', { min, max });
+    if (min !== null) return t('events.birthYears.from', { year: min });
+    if (max !== null) return t('events.birthYears.until', { year: max });
+    return null;
+  };
+
   return (
     <ul className="divide-sable-200 divide-y rounded-lg bg-white shadow-sm">
       {events.map((event) => (
@@ -30,6 +38,7 @@ export function EventList({ events }: { events: Event[] }) {
                     date: formatDate(event.plannedDate),
                     time: formatTime(event.plannedDate),
                   }),
+                birthYears(event),
                 event.maxEntries
                   ? t('events.maxEntriesSummary', { max: event.maxEntries })
                   : t('events.unlimited'),
