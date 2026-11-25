@@ -1153,7 +1153,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           $ref: '#/components/responses/Conflict'
-          # ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL
+          # ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL, DRAW_PUBLISHED
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -1169,7 +1169,8 @@ paths:
         Moves registrations from another event of the same tournament and the same discipline
         (e.g. Minime U15 to Cadet U17, or Senior to Series 2). Each registration is checked
         against this event (gender, birth years, already registered, maximum entries) and moved
-        or rejected on its own. `registeredAt` and the status are kept.
+        or rejected on its own. `registeredAt` and the status are kept. Refused as a whole with
+        `DRAW_PUBLISHED` when the draw of this event is published.
       requestBody:
         required: true
         content:
@@ -1182,6 +1183,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/TransferResult' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED
 
   /events/{eventId}/eligible-players:
     parameters:
@@ -1251,6 +1255,9 @@ paths:
       responses:
         '204': { description: Deleted }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -1305,15 +1312,16 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  # ---------------------------------------------------------------- Draws (planned)
+  # ---------------------------------------------------------------- Draws
   /events/{eventId}/draw:
     parameters:
       - $ref: '#/components/parameters/EventId'
     get:
       tags: [Draws]
       operationId: getDraw
-      x-status: planned
+      x-roles: [ORGANIZER, CLUB]
       summary: Draw of an event (pools and/or knockout bracket)
+      description: Organizers and clubs only, like the registrations it shows (birth dates).
       responses:
         '200':
           description: The draw, draft or published
@@ -1324,17 +1332,16 @@ paths:
           $ref: '#/components/responses/NotFound'
           # EVENT_NOT_FOUND, DRAW_NOT_FOUND (no draw yet)
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Draws]
       operationId: createDraw
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Run (or run again) the draw of an event
       description: |
         Draws the `CONFIRMED` registrations of the event; the others are listed in
-        `excludedRegistrationIds`. Replaces the current draft. The settings are saved on the
-        event (`poolCount`, `qualifiersPerPool`). Missing settings use the event's values, then
-        the defaults:
+        `excludedRegistrationIds`. Replaces the current draft. Missing settings use the event's
+        values (`poolCount`, `qualifiersPerPool`), then the defaults:
         - `poolCount`: entries / 4, rounded, between 1 and 16. Pool sizes are derived: entries
           are split as evenly as possible (13 entries in 3 pools → 5, 4, 4), 3 to 8 per pool.
         - `qualifiersPerPool`: 2, less than the smallest pool.
@@ -1343,6 +1350,9 @@ paths:
 
         The draw is reproducible: the same confirmed registrations, settings and `randomSeed`
         always give the same draw. Send the `randomSeed` of a previous draw to replay it.
+
+        While the draw is a draft, any change to the registrations of the event (added, changed,
+        withdrawn or moved) deletes it: run it again.
 
         See "Pools and Draw" in `docs/competition-rules.md` for the placement rules.
       requestBody:
@@ -1369,7 +1379,6 @@ paths:
       tags: [Draws]
       operationId: deleteDraw
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Delete a draft draw
       responses:
         '204': { description: Deleted }
@@ -1387,7 +1396,6 @@ paths:
       tags: [Draws]
       operationId: swapDrawSlots
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Swap two slots of a draft draw
       description: |
         Swaps two entries between pools or within a pool, or two lines of the bracket (an
@@ -1420,12 +1428,11 @@ paths:
       tags: [Draws]
       operationId: publishDraw
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Publish the draw
       description: |
         Locks the draw and the registrations of the event: adding, changing, withdrawing or
-        moving a registration is then refused with `DRAW_PUBLISHED`. Matches are generated
-        from the published draw.
+        moving a registration is then refused with `DRAW_PUBLISHED`. Planned: matches are
+        generated from the published draw (#92, #93).
       responses:
         '200':
           description: Published draw
@@ -2550,7 +2557,7 @@ components:
                 description: |
                   INCOMPATIBLE_EVENT, PLAYER_NOT_ELIGIBLE, PARTNER_NOT_ELIGIBLE,
                   ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL,
-                  REGISTRATION_NOT_FOUND
+                  REGISTRATION_NOT_FOUND, DRAW_PUBLISHED (draw of its event published)
               message: { type: string }
 
     CreateRegistrationRequest:
