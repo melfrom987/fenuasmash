@@ -36,6 +36,18 @@ public class UpdateEventRequest {
 
 	private boolean maxEntriesSent;
 
+	@Min(1900)
+	@Max(2100)
+	private Integer minBirthYear;
+
+	private boolean minBirthYearSent;
+
+	@Min(1900)
+	@Max(2100)
+	private Integer maxBirthYear;
+
+	private boolean maxBirthYearSent;
+
 	@Min(1)
 	private Integer poolCount;
 
@@ -71,6 +83,16 @@ public class UpdateEventRequest {
 	public void setMaxEntries(Integer maxEntries) {
 		this.maxEntries = maxEntries;
 		this.maxEntriesSent = true;
+	}
+
+	public void setMinBirthYear(Integer minBirthYear) {
+		this.minBirthYear = minBirthYear;
+		this.minBirthYearSent = true;
+	}
+
+	public void setMaxBirthYear(Integer maxBirthYear) {
+		this.maxBirthYear = maxBirthYear;
+		this.maxBirthYearSent = true;
 	}
 
 	public void setPoolCount(Integer poolCount) {
@@ -115,6 +137,22 @@ public class UpdateEventRequest {
 
 	boolean maxEntriesSent() {
 		return maxEntriesSent;
+	}
+
+	Integer minBirthYear() {
+		return minBirthYear;
+	}
+
+	boolean minBirthYearSent() {
+		return minBirthYearSent;
+	}
+
+	Integer maxBirthYear() {
+		return maxBirthYear;
+	}
+
+	boolean maxBirthYearSent() {
+		return maxBirthYearSent;
 	}
 
 	Integer poolCount() {

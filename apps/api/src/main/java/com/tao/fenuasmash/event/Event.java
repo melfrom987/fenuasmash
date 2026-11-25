@@ -43,6 +43,12 @@ public class Event {
 	@Column(name = "max_entries")
 	private Integer maxEntries;
 
+	@Column(name = "min_birth_year")
+	private Integer minBirthYear;
+
+	@Column(name = "max_birth_year")
+	private Integer maxBirthYear;
+
 	@Column(name = "pool_count")
 	private Integer poolCount;
 
@@ -56,20 +62,22 @@ public class Event {
 	}
 
 	Event(UUID tournamentId, String name, Discipline discipline, CategoryType categoryType, String categoryLabel,
-			Instant plannedDate, Integer maxEntries, PoolStructure structure) {
+			Instant plannedDate, Integer maxEntries, BirthYearBounds birthYears, PoolStructure structure) {
 		this.id = UUID.randomUUID();
 		this.tournamentId = tournamentId;
-		update(name, discipline, categoryType, categoryLabel, plannedDate, maxEntries, structure);
+		update(name, discipline, categoryType, categoryLabel, plannedDate, maxEntries, birthYears, structure);
 	}
 
 	void update(String name, Discipline discipline, CategoryType categoryType, String categoryLabel,
-			Instant plannedDate, Integer maxEntries, PoolStructure structure) {
+			Instant plannedDate, Integer maxEntries, BirthYearBounds birthYears, PoolStructure structure) {
 		this.name = name;
 		this.discipline = discipline;
 		this.categoryType = categoryType;
 		this.categoryLabel = categoryLabel;
 		this.plannedDate = plannedDate != null ? plannedDate.truncatedTo(ChronoUnit.MICROS) : null;
 		this.maxEntries = maxEntries;
+		this.minBirthYear = birthYears.min();
+		this.maxBirthYear = birthYears.max();
 		this.poolCount = structure.poolCount();
 		this.poolSize = structure.poolSize();
 		this.qualifiersPerPool = structure.qualifiersPerPool();
@@ -105,6 +113,10 @@ public class Event {
 
 	public Integer getMaxEntries() {
 		return maxEntries;
+	}
+
+	public BirthYearBounds getBirthYears() {
+		return new BirthYearBounds(minBirthYear, maxBirthYear);
 	}
 
 	public Integer getPoolCount() {
