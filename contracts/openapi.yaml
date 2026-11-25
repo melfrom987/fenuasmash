@@ -683,6 +683,12 @@ paths:
         outcome is `WALKOVER`. Other statuses take neither (`INVALID_MATCH_RESULT`). Leaving
         `FINISHED` clears the result.
 
+        **Knockout bracket:** the winner of a `FINISHED` or `WALKOVER` match with a
+        `bracketPosition` takes its side in the next round (side A from an odd position, side B
+        from an even one); the final has no next match. Reopening a finished match takes the
+        winner out of the next match again, which goes back to `SCHEDULED` if it was `READY`;
+        it is refused with `NEXT_MATCH_STARTED` once the next match is called or played.
+
         **Concurrent changes:** send the `stateVersion` read with the match. If the match
         changed since, nothing is applied and the answer is `STATE_VERSION_CONFLICT`: read
         the match again, then decide. Every change increments `stateVersion`.
@@ -709,7 +715,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # INVALID_STATUS_TRANSITION, MATCH_SIDES_INCOMPLETE, STATE_VERSION_CONFLICT,
-          # COURT_REQUIRED, COURT_OCCUPIED, SIDE_ON_ANOTHER_COURT
+          # COURT_REQUIRED, COURT_OCCUPIED, SIDE_ON_ANOTHER_COURT, NEXT_MATCH_STARTED
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403':
           $ref: '#/components/responses/Forbidden'
@@ -1436,7 +1442,8 @@ paths:
         A single elimination gets every match of its bracket, `SCHEDULED` (see
         `listEventMatches`): one per pair of first-round lines that are not a bye, then every
         later round with the sides known so far. An entry facing a bye is placed straight into
-        the second round. The winners move on with #96; pools get their matches with #93.
+        the second round. The winners move on by themselves (see `changeMatchStatus`); pools
+        get their matches with #93.
       responses:
         '200':
           description: Published draw
@@ -1735,6 +1742,7 @@ components:
         - INVALID_STATUS_TRANSITION
         - MATCH_SIDES_INCOMPLETE
         - STATE_VERSION_CONFLICT
+        - NEXT_MATCH_STARTED
         # Courts and matches
         - INVALID_COURT
         - COURT_REQUIRED
