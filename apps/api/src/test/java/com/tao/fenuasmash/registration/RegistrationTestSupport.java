@@ -28,7 +28,7 @@ import com.tao.fenuasmash.common.text.TextKeys;
  * A tournament with all disciplines, one club and four players: Teva (man, 1995), Manu (man,
  * 2012), Hina (woman, 1998) and Moana (woman, 1985).
  */
-abstract class RegistrationTestSupport {
+public abstract class RegistrationTestSupport {
 
 	@Autowired
 	protected MockMvc mvc;

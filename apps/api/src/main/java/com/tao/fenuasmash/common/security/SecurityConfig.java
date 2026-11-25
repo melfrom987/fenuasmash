@@ -70,7 +70,7 @@ class SecurityConfig {
 				// Player records hold birth dates and contact details: only organizers and clubs read them
 				.requestMatchers(HttpMethod.GET, "/api/players", "/api/players/**", "/api/registrations/**",
 						"/api/tournaments/*/registrations", "/api/tournaments/*/registrations/**",
-						"/api/events/*/registrations", "/api/events/*/eligible-players")
+						"/api/events/*/registrations", "/api/events/*/eligible-players", "/api/events/*/draw")
 				.hasAnyRole("ORGANIZER", "CLUB")
 				// Tournaments, events, courts, clubs and organizations are public to read
 				.requestMatchers(HttpMethod.GET, "/api/**")

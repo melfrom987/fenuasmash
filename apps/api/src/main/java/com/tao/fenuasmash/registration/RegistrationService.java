@@ -22,6 +22,7 @@ import com.tao.fenuasmash.common.error.ConflictException;
 import com.tao.fenuasmash.common.error.FieldValidationException;
 import com.tao.fenuasmash.common.error.InvalidRequestException;
 import com.tao.fenuasmash.common.error.NotFoundException;
+import com.tao.fenuasmash.draw.DrawLock;
 import com.tao.fenuasmash.event.BirthYearBounds;
 import com.tao.fenuasmash.event.EventResponse;
 import com.tao.fenuasmash.event.EventService;
@@ -54,18 +55,22 @@ public class RegistrationService {
 
 	private final PlayerService playerService;
 
+	private final DrawLock drawLock;
+
 	private final Clock clock;
 
 	RegistrationService(RegistrationRepository repository, EventService eventService,
-			TournamentService tournamentService, PlayerService playerService) {
+			TournamentService tournamentService, PlayerService playerService, DrawLock drawLock) {
 		this.repository = repository;
 		this.eventService = eventService;
 		this.tournamentService = tournamentService;
 		this.playerService = playerService;
+		this.drawLock = drawLock;
 		this.clock = Clock.systemUTC();
 	}
 
-	List<RegistrationResponse> findAllByEvent(UUID eventId) {
+	/** The registrations of an event, by registration date. */
+	public List<RegistrationResponse> findAllByEvent(UUID eventId) {
 		eventService.findById(eventId);
 		return toResponses(repository.findByEventId(eventId).stream().sorted(BY_DATE).toList());
 	}
@@ -119,6 +124,7 @@ public class RegistrationService {
 		if (partner != null) {
 			checkCombinations(event, partner, null);
 		}
+		drawLock.beforeRegistrationsChange(eventId);
 		RegistrationStatus status = (DisciplineRules.isSingles(event.discipline()) || partner != null)
 				? RegistrationStatus.CONFIRMED : RegistrationStatus.LOOKING_FOR_PARTNER;
 		Registration registration = repository.save(new Registration(event.tournamentId(), eventId, player.id(),
@@ -130,6 +136,7 @@ public class RegistrationService {
 	RegistrationResponse update(UUID id, UpdateRegistrationRequest request) {
 		Registration registration = getRegistration(id);
 		EventResponse event = eventService.findById(registration.getEventId());
+		drawLock.beforeRegistrationsChange(event.id());
 		if (request.confirm()) {
 			if (registration.getStatus() != RegistrationStatus.PENDING_PARTNER) {
 				throw new ConflictException("NOT_PENDING", "Only a registration with a pending partner is confirmed");
@@ -167,7 +174,9 @@ public class RegistrationService {
 
 	@Transactional
 	void delete(UUID id) {
-		repository.delete(getRegistration(id));
+		Registration registration = getRegistration(id);
+		drawLock.beforeRegistrationsChange(registration.getEventId());
+		repository.delete(registration);
 	}
 
 	/**
@@ -177,6 +186,7 @@ public class RegistrationService {
 	@Transactional
 	TransferResult transfer(UUID eventId, TransferRequest request) {
 		EventResponse target = eventService.findById(eventId);
+		drawLock.beforeRegistrationsChange(eventId);
 		List<Registration> moved = new ArrayList<>();
 		List<TransferResult.Rejection> rejected = new ArrayList<>();
 		for (UUID registrationId : new LinkedHashSet<>(request.registrationIds())) {
@@ -194,6 +204,7 @@ public class RegistrationService {
 				}
 				checkNotRegistered(target, player, partner, null);
 				checkNotFull(target);
+				drawLock.beforeRegistrationsChange(registration.getEventId());
 				registration.moveTo(target.id());
 				repository.saveAndFlush(registration);
 				moved.add(registration);
