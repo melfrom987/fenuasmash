@@ -1300,6 +1300,96 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'La tablette n’enverra plus de scores tant qu’elle n’aura pas un nouveau code.'**
   String get tabletUnpairMessage;
+
+  /// No description provided for @courtMatchLoading.
+  ///
+  /// In fr, this message translates to:
+  /// **'Recherche du match du terrain…'**
+  String get courtMatchLoading;
+
+  /// No description provided for @courtMatchFreeTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Aucun match sur le terrain'**
+  String get courtMatchFreeTitle;
+
+  /// No description provided for @courtMatchFreeDescription.
+  ///
+  /// In fr, this message translates to:
+  /// **'Le match appelé par l’organisateur s’affichera ici tout seul.'**
+  String get courtMatchFreeDescription;
+
+  /// No description provided for @courtMatchCalled.
+  ///
+  /// In fr, this message translates to:
+  /// **'Match appelé'**
+  String get courtMatchCalled;
+
+  /// No description provided for @courtMatchWarmup.
+  ///
+  /// In fr, this message translates to:
+  /// **'Échauffement'**
+  String get courtMatchWarmup;
+
+  /// No description provided for @courtMatchInProgress.
+  ///
+  /// In fr, this message translates to:
+  /// **'Match en cours'**
+  String get courtMatchInProgress;
+
+  /// No description provided for @courtMatchUnknownEvent.
+  ///
+  /// In fr, this message translates to:
+  /// **'Match du tournoi'**
+  String get courtMatchUnknownEvent;
+
+  /// No description provided for @courtMatchRound.
+  ///
+  /// In fr, this message translates to:
+  /// **'Tour {round}'**
+  String courtMatchRound(int round);
+
+  /// No description provided for @courtMatchOpenHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touche pour saisir les joueurs et commencer.'**
+  String get courtMatchOpenHint;
+
+  /// No description provided for @courtMatchResumeHint.
+  ///
+  /// In fr, this message translates to:
+  /// **'Touche pour reprendre le match.'**
+  String get courtMatchResumeHint;
+
+  /// No description provided for @courtMatchOffline.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne : affiché tel qu’à {time}.'**
+  String courtMatchOffline(String time);
+
+  /// No description provided for @courtMatchOfflineNever.
+  ///
+  /// In fr, this message translates to:
+  /// **'Hors ligne : le serveur ne répond pas.'**
+  String get courtMatchOfflineNever;
+
+  /// No description provided for @courtMatchReplaceTitle.
+  ///
+  /// In fr, this message translates to:
+  /// **'Un autre match est en cours'**
+  String get courtMatchReplaceTitle;
+
+  /// No description provided for @courtMatchReplaceMessage.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir le match du terrain remplace le match en cours sur la tablette. Ses points déjà joués seront quand même envoyés.'**
+  String get courtMatchReplaceMessage;
+
+  /// No description provided for @courtMatchReplace.
+  ///
+  /// In fr, this message translates to:
+  /// **'Ouvrir'**
+  String get courtMatchReplace;
 }
 
 class _AppLocalizationsDelegate

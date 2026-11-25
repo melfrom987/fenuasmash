@@ -1,4 +1,7 @@
 import 'package:badminton_umpire/core/responsive/responsive.dart';
+import 'package:badminton_umpire/features/court_match/application/court_match_controller.dart';
+import 'package:badminton_umpire/features/court_match/domain/court_match.dart';
+import 'package:badminton_umpire/features/court_match/presentation/court_match_card.dart';
 import 'package:badminton_umpire/features/history/presentation/pages/match_history_page.dart';
 import 'package:badminton_umpire/features/match/domain/models/match_draft.dart';
 import 'package:badminton_umpire/features/match/presentation/pages/match_page.dart';
@@ -13,10 +16,13 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.pairing});
+  const HomePage({super.key, this.pairing, this.courtMatch});
 
   /// The pairing of the tablet; the app-wide one when null.
   final TabletSessionController? pairing;
+
+  /// The match on the court of the tablet; the app-wide one when null.
+  final CourtMatchController? courtMatch;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -48,9 +54,30 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  Future<void> _openMatchSetup() async {
+  Future<void> _openMatchSetup() => _startMatch();
+
+  bool _isCurrentMatch(CourtMatch match) {
+    return _currentMatch?.config.serverMatchId == match.id;
+  }
+
+  /// Opens the match called to the court: the one already started on the
+  /// tablet, or the setup screen filled in with what the server knows.
+  Future<void> _openCourtMatch(CourtMatch match) async {
+    if (_isCurrentMatch(match)) {
+      return _resumeMatch();
+    }
+    final pairing = widget.pairing ?? tabletSessionController;
+    return _startMatch(
+      courtMatch: match,
+      courtNumber: pairing.session?.courtNumber,
+    );
+  }
+
+  Future<void> _startMatch({CourtMatch? courtMatch, int? courtNumber}) async {
     if (_currentMatch != null) {
-      final shouldReplace = await _confirmReplaceCurrentMatch();
+      final shouldReplace = courtMatch == null
+          ? await _confirmReplaceCurrentMatch()
+          : await _confirmReplaceByCourtMatch();
 
       if (!shouldReplace) {
         return;
@@ -77,7 +104,10 @@ class _HomePageState extends State<HomePage> {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) {
-          return MatchSetupPage();
+          return MatchSetupPage(
+            courtMatch: courtMatch,
+            courtNumber: courtNumber,
+          );
         },
       ),
     );
@@ -107,6 +137,29 @@ class _HomePageState extends State<HomePage> {
     );
 
     await _loadCurrentMatch();
+  }
+
+  Future<bool> _confirmReplaceByCourtMatch() async {
+    final l10n = AppLocalizations.of(context)!;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.courtMatchReplaceTitle),
+        content: Text(l10n.courtMatchReplaceMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            key: const Key('courtMatchReplace'),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.courtMatchReplace),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Future<bool> _confirmReplaceCurrentMatch() async {
@@ -219,6 +272,12 @@ class _HomePageState extends State<HomePage> {
                                 widget.pairing ?? tabletSessionController,
                           ),
                           SizedBox(height: responsive.spaceM),
+                          CourtMatchCard(
+                            controller:
+                                widget.courtMatch ?? courtMatchController,
+                            onOpen: _openCourtMatch,
+                            isResumable: _isCurrentMatch,
+                          ),
                           if (!_isLoadingDraft && _currentMatch != null) ...[
                             _CurrentMatchCard(
                               draft: _currentMatch!,
