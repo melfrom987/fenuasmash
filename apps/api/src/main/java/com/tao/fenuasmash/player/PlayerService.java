@@ -1,8 +1,11 @@
 package com.tao.fenuasmash.player;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,22 +40,73 @@ public class PlayerService {
 
 	@Transactional(readOnly = true)
 	PlayerPage search(String query, UUID clubId, Gender gender, int page, int size) {
-		if (page < 0) {
-			throw new FieldValidationException("page", "must be greater than or equal to 0");
-		}
-		if (size < 1 || size > MAX_PAGE_SIZE) {
-			throw new FieldValidationException("size", "must be between 1 and " + MAX_PAGE_SIZE);
-		}
-		Specification<Player> matches = (root, criteriaQuery, builder) -> builder.conjunction();
-		if (query != null && !query.isBlank()) {
-			String key = "%" + escapeLike(TextKeys.of(query)) + "%";
-			matches = matches.and((root, criteriaQuery, builder) -> builder.like(root.get("searchKey"), key, '\\'));
-		}
+		Specification<Player> matches = matching(query);
 		if (clubId != null) {
 			matches = matches.and((root, criteriaQuery, builder) -> builder.equal(root.get("clubId"), clubId));
 		}
 		if (gender != null) {
 			matches = matches.and((root, criteriaQuery, builder) -> builder.equal(root.get("gender"), gender));
+		}
+		return page(matches, page, size);
+	}
+
+	/** One page of the players matching {@code query} and {@code eligible}, as {@link #search}. */
+	@Transactional(readOnly = true)
+	public PlayerPage searchEligible(String query, EligiblePlayers eligible, int page, int size) {
+		Specification<Player> matches = matching(query)
+			.and((root, criteriaQuery, builder) -> root.get("gender").in(eligible.genders()));
+		if (eligible.bornFrom() != null) {
+			matches = matches.and((root, criteriaQuery, builder) -> builder
+				.greaterThanOrEqualTo(root.get("birthDate"), eligible.bornFrom()));
+		}
+		if (eligible.bornUntil() != null) {
+			matches = matches.and((root, criteriaQuery, builder) -> builder
+				.lessThanOrEqualTo(root.get("birthDate"), eligible.bornUntil()));
+		}
+		if (!eligible.excluded().isEmpty()) {
+			matches = matches
+				.and((root, criteriaQuery, builder) -> builder.not(root.get("id").in(eligible.excluded())));
+		}
+		return page(matches, page, size);
+	}
+
+	/** The players among {@code ids}, by id; unknown ids are left out. */
+	@Transactional(readOnly = true)
+	public Map<UUID, PlayerSummary> findSummaries(Collection<UUID> ids) {
+		List<Player> players = repository.findAllById(ids);
+		Map<UUID, ClubSummary> clubs = clubService
+			.findSummaries(players.stream().map(Player::getClubId).distinct().toList());
+		return players.stream()
+			.collect(Collectors.toMap(Player::getId, (player) -> summary(player, clubs.get(player.getClubId()))));
+	}
+
+	/** The player, or empty if it does not exist. */
+	@Transactional(readOnly = true)
+	public Optional<PlayerSummary> findSummary(UUID id) {
+		return Optional.ofNullable(findSummaries(List.of(id)).get(id));
+	}
+
+	private static PlayerSummary summary(Player player, ClubSummary club) {
+		return new PlayerSummary(player.getId(), player.getFirstName(), player.getLastName(), player.getGender(),
+				player.getBirthDate(), (club != null) ? club.name() : null, player.getLicenseNumber(),
+				player.rankings());
+	}
+
+	private static Specification<Player> matching(String query) {
+		Specification<Player> matches = (root, criteriaQuery, builder) -> builder.conjunction();
+		if (query != null && !query.isBlank()) {
+			String key = "%" + escapeLike(TextKeys.of(query)) + "%";
+			matches = matches.and((root, criteriaQuery, builder) -> builder.like(root.get("searchKey"), key, '\\'));
+		}
+		return matches;
+	}
+
+	private PlayerPage page(Specification<Player> matches, int page, int size) {
+		if (page < 0) {
+			throw new FieldValidationException("page", "must be greater than or equal to 0");
+		}
+		if (size < 1 || size > MAX_PAGE_SIZE) {
+			throw new FieldValidationException("size", "must be between 1 and " + MAX_PAGE_SIZE);
 		}
 		Page<Player> players = repository.findAll(matches, PageRequest.of(page, size, BY_NAME));
 		Map<UUID, ClubSummary> clubs = clubService

@@ -6,7 +6,7 @@ import java.util.UUID;
 import com.tao.fenuasmash.club.ClubSummary;
 
 /** The `Player` schema. */
-record PlayerResponse(UUID id, String firstName, String lastName, Gender gender, LocalDate birthDate, ClubSummary club,
+public record PlayerResponse(UUID id, String firstName, String lastName, Gender gender, LocalDate birthDate, ClubSummary club,
 		String licenseNumber, String email, String phone, PlayerRankings rankings) {
 
 	static PlayerResponse from(Player player, ClubSummary club) {

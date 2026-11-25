@@ -57,8 +57,11 @@ public class EventService {
 		}
 		PoolStructure structure = resolveStructure(tournament.drawFormat(), PoolStructure.NONE, request.poolCount(),
 				request.poolSize(), request.qualifiersPerPool());
+		BirthYearBounds birthYears = resolveBirthYears(request.categoryType(),
+				new BirthYearBounds(request.minBirthYear(), request.maxBirthYear()), true);
 		return EventResponse.from(repository.save(new Event(tournamentId, name, request.discipline(),
-				request.categoryType(), categoryLabel, request.plannedDate(), request.maxEntries(), structure)));
+				request.categoryType(), categoryLabel, request.plannedDate(), request.maxEntries(), birthYears,
+				structure)));
 	}
 
 	@Transactional
@@ -80,7 +83,13 @@ public class EventService {
 				request.poolSize(), request.qualifiersPerPool());
 		Instant plannedDate = request.plannedDateSent() ? request.plannedDate() : event.getPlannedDate();
 		Integer maxEntries = request.maxEntriesSent() ? request.maxEntries() : event.getMaxEntries();
-		event.update(name, discipline, categoryType, categoryLabel, plannedDate, maxEntries, structure);
+		BirthYearBounds currentYears = event.getBirthYears();
+		BirthYearBounds requestedYears = new BirthYearBounds(
+				request.minBirthYearSent() ? request.minBirthYear() : currentYears.min(),
+				request.maxBirthYearSent() ? request.maxBirthYear() : currentYears.max());
+		BirthYearBounds birthYears = resolveBirthYears(categoryType, requestedYears,
+				request.minBirthYearSent() || request.maxBirthYearSent());
+		event.update(name, discipline, categoryType, categoryLabel, plannedDate, maxEntries, birthYears, structure);
 		return EventResponse.from(event);
 	}
 
@@ -89,7 +98,26 @@ public class EventService {
 		repository.delete(getEvent(id));
 	}
 
-	private static String resolveCategoryLabel(CategoryType categoryType, String categoryLabel) {
+	/**
+	 * Birth-year bounds are only for age events: sent for another category, they are refused;
+	 * kept from before, they are cleared when the event stops being an age event.
+	 */
+	private static BirthYearBounds resolveBirthYears(CategoryType categoryType, BirthYearBounds requested,
+			boolean sent) {
+		if (categoryType != CategoryType.AGE) {
+			if (sent && (requested.min() != null || requested.max() != null)) {
+				throw new FieldValidationException(requested.min() != null ? "minBirthYear" : "maxBirthYear",
+						"only allowed for an AGE event");
+			}
+			return BirthYearBounds.NONE;
+		}
+		if (requested.min() != null && requested.max() != null && requested.min() > requested.max()) {
+			throw new FieldValidationException("maxBirthYear", "must be greater than or equal to minBirthYear");
+		}
+		return requested;
+	}
+
+		private static String resolveCategoryLabel(CategoryType categoryType, String categoryLabel) {
 		if (categoryType == CategoryType.OPEN) {
 			return null;
 		}

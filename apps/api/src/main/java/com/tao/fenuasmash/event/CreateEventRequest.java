@@ -17,6 +17,8 @@ public record CreateEventRequest(
 		@Size(max = 50) String categoryLabel,
 		Instant plannedDate,
 		@Min(2) @Max(256) Integer maxEntries,
+		@Min(1900) @Max(2100) Integer minBirthYear,
+		@Min(1900) @Max(2100) Integer maxBirthYear,
 		@Min(1) Integer poolCount,
 		@Min(3) @Max(8) Integer poolSize,
 		@Min(1) @Max(7) Integer qualifiersPerPool) {
