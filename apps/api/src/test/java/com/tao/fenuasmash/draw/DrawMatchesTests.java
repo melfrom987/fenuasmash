@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static com.tao.fenuasmash.TestTokens.organizer;
 
+import java.time.LocalDate;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -27,10 +28,10 @@ class DrawMatchesTests extends RegistrationTestSupport {
 
 	@Test
 	void createsEveryMatchOfTheBracketWithTheByesInTheSecondRound() throws Exception {
-		UUID event = createEvent("Double Open", "OD");
+		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
-		registered(event, hina, null);
-		registered(event, moana, null);
+		registered(event, manu, null);
+		registered(event, insertPlayer("Tama", "Roa", "MALE", LocalDate.of(1990, 1, 1), 500), null);
 		mvc.perform(post("/api/events/{id}/draw", event).with(organizer(jwtService))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content("{}")).andExpect(status().isCreated());
