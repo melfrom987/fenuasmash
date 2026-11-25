@@ -147,6 +147,10 @@ public class ScoreService {
 		Instant now = Instant.now();
 		eventRepository.saveAll(fresh.stream().map(event -> new ScoreEvent(match.getId(), event, tablet.tabletId(), now))
 			.toList());
+		UUID previousWinner = MatchService.winnerOf(match);
+		if (sheet.winner() == null && match.getStatus() == MatchStatus.FINISHED) {
+			matchService.checkCanReopen(match);
+		}
 		match.updateScore(sheet, now);
 		if (sheet.winner() != null && (match.getStatus() != MatchStatus.FINISHED || match.getWinner() != sheet.winner())) {
 			match.moveTo(MatchStatus.FINISHED, sheet.winner(), MatchOutcome.NORMAL, now);
@@ -156,6 +160,8 @@ public class ScoreService {
 			matchService.checkCourtIsFree(match, match.getCourtId());
 			match.moveTo(MatchStatus.IN_PROGRESS, null, null, now);
 		}
+		// The winner moves on in a knockout bracket, or comes back when the winning point is undone
+		matchService.afterResultChange(match, previousWinner, now);
 		// Flushed now, so that the answer carries the new state version
 		matchRepository.saveAndFlush(match);
 		return expected - 1;

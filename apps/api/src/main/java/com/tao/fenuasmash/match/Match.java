@@ -46,6 +46,10 @@ class Match {
 	@Column(name = "bracket_position", updatable = false)
 	private Integer bracketPosition;
 
+	/** The pool of a pool match; null otherwise. */
+	@Column(name = "pool_name", updatable = false)
+	private String pool;
+
 	@Column(name = "side_a_id")
 	private UUID sideA;
 
@@ -204,6 +208,16 @@ class Match {
 
 	Integer getBracketPosition() {
 		return bracketPosition;
+	}
+
+	String getPool() {
+		return pool;
+	}
+
+	/** Makes this match a pool match, right after it is built. */
+	Match inPool(String pool) {
+		this.pool = pool;
+		return this;
 	}
 
 	UUID getSideA() {

@@ -12,6 +12,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,12 +53,15 @@ public class MatchService {
 
 	private final CourtService courtService;
 
+	private final ApplicationEventPublisher events;
+
 	MatchService(MatchRepository repository, EventService eventService, TournamentService tournamentService,
-			CourtService courtService) {
+			CourtService courtService, ApplicationEventPublisher events) {
 		this.repository = repository;
 		this.eventService = eventService;
 		this.tournamentService = tournamentService;
 		this.courtService = courtService;
+		this.events = events;
 	}
 
 	public List<MatchResponse> findAllByEvent(UUID eventId) {
@@ -209,11 +213,8 @@ public class MatchService {
 			throw courtRequired("A match is called with POST /api/matches/" + id + "/court, which sets its court");
 		}
 		MatchOutcome outcome = resolveOutcome(next, request.winner(), request.outcome());
-		Optional<Match> following = followingMatch(match);
-		boolean reopened = current == MatchStatus.FINISHED && next != MatchStatus.FINISHED;
-		if (reopened && following.isPresent() && following.get().getStatus().compareTo(MatchStatus.READY) > 0) {
-			throw new ConflictException("NEXT_MATCH_STARTED", "The winner of match " + id
-					+ " already plays the next match: it cannot be reopened");
+		if (current == MatchStatus.FINISHED && next != MatchStatus.FINISHED) {
+			checkCanReopen(match);
 		}
 		if (!current.isOnCourt() && next.isOnCourt()) {
 			// Reopening a finished match puts it back on its court
@@ -223,10 +224,10 @@ public class MatchService {
 			repository.lockTournament(match.getTournamentId());
 			checkCourtIsFree(match, match.getCourtId());
 		}
-		UUID previousWinner = (current == MatchStatus.FINISHED) ? match.sideOf(match.getWinner()) : null;
+		UUID previousWinner = winnerOf(match);
 		Instant now = Instant.now();
 		match.moveTo(next, request.winner(), outcome, now);
-		following.ifPresent((nextMatch) -> moveWinnerOn(match, nextMatch, previousWinner, now));
+		afterResultChange(match, previousWinner, now);
 		// Flushed now, so that the answer carries the new state version
 		return MatchResponse.from(repository.saveAndFlush(match));
 	}
@@ -243,14 +244,76 @@ public class MatchService {
 				(match.getBracketPosition() + 1) / 2);
 	}
 
+	/** The registration that won the match, or null while it has no winner. */
+	static UUID winnerOf(Match match) {
+		return (match.getStatus() == MatchStatus.FINISHED || match.getStatus() == MatchStatus.WALKOVER)
+				? match.sideOf(match.getWinner()) : null;
+	}
+
 	/**
-	 * Keeps the next match in line with the result: the winner takes its side (A from an odd
-	 * position, B from an even one), and leaves it when the match is reopened.
+	 * A finished knockout match can be reopened only while its winner has not been called to
+	 * the next match.
+	 * @throws ConflictException `NEXT_MATCH_STARTED` otherwise
 	 */
+	void checkCanReopen(Match match) {
+		Optional<Match> following = followingMatch(match);
+		if (following.isPresent() && following.get().getStatus().compareTo(MatchStatus.READY) > 0) {
+			throw new ConflictException("NEXT_MATCH_STARTED", "The winner of match " + match.getId()
+					+ " already plays the next match: it cannot be reopened");
+		}
+	}
+
+	/**
+	 * After any change of status or score. A knockout match keeps its next match in line with
+	 * its result: the winner takes its side (A from an odd position, B from an even one), and
+	 * leaves it when the match is reopened; {@code previousWinner} is the winner before the
+	 * change. A pool match tells that its pool may be over, or no longer ({@link PoolMatchChanged}).
+	 */
+	void afterResultChange(Match match, UUID previousWinner, Instant now) {
+		followingMatch(match).ifPresent((nextMatch) -> moveWinnerOn(match, nextMatch, previousWinner, now));
+		if (match.getPool() != null) {
+			repository.flush();
+			events.publishEvent(new PoolMatchChanged(match.getEventId(), match.getPool()));
+		}
+	}
+
+	/** Creates the matches of the pools of an event, all {@code SCHEDULED}. */
+	@Transactional
+	public List<MatchResponse> createPoolMatches(UUID eventId, List<PoolMatch> matches) {
+		EventResponse event = eventService.findById(eventId);
+		Instant now = Instant.now();
+		List<Match> created = matches.stream()
+			.map((match) -> new Match(event.tournamentId(), eventId, match.round(), null, match.sideA(), match.sideB(),
+					now)
+				.inPool(match.pool()))
+			.toList();
+		return repository.saveAllAndFlush(created).stream().map(MatchResponse::from).toList();
+	}
+
+	/**
+	 * Places a registration on a side of a knockout match not started yet, or empties it with
+	 * null: a pool qualifier, once its pool is over.
+	 * @throws ConflictException `NEXT_MATCH_STARTED` when the match is already called or played
+	 */
+	@Transactional
+	public void placeInKnockout(UUID eventId, int round, int position, MatchSide side, UUID registration) {
+		Match match = repository.findByEventIdAndRoundAndBracketPosition(eventId, round, position)
+			.orElseThrow(() -> new IllegalStateException(
+					"No knockout match at round " + round + ", position " + position + " of event " + eventId));
+		if (Objects.equals(match.sideOf(side), registration)) {
+			return;
+		}
+		if (match.getStatus().compareTo(MatchStatus.READY) > 0) {
+			throw new ConflictException("NEXT_MATCH_STARTED",
+					"The knockout match of this pool qualifier has already started");
+		}
+		match.placeOn(side, registration, Instant.now());
+		repository.save(match);
+	}
+
 	private void moveWinnerOn(Match match, Match nextMatch, UUID previousWinner, Instant now) {
 		MatchSide side = (match.getBracketPosition() % 2 == 1) ? MatchSide.A : MatchSide.B;
-		UUID winner = match.getStatus().isEnded() && match.getWinner() != null ? match.sideOf(match.getWinner())
-				: null;
+		UUID winner = winnerOf(match);
 		UUID placed = nextMatch.sideOf(side);
 		if (Objects.equals(placed, winner) || (winner == null && !Objects.equals(placed, previousWinner))) {
 			return;

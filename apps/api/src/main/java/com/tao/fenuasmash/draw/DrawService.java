@@ -17,7 +17,12 @@ import com.tao.fenuasmash.common.error.InvalidRequestException;
 import com.tao.fenuasmash.common.error.NotFoundException;
 import com.tao.fenuasmash.event.EventResponse;
 import com.tao.fenuasmash.event.EventService;
+import com.tao.fenuasmash.match.GameScore;
+import com.tao.fenuasmash.match.MatchResponse;
 import com.tao.fenuasmash.match.MatchService;
+import com.tao.fenuasmash.match.MatchSide;
+import com.tao.fenuasmash.match.MatchStatus;
+import com.tao.fenuasmash.match.PoolMatch;
 import com.tao.fenuasmash.player.PlayerRankings;
 import com.tao.fenuasmash.player.PlayerSummary;
 import com.tao.fenuasmash.player.Ranking;
@@ -25,7 +30,7 @@ import com.tao.fenuasmash.registration.RegistrationResponse;
 import com.tao.fenuasmash.registration.RegistrationService;
 import com.tao.fenuasmash.registration.RegistrationStatus;
 import com.tao.fenuasmash.tournament.Discipline;
-import com.tao.fenuasmash.tournament.DrawFormat;
+import com.tao.fenuasmash.tournament.ScoringRules;
 import com.tao.fenuasmash.tournament.TournamentService;
 
 /**
@@ -127,8 +132,9 @@ public class DrawService {
 	}
 
 	/**
-	 * Locks the draw, and with it the registrations of the event. A single elimination gets
-	 * the matches of its whole bracket (pools come with #93).
+	 * Locks the draw, and with it the registrations of the event, and creates its matches:
+	 * every match of each pool, and every match of the knockout bracket. The lines of pool
+	 * qualifiers are filled once their pool is over ({@link #placeQualifiers}).
 	 */
 	@Transactional
 	DrawResponse publish(UUID eventId) {
@@ -138,11 +144,123 @@ public class DrawService {
 			throw DrawLock.published();
 		}
 		draw.publish(clock.instant());
-		if (tournamentService.findById(event.tournamentId()).drawFormat() == DrawFormat.SINGLE_ELIMINATION) {
-			List<UUID> lines = draw.getBracket().stream().map(BracketRow::registrationId).toList();
-			matchService.createKnockout(eventId, KnockoutPlanner.plan(lines));
+		List<PoolMatch> poolMatches = new ArrayList<>();
+		for (PoolRow pool : draw.getPools()) {
+			for (RoundRobin.Pairing pairing : RoundRobin.schedule(poolEntries(draw, pool.name()))) {
+				poolMatches.add(new PoolMatch(pool.name(), pairing.round(), pairing.sideA(), pairing.sideB()));
+			}
+		}
+		if (!poolMatches.isEmpty()) {
+			matchService.createPoolMatches(eventId, poolMatches);
+		}
+		if (draw.getBracketSize() != null) {
+			matchService.createKnockout(eventId, KnockoutPlanner.planLines(lines(draw)));
 		}
 		return toResponse(event, draw);
+	}
+
+	/** The ranking of each pool, from the results of its matches so far. */
+	List<PoolStandingResponse> standings(UUID eventId) {
+		EventResponse event = eventService.findById(eventId);
+		Draw draw = getDraw(eventId);
+		ScoringRules scoring = tournamentService.findById(event.tournamentId()).scoring();
+		List<MatchResponse> matches = matchService.findAllByEvent(eventId);
+		return draw.getPools()
+			.stream()
+			.map((pool) -> standing(draw, pool, matches, scoring))
+			.toList();
+	}
+
+	/**
+	 * Places the qualifiers of a pool in the knockout bracket once all its matches are over,
+	 * and takes them out again when one is reopened.
+	 */
+	@Transactional
+	void placeQualifiers(UUID eventId, String pool) {
+		Draw draw = repository.findById(eventId).orElse(null);
+		if (draw == null || draw.getStatus() != DrawStatus.PUBLISHED || draw.getBracketSize() == null) {
+			return;
+		}
+		EventResponse event = eventService.findById(eventId);
+		ScoringRules scoring = tournamentService.findById(event.tournamentId()).scoring();
+		PoolRow row = draw.getPools()
+			.stream()
+			.filter((candidate) -> candidate.name().equals(pool))
+			.findFirst()
+			.orElseThrow();
+		PoolStandingResponse standing = standing(draw, row, matchService.findAllByEvent(eventId), scoring);
+		List<KnockoutPlanner.Line> lines = lines(draw);
+		List<BracketRow> bracket = draw.getBracket();
+		for (int i = 0; i < bracket.size(); i++) {
+			BracketRow line = bracket.get(i);
+			if (!pool.equals(line.qualifierPool())) {
+				continue;
+			}
+			UUID qualifier = standing.complete() ? standing.rows().get(line.qualifierRank() - 1).registrationId()
+					: null;
+			KnockoutPlanner.Slot slot = KnockoutPlanner.firstSlot(lines, i + 1);
+			matchService.placeInKnockout(eventId, slot.round(), slot.position(), slot.side(), qualifier);
+		}
+	}
+
+	private static List<KnockoutPlanner.Line> lines(Draw draw) {
+		return draw.getBracket()
+			.stream()
+			.map((row) -> new KnockoutPlanner.Line(row.registrationId(), row.bye()))
+			.toList();
+	}
+
+	private static List<UUID> poolEntries(Draw draw, String pool) {
+		return draw.getPoolEntries()
+			.stream()
+			.filter((entry) -> entry.pool().equals(pool))
+			.map(PoolEntryRow::registrationId)
+			.toList();
+	}
+
+	private static PoolStandingResponse standing(Draw draw, PoolRow pool, List<MatchResponse> matches,
+			ScoringRules scoring) {
+		List<MatchResponse> poolMatches = matches.stream().filter((match) -> pool.name().equals(match.pool())).toList();
+		List<PoolStandings.Result> results = poolMatches.stream()
+			.filter((match) -> match.winner() != null)
+			.map((match) -> result(match, scoring))
+			.toList();
+		boolean complete = !poolMatches.isEmpty()
+				&& poolMatches.stream().allMatch((match) -> match.status().isEnded());
+		List<PoolStandingResponse.Row> rows = PoolStandings.rank(poolEntries(draw, pool.name()), results)
+			.stream()
+			.map(PoolStandingResponse.Row::from)
+			.toList();
+		return new PoolStandingResponse(pool.name(), pool.qualifiers(), complete, rows);
+	}
+
+	/**
+	 * Games and points of a match with a winner: as scored point by point; a walkover counts as
+	 * won in straight games to zero, and a result entered without points as won in straight
+	 * games, without points.
+	 */
+	private static PoolStandings.Result result(MatchResponse match, ScoringRules scoring) {
+		UUID winner = (match.winner() == MatchSide.A) ? match.sideA() : match.sideB();
+		UUID loser = (match.winner() == MatchSide.A) ? match.sideB() : match.sideA();
+		List<GameScore> games = (match.score() != null) ? match.score().games() : List.of();
+		if (match.status() == MatchStatus.WALKOVER) {
+			return new PoolStandings.Result(winner, loser, scoring.gamesToWin(), 0,
+					scoring.gamesToWin() * scoring.pointsToWin(), 0);
+		}
+		if (games.isEmpty()) {
+			return new PoolStandings.Result(winner, loser, scoring.gamesToWin(), 0, 0, 0);
+		}
+		int[] won = new int[2];
+		int[] points = new int[2];
+		for (GameScore game : games) {
+			points[0] += game.a();
+			points[1] += game.b();
+			if (game.a() != game.b()) {
+				won[(game.a() > game.b()) ? 0 : 1]++;
+			}
+		}
+		int w = (match.winner() == MatchSide.A) ? 0 : 1;
+		return new PoolStandings.Result(winner, loser, won[w], won[1 - w], points[w], points[1 - w]);
 	}
 
 	/** Index in all the pool entries of the draw of {@code ref}. */

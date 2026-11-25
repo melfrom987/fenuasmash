@@ -45,7 +45,12 @@ class DrawController {
 		return service.swap(eventId, request);
 	}
 
-	@PostMapping("/publish")
+	@GetMapping("/standings")
+	java.util.List<PoolStandingResponse> standings(@PathVariable UUID eventId) {
+		return service.standings(eventId);
+	}
+
+		@PostMapping("/publish")
 	DrawResponse publish(@PathVariable UUID eventId) {
 		return service.publish(eventId);
 	}
