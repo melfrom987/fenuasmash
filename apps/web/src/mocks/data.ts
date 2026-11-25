@@ -1,4 +1,4 @@
-import type { Court, Draw, Organization, Tournament, Event } from '@/api/models';
+import type { Court, Draw, Organization, Tablet, Tournament, Event } from '@/api/models';
 import { clubs, players } from './people';
 import { seedRegistrations } from './registrations';
 
@@ -109,6 +109,38 @@ const registrations = seedRegistrations(events, players);
 
 const draws: Draw[] = [];
 
+const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+const tablets: Tablet[] = [
+  {
+    id: '30000000-0000-4000-8000-000000000001',
+    courtId: courts[0].id,
+    courtNumber: 1,
+    deviceName: 'Galaxy Tab A8',
+    pairedAt: minutesAgo(90),
+    lastSeenAt: minutesAgo(0),
+    revokedAt: null,
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000002',
+    courtId: courts[1].id,
+    courtNumber: 2,
+    deviceName: 'iPad 9',
+    pairedAt: minutesAgo(80),
+    lastSeenAt: minutesAgo(25),
+    revokedAt: null,
+  },
+  {
+    id: '30000000-0000-4000-8000-000000000003',
+    courtId: courts[1].id,
+    courtNumber: 2,
+    deviceName: null,
+    pairedAt: minutesAgo(200),
+    lastSeenAt: minutesAgo(150),
+    revokedAt: minutesAgo(120),
+  },
+];
+
 export const db = {
   organizations,
   tournaments,
@@ -118,4 +150,5 @@ export const db = {
   players,
   registrations,
   draws,
+  tablets,
 };

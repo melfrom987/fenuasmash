@@ -42,7 +42,7 @@ info:
     | `ORGANIZER` | Manage tournaments, events, courts, matches, clubs, players and registrations |
     | `CLUB` | Read players and registrations (planned: only the players of its club) |
     | `PLAYER` | Planned with online registration (phase 3) |
-    | `TABLET` | A paired umpire tablet: reads its court (planned: sends the scores of its court) |
+    | `TABLET` | A paired umpire tablet: reads its court and moves the match on it (planned: sends its scores) |
 
 servers:
   - url: /api
@@ -63,6 +63,7 @@ tags:
   - name: Players
   - name: Registrations
   - name: Import
+  - name: Draws
   - name: Scores
 
 paths:
@@ -462,7 +463,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           $ref: '#/components/responses/Conflict'
-          # COURT_NOT_LAST; planned: COURT_IN_USE
+          # COURT_NOT_LAST, COURT_IN_USE (a match was assigned to it: disable it instead)
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -540,6 +541,49 @@ paths:
                 items: { $ref: '#/components/schemas/Match' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /tournaments/{tournamentId}/match-queue:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Matches]
+      operationId: getMatchQueue
+      security: []
+      summary: List the matches waiting for a court
+      description: |
+        The `READY` matches, in the order they should be called: by round (matches without a
+        round last), then creation order. A match is `available` when none of its sides is
+        on a court: it can be assigned now.
+      responses:
+        '200':
+          description: The queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/QueuedMatch' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /tournaments/{tournamentId}/court-assignments:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Matches]
+      operationId: listCourtAssignments
+      security: []
+      summary: List the courts of a tournament with the match on each
+      description: |
+        Every court, by number, with the match on it (`CALLED`, `WARMUP` or `IN_PROGRESS`), or
+        `null` when the court is free. A free court that is `active` can receive a match.
+      responses:
+        '200':
+          description: The courts
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CourtAssignment' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /matches/{matchId}:
     parameters:
       - $ref: '#/components/parameters/MatchId'
@@ -556,13 +600,62 @@ paths:
               schema: { $ref: '#/components/schemas/Match' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /matches/{matchId}/court:
+    parameters:
+      - $ref: '#/components/parameters/MatchId'
+    post:
+      tags: [Matches]
+      operationId: assignMatchToCourt
+      x-roles: [ORGANIZER]
+      summary: Call a match to a court
+      description: |
+        Puts a `READY` match on a court: the match becomes `CALLED`. A `CALLED` match can be
+        moved to another court the same way. Sending the match back to `READY`
+        (`POST /matches/{matchId}/status`) frees the court.
+
+        - The court must belong to the tournament of the match (`INVALID_COURT`) and be
+          active (`COURT_INACTIVE`).
+        - **One match per court:** a court with a `CALLED`, `WARMUP` or `IN_PROGRESS` match
+          gets `COURT_OCCUPIED`.
+        - **A side is never on two courts:** when a side of the match is already on another
+          court, the answer is `SIDE_ON_ANOTHER_COURT`. Sides are registrations: until
+          registrations are stored by the API, a player entered in two events (e.g. singles
+          and doubles) is not detected.
+        - `stateVersion` works as for status changes (`STATE_VERSION_CONFLICT`).
+
+        Assignments of one tournament are made one at a time: two organizers calling matches
+        at the same moment cannot put two matches on one court.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignMatchToCourtRequest' }
+      responses:
+        '200':
+          description: Called to the court
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED, INVALID_COURT
+        '404':
+          $ref: '#/components/responses/NotFound'
+          # MATCH_NOT_FOUND, COURT_NOT_FOUND
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # INVALID_STATUS_TRANSITION (not READY or CALLED), COURT_INACTIVE, COURT_OCCUPIED,
+          # SIDE_ON_ANOTHER_COURT, STATE_VERSION_CONFLICT
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /matches/{matchId}/status:
     parameters:
       - $ref: '#/components/parameters/MatchId'
     post:
       tags: [Matches]
       operationId: changeMatchStatus
-      x-roles: [ORGANIZER]
+      x-roles: [ORGANIZER, TABLET]
       summary: Move a match to another status
       description: |
         Only these transitions are allowed:
@@ -580,6 +673,11 @@ paths:
         Any other transition gets `INVALID_STATUS_TRANSITION`. Every status except
         `SCHEDULED` and `CANCELLED` needs both sides (`MATCH_SIDES_INCOMPLETE`).
 
+        **Courts:** a match goes `CALLED` with `POST /matches/{matchId}/court`, not here
+        (`COURT_REQUIRED`). Back to `READY`, it leaves its court. A finished, cancelled or
+        walkover match keeps `courtId`, but frees the court. Reopening a finished match puts
+        it back on its court, which must be free (`COURT_OCCUPIED`, `SIDE_ON_ANOTHER_COURT`).
+
         **Result:** `FINISHED` needs `winner` and `outcome` (`NORMAL`, or `RETIRED` when the
         loser retired). `WALKOVER` needs `winner` (the side that did not forfeit); its
         outcome is `WALKOVER`. Other statuses take neither (`INVALID_MATCH_RESULT`). Leaving
@@ -589,8 +687,10 @@ paths:
         changed since, nothing is applied and the answer is `STATE_VERSION_CONFLICT`: read
         the match again, then decide. Every change increments `stateVersion`.
 
-        Planned: the umpire tablet of the court will also move its match (warm-up, start,
-        retirement), once matches are assigned to courts (#99).
+        **Umpire tablet:** a tablet only moves a match on its own court
+        (`MATCH_NOT_ON_TABLET_COURT`), and only to `WARMUP`, `IN_PROGRESS`, `FINISHED`, or
+        back to `CALLED` from `WARMUP` (`STATUS_NOT_ALLOWED_FOR_TABLET`). Sending a match back
+        to the queue, cancelling it and walkovers stay with the organizer.
       requestBody:
         required: true
         content:
@@ -608,9 +708,12 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           $ref: '#/components/responses/Conflict'
-          # INVALID_STATUS_TRANSITION, MATCH_SIDES_INCOMPLETE, STATE_VERSION_CONFLICT
+          # INVALID_STATUS_TRANSITION, MATCH_SIDES_INCOMPLETE, STATE_VERSION_CONFLICT,
+          # COURT_REQUIRED, COURT_OCCUPIED, SIDE_ON_ANOTHER_COURT
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+          # FORBIDDEN, MATCH_NOT_ON_TABLET_COURT, STATUS_NOT_ALLOWED_FOR_TABLET
 
   # ---------------------------------------------------------------- Tablets
   /courts/{courtId}/pairing-code:
@@ -687,6 +790,24 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CurrentTablet' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tablets/me/match:
+    get:
+      tags: [Tablets]
+      operationId: getCurrentTabletMatch
+      x-roles: [TABLET]
+      summary: Get the match on the court of the tablet
+      description: The match `CALLED`, `WARMUP` or `IN_PROGRESS` on the court; none when the court is free.
+      responses:
+        '200':
+          description: The match on the court
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Match' }
+        '204':
+          description: The court is free
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -815,6 +936,54 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /clubs/{clubId}/logo:
+    parameters:
+      - $ref: '#/components/parameters/ClubId'
+    put:
+      tags: [Clubs]
+      operationId: uploadClubLogo
+      x-status: planned
+      summary: Add or replace the club logo
+      description: >
+        PNG, JPEG or WebP, 1 MB maximum. SVG is refused (it can contain scripts).
+        The server stores the file and returns the club with its new `logoUrl`.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+            encoding:
+              file: { contentType: 'image/png, image/jpeg, image/webp' }
+      responses:
+        '200':
+          description: The club, with its new logo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Club' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413':
+          description: File larger than 1 MB (LOGO_TOO_LARGE)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+        '415':
+          description: Not a PNG, JPEG or WebP image (UNSUPPORTED_LOGO_TYPE)
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/ProblemDetail' }
+    delete:
+      tags: [Clubs]
+      operationId: deleteClubLogo
+      x-status: planned
+      summary: Remove the club logo
+      responses:
+        '204': { description: Removed (also when the club had no logo) }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   # ---------------------------------------------------------------- Players (planned)
   /players:
@@ -999,6 +1168,32 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /events/{eventId}/registrations/transfer:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    post:
+      tags: [Registrations]
+      operationId: transferRegistrations
+      x-status: planned
+      summary: Move registrations into this event
+      description: |
+        Moves registrations from another event of the same tournament and the same discipline
+        (e.g. Minime U15 to Cadet U17, or Senior to Series 2). Each registration is checked
+        against this event (gender, birth years, already registered, maximum entries) and moved
+        or rejected on its own. `registeredAt` and the status are kept.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransferRequest' }
+      responses:
+        '200':
+          description: What was moved and what was rejected, with the reason
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TransferResult' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /events/{eventId}/eligible-players:
     parameters:
       - $ref: '#/components/parameters/EventId'
@@ -1124,6 +1319,179 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  # ---------------------------------------------------------------- Draws (planned)
+  /events/{eventId}/draw:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Draws]
+      operationId: getDraw
+      x-status: planned
+      summary: Draw of an event (pools and/or knockout bracket)
+      responses:
+        '200':
+          description: The draw, draft or published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Draw' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+          # EVENT_NOT_FOUND, DRAW_NOT_FOUND (no draw yet)
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Draws]
+      operationId: createDraw
+      x-roles: [ORGANIZER]
+      x-status: planned
+      summary: Run (or run again) the draw of an event
+      description: |
+        Draws the `CONFIRMED` registrations of the event; the others are listed in
+        `excludedRegistrationIds`. Replaces the current draft. The settings are saved on the
+        event (`poolCount`, `qualifiersPerPool`). Missing settings use the event's values, then
+        the defaults:
+        - `poolCount`: entries / 4, rounded, between 1 and 16. Pool sizes are derived: entries
+          are split as evenly as possible (13 entries in 3 pools → 5, 4, 4), 3 to 8 per pool.
+        - `qualifiersPerPool`: 2, less than the smallest pool.
+        - `seedCount`: 2 up to a draw of 8, 4 up to 16, 8 up to 32, 16 beyond.
+
+        See "Pools and Draw" in `docs/competition-rules.md` for the placement rules.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DrawSettings' }
+      responses:
+        '201':
+          description: Draft draw
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Draw' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # NOT_ENOUGH_ENTRIES, INVALID_DRAW_SETTINGS
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      tags: [Draws]
+      operationId: deleteDraw
+      x-roles: [ORGANIZER]
+      x-status: planned
+      summary: Delete a draft draw
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /events/{eventId}/draw/swap:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    post:
+      tags: [Draws]
+      operationId: swapDrawSlots
+      x-roles: [ORGANIZER]
+      x-status: planned
+      summary: Swap two slots of a draft draw
+      description: |
+        Swaps two entries between pools or within a pool, or two lines of the bracket (an
+        entry, a qualifier or a bye). A pool slot cannot be swapped with a bracket line.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DrawSwapRequest' }
+      responses:
+        '200':
+          description: Updated draft
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Draw' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # INVALID_SWAP
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /events/{eventId}/draw/publish:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    post:
+      tags: [Draws]
+      operationId: publishDraw
+      x-roles: [ORGANIZER]
+      x-status: planned
+      summary: Publish the draw
+      description: |
+        Locks the draw and the registrations of the event: adding, changing, withdrawing or
+        moving a registration is then refused with `DRAW_PUBLISHED`. Matches are generated
+        from the published draw.
+      responses:
+        '200':
+          description: Published draw
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Draw' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /events/{eventId}/series:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    post:
+      tags: [Draws]
+      operationId: splitIntoSeries
+      x-roles: [ORGANIZER]
+      x-status: planned
+      summary: Split an event into level series
+      description: |
+        Before the draw, the organizer sorts the confirmed entries by ranking and splits them
+        into level series (e.g. the 5 best in Series 1, the next 7 in Series 2…). In one
+        transaction, for each series:
+        - creates an event named `<event name> <label>` (e.g. "Simple Homme Série 1"),
+          `categoryType: LEVEL`, `categoryLabel: <label>`, with the discipline, planned date and
+          birth year bounds of the source event, and `parentEventId` = the source event;
+        - moves the listed registrations into it (status and `registeredAt` kept).
+
+        Rules: 2 to 8 series; labels filled and different; at least 2 entries per series; each
+        registration is a `CONFIRMED` registration of the source event and appears once. The
+        web app sends the entries in ranking order, but the backend does not re-sort them: the
+        organizer decides. A series cannot be split again. The draft draw of the source event,
+        if any, is deleted. Unlisted registrations stay in the source event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SeriesSplitRequest' }
+      responses:
+        '201':
+          description: The created series events
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SeriesSplitResult' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # INVALID_SERIES_SPLIT
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED, EVENT_NAME_ALREADY_EXISTS
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   # ---------------------------------------------------------------- Scores
   /matches/{matchId}/events:
     parameters:
@@ -1242,11 +1610,6 @@ components:
       name: size
       in: query
       schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
-    MatchId:
-      name: matchId
-      in: path
-      required: true
-      schema: { type: string, format: uuid }
 
   responses:
     BadRequest:
@@ -1275,7 +1638,7 @@ components:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
     Forbidden:
-      description: The role of the account is not allowed (`FORBIDDEN`)
+      description: The role of the account is not allowed (`FORBIDDEN`), or a tablet acts outside its court
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/ProblemDetail' }
@@ -1348,6 +1711,7 @@ components:
         - CLUB_NOT_FOUND
         - PLAYER_NOT_FOUND
         - REGISTRATION_NOT_FOUND
+        - DRAW_NOT_FOUND
         # Tournaments
         - INVALID_DATE_RANGE
         - INVALID_ORGANIZATION
@@ -1370,9 +1734,18 @@ components:
         - INVALID_STATUS_TRANSITION
         - MATCH_SIDES_INCOMPLETE
         - STATE_VERSION_CONFLICT
+        # Courts and matches
+        - INVALID_COURT
+        - COURT_REQUIRED
+        - COURT_OCCUPIED
+        - SIDE_ON_ANOTHER_COURT
+        - MATCH_NOT_ON_TABLET_COURT
+        - STATUS_NOT_ALLOWED_FOR_TABLET
         # Clubs and players (planned)
         - CLUB_NAME_ALREADY_EXISTS
         - INVALID_CLUB
+        - LOGO_TOO_LARGE
+        - UNSUPPORTED_LOGO_TYPE
         - PLAYER_LICENSE_ALREADY_EXISTS
         # Registrations (planned)
         - PLAYER_NOT_ELIGIBLE
@@ -1382,10 +1755,18 @@ components:
         - EVENT_FULL
         - FORBIDDEN_COMBINATION
         - NOT_PENDING
+        - INCOMPATIBLE_EVENT
+        - DRAW_PUBLISHED
         # Import (planned)
         - PLAYER_UNRESOLVED
+        - CLUB_CITY_REQUIRED
         - PARTNER_UNRESOLVED
         - UNKNOWN_EVENT
+        # Draws (planned)
+        - NOT_ENOUGH_ENTRIES
+        - INVALID_DRAW_SETTINGS
+        - INVALID_SWAP
+        - INVALID_SERIES_SPLIT
         # Scores (planned)
         - INVALID_SCORE_EVENT
         - SEQUENCE_GAP
@@ -1654,6 +2035,7 @@ components:
         - poolCount
         - poolSize
         - qualifiersPerPool
+        - parentEventId
       properties:
         id: { type: string, format: uuid }
         tournamentId: { type: string, format: uuid }
@@ -1684,13 +2066,26 @@ components:
           description: |
             Planned. Most recent birth year allowed (veterans). Only for AGE events.
           x-status: planned
-        poolCount: { type: [integer, 'null'], minimum: 1 }
-        poolSize: { type: [integer, 'null'], minimum: 3, maximum: 8 }
+        poolCount: { type: [integer, 'null'], minimum: 1, maximum: 16 }
+        poolSize:
+          type: [integer, 'null']
+          minimum: 3
+          maximum: 8
+          description: |
+            Planned size before registrations. Once the organizer sets `poolCount`, the draw
+            derives the actual sizes (13 entries in 3 pools → 5, 4, 4).
         qualifiersPerPool:
           type: [integer, 'null']
           minimum: 1
           maximum: 7
-          description: Less than `poolSize`
+          description: Less than the smallest pool
+        parentEventId:
+          type: [string, 'null']
+          format: uuid
+          x-status: planned
+          description: |
+            Planned. For a level series, the event it was split from (see
+            `POST /events/{eventId}/series`); null otherwise.
 
     CreateEventRequest:
       type: object
@@ -1778,8 +2173,8 @@ components:
 
     Match:
       type: object
-      required: [id, tournamentId, eventId, round, sideA, sideB, status, winner, outcome,
-        stateVersion, startedAt, endedAt, createdAt, updatedAt]
+      required: [id, tournamentId, eventId, round, sideA, sideB, courtId, status, winner,
+        outcome, stateVersion, startedAt, endedAt, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         tournamentId: { type: string, format: uuid }
@@ -1796,6 +2191,12 @@ components:
           type: [string, 'null']
           format: uuid
           description: Registration of side B; null while unknown
+        courtId:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The court of the match: set from `CALLED`, kept once the match is over; null
+            before, or when the match went back to the queue
         status: { $ref: '#/components/schemas/MatchStatus' }
         winner:
           oneOf:
@@ -1850,6 +2251,36 @@ components:
           type: [string, 'null']
           enum: [NORMAL, RETIRED, null]
           description: Required for `FINISHED`
+
+    AssignMatchToCourtRequest:
+      type: object
+      required: [courtId, stateVersion]
+      properties:
+        courtId: { type: string, format: uuid }
+        stateVersion:
+          type: integer
+          minimum: 0
+          description: The `stateVersion` of the match as read by the client
+
+    QueuedMatch:
+      type: object
+      required: [match, available]
+      properties:
+        match: { $ref: '#/components/schemas/Match' }
+        available:
+          type: boolean
+          description: No side of the match is on a court
+
+    CourtAssignment:
+      type: object
+      required: [court, match]
+      properties:
+        court: { $ref: '#/components/schemas/Court' }
+        match:
+          oneOf:
+            - $ref: '#/components/schemas/Match'
+            - type: 'null'
+          description: The match on the court; null when the court is free
 
     # ------------------------------------------------------------ Tablets
     PairingCode:
@@ -1919,28 +2350,45 @@ components:
     # ------------------------------------------------------------ Clubs (planned)
     Club:
       type: object
-      required: [id, name, city]
+      required: [id, name, city, address, email, phone, logoUrl]
       properties:
         id: { type: string, format: uuid }
         name: { type: string, maxLength: 100 }
-        city: { type: [string, 'null'], maxLength: 100 }
+        city: { type: string, maxLength: 100 }
+        address:
+          type: [string, 'null']
+          maxLength: 200
+          description: Street address or venue (gym), on one or several lines
+        email: { type: [string, 'null'], format: email, maxLength: 254 }
+        phone: { type: [string, 'null'], maxLength: 30 }
+        logoUrl:
+          type: [string, 'null']
+          format: uri-reference
+          description: Set through `PUT /clubs/{clubId}/logo`, never in the JSON body
 
     ClubRequest:
       type: object
-      required: [name]
+      required: [name, city]
       properties:
         name:
           type: string
           minLength: 1
           maxLength: 100
           description: Unique, case and accent insensitive (CLUB_NAME_ALREADY_EXISTS)
-        city: { type: [string, 'null'], maxLength: 100 }
+        city: { type: string, minLength: 1, maxLength: 100 }
+        address: { type: [string, 'null'], maxLength: 200 }
+        email: { type: [string, 'null'], format: email, maxLength: 254 }
+        phone: { type: [string, 'null'], maxLength: 30 }
 
     UpdateClubRequest:
       type: object
+      description: Only present fields change; nullable fields sent as null are cleared.
       properties:
         name: { type: string, minLength: 1, maxLength: 100 }
-        city: { type: [string, 'null'], maxLength: 100 }
+        city: { type: string, minLength: 1, maxLength: 100 }
+        address: { type: [string, 'null'], maxLength: 200 }
+        email: { type: [string, 'null'], format: email, maxLength: 254 }
+        phone: { type: [string, 'null'], maxLength: 30 }
 
     # ------------------------------------------------------------ Players (planned)
     Player:
@@ -1955,8 +2403,7 @@ components:
         - licenseNumber
         - email
         - phone
-        - rankingPoints
-        - rankingPosition
+        - rankings
       properties:
         id: { type: string, format: uuid }
         firstName: { type: string, maxLength: 100 }
@@ -1970,18 +2417,32 @@ components:
           description: Unique when set; optional in the MVP (the registration form does not ask for it)
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], maxLength: 30 }
-        rankingPoints:
-          type: [integer, 'null']
-          description: French Polynesia ranking points; optional for now
-        rankingPosition:
-          type: [integer, 'null']
-          minimum: 1
-          description: French Polynesia ranking position; optional for now
+        rankings: { $ref: '#/components/schemas/PlayerRankings' }
+
+    PlayerRankings:
+      type: object
+      description: >
+        French Polynesia ranking, one per discipline family. Optional for now:
+        a player without a ranking has null points and position.
+        The age category is not stored: it is computed from the birth date
+        (see docs/competition-rules.md).
+      required: [singles, doubles, mixed]
+      properties:
+        singles: { $ref: '#/components/schemas/Ranking' }
+        doubles: { $ref: '#/components/schemas/Ranking' }
+        mixed: { $ref: '#/components/schemas/Ranking' }
+
+    Ranking:
+      type: object
+      required: [points, position]
+      properties:
+        points: { type: [integer, 'null'], minimum: 0 }
+        position: { type: [integer, 'null'], minimum: 1 }
 
     PlayerSummary:
       type: object
       description: Short form used inside registrations and import reports
-      required: [id, firstName, lastName, gender, birthDate, clubName, licenseNumber]
+      required: [id, firstName, lastName, gender, birthDate, clubName, licenseNumber, rankings]
       properties:
         id: { type: string, format: uuid }
         firstName: { type: string }
@@ -1990,13 +2451,17 @@ components:
         birthDate: { type: string, format: date }
         clubName: { type: string }
         licenseNumber: { type: [string, 'null'] }
+        rankings:
+          $ref: '#/components/schemas/PlayerRankings'
+          description: Used to sort registrations (points in the discipline, pairs = sum)
 
     ClubSummary:
       type: object
-      required: [id, name]
+      required: [id, name, logoUrl]
       properties:
         id: { type: string, format: uuid }
         name: { type: string }
+        logoUrl: { type: [string, 'null'], format: uri-reference }
 
     PlayerPage:
       type: object
@@ -2024,8 +2489,9 @@ components:
         licenseNumber: { type: [string, 'null'], maxLength: 30 }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], maxLength: 30 }
-        rankingPoints: { type: [integer, 'null'] }
-        rankingPosition: { type: [integer, 'null'], minimum: 1 }
+        rankings:
+          $ref: '#/components/schemas/PlayerRankings'
+          description: Replaces the three rankings; missing on creation = no ranking
 
     UpdatePlayerRequest:
       type: object
@@ -2039,13 +2505,14 @@ components:
         licenseNumber: { type: [string, 'null'], maxLength: 30 }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], maxLength: 30 }
-        rankingPoints: { type: [integer, 'null'] }
-        rankingPosition: { type: [integer, 'null'], minimum: 1 }
+        rankings:
+          $ref: '#/components/schemas/PlayerRankings'
+          description: Replaces the three rankings; missing on creation = no ranking
 
     # ------------------------------------------------------------ Registrations (planned)
     Registration:
       type: object
-      required: [id, tournamentId, eventId, status, player, partner, createdAt]
+      required: [id, tournamentId, eventId, status, player, partner, registeredAt, createdAt]
       properties:
         id: { type: string, format: uuid }
         tournamentId: { type: string, format: uuid }
@@ -2057,7 +2524,45 @@ components:
             - $ref: '#/components/schemas/PlayerSummary'
             - type: 'null'
           description: Null for singles and for LOOKING_FOR_PARTNER
+        registeredAt:
+          type: string
+          format: date-time
+          description: |
+            When the player registered: the form timestamp for an import, otherwise the
+            creation time. Breaks ties between equal rankings and orders a future waiting list.
+            Kept when the registration is moved to another event.
         createdAt: { type: string, format: date-time }
+
+    TransferRequest:
+      type: object
+      required: [registrationIds]
+      properties:
+        registrationIds:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+
+    TransferResult:
+      type: object
+      required: [moved, rejected]
+      properties:
+        moved:
+          type: array
+          items: { $ref: '#/components/schemas/Registration' }
+        rejected:
+          type: array
+          items:
+            type: object
+            required: [registrationId, code, message]
+            properties:
+              registrationId: { type: string, format: uuid }
+              code:
+                type: string
+                description: |
+                  INCOMPATIBLE_EVENT, PLAYER_NOT_ELIGIBLE, PARTNER_NOT_ELIGIBLE,
+                  ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL,
+                  REGISTRATION_NOT_FOUND
+              message: { type: string }
 
     CreateRegistrationRequest:
       type: object
@@ -2105,7 +2610,17 @@ components:
           type: string
           minLength: 1
           description: Matched to an existing club (case and accent insensitive), otherwise created
+        clubCity:
+          type: [string, 'null']
+          description: >
+            Required when the club does not exist yet (the city of a club is required),
+            otherwise ignored. Missing for a new club → row issue CLUB_CITY_REQUIRED.
         email: { type: [string, 'null'] }
+        phone: { type: [string, 'null'], maxLength: 30 }
+        registeredAt:
+          type: [string, 'null']
+          format: date-time
+          description: Form timestamp (UTC); null = import time
         playerDecision: { $ref: '#/components/schemas/PlayerDecision' }
         entries:
           type: array
@@ -2221,12 +2736,15 @@ components:
               issues:
                 type: array
                 description: |
-                  E.g. PLAYER_NOT_ELIGIBLE, EVENT_FULL, FORBIDDEN_COMBINATION, PARTNER_UNRESOLVED,
-                  ALREADY_REGISTERED (not blocking: the entry is skipped)
+                  E.g. PLAYER_NOT_ELIGIBLE, EVENT_FULL, FORBIDDEN_COMBINATION (blocking: status null);
+                  ALREADY_REGISTERED (the entry is skipped); PARTNER_UNRESOLVED (not blocking: the
+                  entry is imported as LOOKING_FOR_PARTNER, the organizer adds the partner later)
                 items: { $ref: '#/components/schemas/ImportIssue' }
         issues:
           type: array
-          description: Row-level issues, e.g. PLAYER_UNRESOLVED (AMBIGUOUS match without decision)
+          description: >
+            Row-level issues, blocking the whole row: PLAYER_UNRESOLVED (AMBIGUOUS match without
+            decision), CLUB_CITY_REQUIRED (new club without city)
           items: { $ref: '#/components/schemas/ImportIssue' }
 
     ImportReport:
@@ -2258,12 +2776,155 @@ components:
           type: array
           items: { $ref: '#/components/schemas/ImportRowReport' }
 
-    # ------------------------------------------------------------ Scores
-    MatchSide:
+    # ------------------------------------------------------------ Draws (planned)
+    DrawStatus:
       type: string
-      enum: [A, B]
-      description: One of the two players or pairs of a match, as listed in the match
+      enum: [DRAFT, PUBLISHED]
 
+    DrawEntry:
+      type: object
+      required: [registrationId, seed, points, player, partner]
+      properties:
+        registrationId: { type: string, format: uuid }
+        seed: { type: [integer, 'null'], minimum: 1, description: Seed number; null if not seeded }
+        points:
+          type: [number, 'null']
+          description: Ranking points in the discipline (sum for a pair); null if unranked
+        player: { $ref: '#/components/schemas/PlayerSummary' }
+        partner:
+          oneOf:
+            - $ref: '#/components/schemas/PlayerSummary'
+            - type: 'null'
+
+    Pool:
+      type: object
+      required: [name, qualifiers, entries]
+      properties:
+        name: { type: string, example: A }
+        qualifiers: { type: integer, minimum: 0, description: 0 for a single pool }
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/DrawEntry' }
+
+    PoolQualifier:
+      type: object
+      required: [pool, rank]
+      properties:
+        pool: { type: string, example: A }
+        rank: { type: integer, minimum: 1 }
+
+    BracketSlot:
+      type: object
+      required: [position, entry, qualifier, bye]
+      description: |
+        One line of the first round. Exactly one of: `entry` (single elimination), `qualifier`
+        (pools then knockout, filled when the pools end) or `bye`.
+      properties:
+        position: { type: integer, minimum: 1 }
+        entry:
+          oneOf:
+            - $ref: '#/components/schemas/DrawEntry'
+            - type: 'null'
+        qualifier:
+          oneOf:
+            - $ref: '#/components/schemas/PoolQualifier'
+            - type: 'null'
+        bye: { type: boolean }
+
+    Bracket:
+      type: object
+      required: [size, slots]
+      properties:
+        size: { type: integer, description: Power of 2 }
+        slots:
+          type: array
+          items: { $ref: '#/components/schemas/BracketSlot' }
+
+    Draw:
+      type: object
+      required:
+        - eventId
+        - status
+        - seedCount
+        - pools
+        - bracket
+        - excludedRegistrationIds
+        - createdAt
+        - publishedAt
+      properties:
+        eventId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/DrawStatus' }
+        seedCount: { type: integer, minimum: 0 }
+        pools:
+          type: array
+          description: Empty for single elimination
+          items: { $ref: '#/components/schemas/Pool' }
+        bracket:
+          oneOf:
+            - $ref: '#/components/schemas/Bracket'
+            - type: 'null'
+          description: Null for a single pool
+        excludedRegistrationIds:
+          type: array
+          description: Registrations not drawn (not `CONFIRMED`)
+          items: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        publishedAt: { type: [string, 'null'], format: date-time }
+
+    DrawSettings:
+      type: object
+      description: All optional; missing or null = event value, then default
+      properties:
+        poolCount: { type: [integer, 'null'], minimum: 1, maximum: 16 }
+        qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
+        seedCount: { type: [integer, 'null'], minimum: 0 }
+
+    DrawSlotRef:
+      oneOf:
+        - type: object
+          required: [pool, index]
+          properties:
+            pool: { type: string }
+            index: { type: integer, minimum: 0 }
+        - type: object
+          required: [position]
+          properties:
+            position: { type: integer, minimum: 1 }
+
+    DrawSwapRequest:
+      type: object
+      required: [a, b]
+      properties:
+        a: { $ref: '#/components/schemas/DrawSlotRef' }
+        b: { $ref: '#/components/schemas/DrawSlotRef' }
+
+    SeriesSplitRequest:
+      type: object
+      required: [series]
+      properties:
+        series:
+          type: array
+          minItems: 2
+          maxItems: 8
+          description: From the strongest series to the weakest
+          items:
+            type: object
+            required: [label, registrationIds]
+            properties:
+              label: { type: string, maxLength: 50, example: Série 1 }
+              registrationIds:
+                type: array
+                minItems: 2
+                items: { type: string, format: uuid }
+
+    SeriesSplitResult:
+      type: object
+      required: [events]
+      properties:
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/Event' }
+    # ------------------------------------------------------------ Scores
     ScoreEventType:
       type: string
       enum: [POINT, UNDO]

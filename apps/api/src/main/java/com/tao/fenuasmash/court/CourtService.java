@@ -3,6 +3,7 @@ package com.tao.fenuasmash.court;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -72,7 +73,15 @@ public class CourtService {
 		if (last.getNumber() != court.getNumber()) {
 			throw new ConflictException("COURT_NOT_LAST", "Only the last court of a tournament can be removed");
 		}
-		repository.delete(court);
+		try {
+			repository.delete(court);
+			repository.flush();
+		}
+		catch (DataIntegrityViolationException ex) {
+			// A match keeps the court it was called to: the court is part of its history
+			throw new ConflictException("COURT_IN_USE",
+					"Court " + id + " has received matches and cannot be removed: disable it instead");
+		}
 	}
 
 	private Court getCourt(UUID id) {

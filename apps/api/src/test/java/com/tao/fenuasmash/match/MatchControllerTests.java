@@ -173,7 +173,7 @@ class MatchControllerTests {
 		changeStatus(ready, "READY", 0).andExpect(status().isOk());
 		UUID called = createMatch(createEvent(tournamentId, "Simple Dames"), 1);
 		changeStatus(called, "READY", 0).andExpect(status().isOk());
-		changeStatus(called, "CALLED", 1).andExpect(status().isOk());
+		callTo(called, addCourt(), 1).andExpect(status().isOk());
 		createMatch();
 		createMatch(createEvent(insertTournament("Open de Moorea"), "Simple Hommes"), 1);
 
@@ -204,7 +204,10 @@ class MatchControllerTests {
 		UUID matchId = createMatch();
 
 		changeStatus(matchId, "READY", 0).andExpect(status().isOk()).andExpect(jsonPath("$.stateVersion").value(1));
-		changeStatus(matchId, "CALLED", 1).andExpect(status().isOk());
+		UUID court = addCourt();
+		callTo(matchId, court, 1).andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("CALLED"))
+			.andExpect(jsonPath("$.courtId").value(court.toString()));
 		changeStatus(matchId, "WARMUP", 2).andExpect(status().isOk());
 		changeStatus(matchId, "IN_PROGRESS", 3).andExpect(status().isOk())
 			.andExpect(jsonPath("$.startedAt").isNotEmpty())
@@ -235,8 +238,8 @@ class MatchControllerTests {
 	void matchCanStepBackBeforeItStarts() throws Exception {
 		UUID matchId = moveToWarmup(createMatch());
 
-		changeStatus(matchId, "CALLED", 3).andExpect(status().isOk());
-		changeStatus(matchId, "READY", 4).andExpect(status().isOk());
+		changeStatus(matchId, "CALLED", 3).andExpect(status().isOk()).andExpect(jsonPath("$.courtId").isNotEmpty());
+		changeStatus(matchId, "READY", 4).andExpect(status().isOk()).andExpect(jsonPath("$.courtId").isEmpty());
 		changeStatus(matchId, "SCHEDULED", 5).andExpect(status().isOk());
 	}
 
@@ -449,7 +452,7 @@ class MatchControllerTests {
 
 	private UUID moveToWarmup(UUID matchId) throws Exception {
 		changeStatus(matchId, "READY", 0).andExpect(status().isOk());
-		changeStatus(matchId, "CALLED", 1).andExpect(status().isOk());
+		callTo(matchId, addCourt(), 1).andExpect(status().isOk());
 		changeStatus(matchId, "WARMUP", 2).andExpect(status().isOk());
 		return matchId;
 	}
@@ -471,6 +474,17 @@ class MatchControllerTests {
 		return mvc.perform(post("/api/matches/{id}/status", matchId).with(organizer(jwtService))
 			.contentType(MediaType.APPLICATION_JSON)
 			.content(body));
+	}
+
+	private ResultActions callTo(UUID matchId, UUID court, int stateVersion) throws Exception {
+		return mvc.perform(post("/api/matches/{id}/court", matchId).with(organizer(jwtService))
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("{\"courtId\": \"%s\", \"stateVersion\": %d}".formatted(court, stateVersion)));
+	}
+
+	private UUID addCourt() throws Exception {
+		return jsonId(mvc.perform(post("/api/tournaments/{id}/courts", tournamentId).with(organizer(jwtService)))
+			.andExpect(status().isCreated()));
 	}
 
 	private String getMatch(UUID matchId) throws Exception {
