@@ -1502,6 +1502,43 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /events/{eventId}/draw/standings:
+    parameters:
+      - $ref: '#/components/parameters/EventId'
+    get:
+      tags: [Draws]
+      operationId: getPoolStandings
+      security: []
+      summary: Ranking of each pool of the draw, from the results so far
+      description: |
+        Badminton rules (BWF General Competition Regulations), on all the matches of the pool:
+        1. most matches won;
+        2. two entries tied: the winner of their match;
+        3. three or more tied: best difference of games won and lost, then of points; whenever
+           two of them remain tied, the winner of their match;
+        4. still tied: by lot. The order of the draw is kept and the rows get `decidedByLot`,
+           so that the organizer can draw lots and swap if needed.
+
+        A walkover counts as won in straight games to zero (`gamesToWin` games of
+        `pointsToWin` points); a result entered without points counts as won in straight
+        games, without points.
+
+        Once every match of a pool is over (`complete`), its qualifiers are placed in the
+        knockout bracket, on the lines `{pool, rank}`. Reopening a match of the pool takes
+        them out again; it is refused with `NEXT_MATCH_STARTED` once one of their knockout
+        matches is called or played.
+      responses:
+        '200':
+          description: One ranking per pool, in pool order
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/PoolStanding' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+          # EVENT_NOT_FOUND, DRAW_NOT_FOUND
+
   /events/{eventId}/draw/publish:
     parameters:
       - $ref: '#/components/parameters/EventId'
@@ -1514,11 +1551,14 @@ paths:
         Locks the draw and the registrations of the event: adding, changing, withdrawing or
         moving a registration is then refused with `DRAW_PUBLISHED`.
 
-        A single elimination gets every match of its bracket, `SCHEDULED` (see
-        `listEventMatches`): one per pair of first-round lines that are not a bye, then every
-        later round with the sides known so far. An entry facing a bye is placed straight into
-        the second round. The winners move on by themselves (see `changeMatchStatus`); pools
-        get their matches with #93.
+        The matches of the event are created, `SCHEDULED` (see `listEventMatches`):
+        - each pool: everyone meets everyone once, spread over rounds so that nobody plays
+          twice in a round (`pool`, `round`);
+        - the knockout bracket: one match per pair of first-round lines that are not a bye,
+          then every later round with the sides known so far. An entry facing a bye is placed
+          straight into the second round. The winners move on by themselves (see
+          `changeMatchStatus`). The lines of pool qualifiers stay empty until their pool is
+          over (see `getPoolStandings`).
       responses:
         '200':
           description: Published draw
@@ -2208,7 +2248,7 @@ components:
 
     Match:
       type: object
-      required: [id, tournamentId, eventId, round, bracketPosition, sideA, sideB, courtId, status,
+      required: [id, tournamentId, eventId, round, bracketPosition, pool, sideA, sideB, courtId, status,
         winner, outcome, score, stateVersion, startedAt, endedAt, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
@@ -2225,6 +2265,9 @@ components:
             Position of a knockout match in its round, from 1 at the top of the bracket: the
             winners of positions 2k-1 and 2k meet at position k of the next round (as sides A
             and B). Null for a match out of a knockout bracket.
+        pool:
+          type: [string, 'null']
+          description: The pool of a pool match (its `round` is the round of the pool); null otherwise
         sideA:
           type: [string, 'null']
           format: uuid
@@ -3023,6 +3066,34 @@ components:
           items: { type: string, format: uuid }
         createdAt: { type: string, format: date-time }
         publishedAt: { type: [string, 'null'], format: date-time }
+
+    PoolStanding:
+      type: object
+      required: [pool, qualifiers, complete, rows]
+      properties:
+        pool: { type: string, example: A }
+        qualifiers: { type: integer, minimum: 0 }
+        complete: { type: boolean, description: Every match of the pool is over }
+        rows:
+          type: array
+          description: From rank 1
+          items:
+            type: object
+            required: [rank, registrationId, played, won, lost, gamesWon, gamesLost, pointsWon,
+              pointsLost, decidedByLot]
+            properties:
+              rank: { type: integer, minimum: 1 }
+              registrationId: { type: string, format: uuid }
+              played: { type: integer, minimum: 0 }
+              won: { type: integer, minimum: 0 }
+              lost: { type: integer, minimum: 0 }
+              gamesWon: { type: integer, minimum: 0 }
+              gamesLost: { type: integer, minimum: 0 }
+              pointsWon: { type: integer, minimum: 0 }
+              pointsLost: { type: integer, minimum: 0 }
+              decidedByLot:
+                type: boolean
+                description: Tied on every criterion with others; placed in the order of the draw
 
     DrawSettings:
       type: object
