@@ -3,6 +3,7 @@ import { useCourts } from '@/features/courts/api';
 import { drawQuery } from '@/features/draw/api';
 import { useEvents } from '@/features/events/api';
 import { tournamentMatchesQuery } from '@/features/matches/api';
+import { scheduleQuery } from '@/features/schedule/api';
 import { useTournamentRegistrations } from '@/features/registrations/api';
 import { computeProgress, drawableEvents } from './progress';
 
@@ -11,6 +12,7 @@ export function useTournamentProgress(tournamentId: string) {
   const events = useEvents(tournamentId);
   const registrations = useTournamentRegistrations(tournamentId);
   const matches = useQuery(tournamentMatchesQuery(tournamentId));
+  const schedule = useQuery(scheduleQuery(tournamentId));
   const playable = drawableEvents(events.data ?? []);
   const draws = useQueries({ queries: playable.map((event) => drawQuery(event.id)) });
 
@@ -24,5 +26,6 @@ export function useTournamentProgress(tournamentId: string) {
     registrations: registrations.data,
     draws: new Map(playable.map((event, i) => [event.id, draws[i].data ?? null])),
     matches: matches.data ?? [],
+    schedule: schedule.data ?? null,
   });
 }

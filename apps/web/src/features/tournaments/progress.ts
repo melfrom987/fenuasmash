@@ -1,4 +1,5 @@
-import type { Court, Draw, Event, Match, Registration } from '@/api/models';
+import type { Court, Draw, Event, Match, Registration, Schedule } from '@/api/models';
+import { MIN_EVENT_ENTRIES } from '@/features/draw/algorithm';
 import { ON_COURT } from '@/features/matches/status';
 
 export type StepId = 'prepare' | 'registrations' | 'draws' | 'schedule' | 'matchday';
@@ -7,10 +8,18 @@ export type StepState = 'done' | 'current' | 'todo' | 'soon';
 export type NextAction =
   | { step: 'prepare'; kind: 'addCourts' | 'addEvents'; to: string }
   | { step: 'registrations'; kind: 'register'; to: string; count: number }
-  | { step: 'draws'; kind: 'runDraw' | 'publishDraw'; to: string; event: string }
+  | { step: 'draws'; kind: 'runDraw' | 'publishDraw' | 'moveEntries'; to: string; event: string }
+  | {
+      step: 'schedule';
+      kind: 'generateSchedule' | 'updateSchedule' | 'publishSchedule';
+      to: string;
+    }
   | { step: 'matchday'; kind: 'startMatches'; to: string };
 
-export type StepPage = { path: string; label: 'settings' | 'events' | 'matches' | 'tablets' };
+export type StepPage = {
+  path: string;
+  label: 'settings' | 'events' | 'distribution' | 'draws' | 'matches' | 'tablets';
+};
 
 export const STEPS: { id: StepId; pages: StepPage[] }[] = [
   {
@@ -21,7 +30,13 @@ export const STEPS: { id: StepId; pages: StepPage[] }[] = [
     ],
   },
   { id: 'registrations', pages: [] },
-  { id: 'draws', pages: [] },
+  {
+    id: 'draws',
+    pages: [
+      { path: 'distribution', label: 'distribution' },
+      { path: 'draws', label: 'draws' },
+    ],
+  },
   { id: 'schedule', pages: [] },
   {
     id: 'matchday',
@@ -35,14 +50,14 @@ export const STEPS: { id: StepId; pages: StepPage[] }[] = [
 export const STEP_PATHS: Record<StepId, string[]> = {
   prepare: ['settings', 'events'],
   registrations: ['registrations'],
-  draws: ['draws'],
+  draws: ['distribution', 'draws'],
   schedule: ['schedule'],
   matchday: ['matches', 'tablets'],
 };
 
-export const SOON_STEPS: StepId[] = ['schedule'];
+export const SOON_STEPS: StepId[] = [];
 
-export const MIN_ENTRIES = 2;
+export const MIN_ENTRIES = MIN_EVENT_ENTRIES;
 
 export type ProgressInput = {
   courts: Court[];
@@ -50,13 +65,14 @@ export type ProgressInput = {
   registrations: Registration[];
   draws: Map<string, Draw | null>;
   matches: Match[];
+  schedule: Schedule | null;
 };
 
 export type StepSummary =
   | { step: 'prepare'; courts: number; events: number }
   | { step: 'registrations'; entries: number }
   | { step: 'draws'; published: number; total: number }
-  | { step: 'schedule' }
+  | { step: 'schedule'; status: Schedule['status'] | null; planned: number }
   | { step: 'matchday'; live: number; total: number };
 
 export type Progress = {
@@ -83,6 +99,7 @@ export function computeProgress({
   registrations,
   draws,
   matches,
+  schedule,
 }: ProgressInput): Progress {
   const confirmed = new Map<string, number>();
   for (const r of registrations) {
@@ -98,6 +115,11 @@ export function computeProgress({
   const registrationsDone = ready.length > 0;
   const drawsDone = ready.length > 0 && published.length === ready.length;
 
+  const entries = new Map<string, number>();
+  for (const r of registrations) entries.set(r.eventId, (entries.get(r.eventId) ?? 0) + 1);
+  const underfilled = playable.find(
+    (e) => (confirmed.get(e.id) ?? 0) < MIN_ENTRIES && (entries.get(e.id) ?? 0) > 0,
+  );
   let next: NextAction | null = null;
   if (activeCourts === 0) next = { step: 'prepare', kind: 'addCourts', to: 'settings' };
   else if (events.length === 0) next = { step: 'prepare', kind: 'addEvents', to: 'events' };
@@ -109,6 +131,13 @@ export function computeProgress({
       to: missing ? `registrations?event=${missing.id}` : 'registrations',
       count: playable.length,
     };
+  } else if (underfilled) {
+    next = {
+      step: 'draws',
+      kind: 'moveEntries',
+      to: `draws?event=${underfilled.id}`,
+      event: underfilled.name,
+    };
   } else if (!drawsDone) {
     const event = ready.find((e) => draws.get(e.id)?.status !== 'PUBLISHED');
     if (event) {
@@ -119,6 +148,12 @@ export function computeProgress({
         event: event.name,
       };
     }
+  } else if (!schedule || schedule.status === 'NOT_GENERATED') {
+    next = { step: 'schedule', kind: 'generateSchedule', to: 'schedule' };
+  } else if (schedule.warnings.some((w) => w.code === 'UNSCHEDULED')) {
+    next = { step: 'schedule', kind: 'updateSchedule', to: 'schedule' };
+  } else if (schedule.status === 'DRAFT') {
+    next = { step: 'schedule', kind: 'publishSchedule', to: 'schedule' };
   } else if (live === 0) {
     next = { step: 'matchday', kind: 'startMatches', to: 'matches' };
   }
@@ -127,7 +162,7 @@ export function computeProgress({
     prepare: prepareDone,
     registrations: registrationsDone,
     draws: drawsDone,
-    schedule: false,
+    schedule: schedule?.status === 'PUBLISHED',
     matchday: false,
   };
   const states = {} as Record<StepId, StepState>;
@@ -153,7 +188,11 @@ export function computeProgress({
         entries: registrations.filter((r) => r.status === 'CONFIRMED').length,
       },
       { step: 'draws', published: published.length, total: ready.length },
-      { step: 'schedule' },
+      {
+        step: 'schedule',
+        status: schedule?.status ?? null,
+        planned: matches.filter((m) => m.plannedStartAt).length,
+      },
       { step: 'matchday', live, total: matches.length },
     ],
   };

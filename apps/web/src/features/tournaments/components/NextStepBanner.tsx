@@ -11,6 +11,7 @@ export function NextStepBanner({ next, here }: { next: NextAction; here: boolean
         return t('tournamentDetail.next.register', { count: next.count });
       case 'runDraw':
       case 'publishDraw':
+      case 'moveEntries':
         return t(`tournamentDetail.next.${next.kind}`, { event: next.event });
       default:
         return t(`tournamentDetail.next.${next.kind}`);
