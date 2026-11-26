@@ -85,7 +85,7 @@ export function MatchesPage() {
         <div className="bg-lagon-50 border-lagon-200 flex flex-wrap items-center justify-between gap-2 rounded-md border px-4 py-2 text-sm">
           <span>
             {t('matches.pickCourt', {
-              sides: `${labels.entry(selected.sideA)} ${t('matches.versus')} ${labels.entry(selected.sideB)}`,
+              sides: `${labels.side(selected, 'A')?.name} ${t('matches.versus')} ${labels.side(selected, 'B')?.name}`,
             })}
           </span>
           <button
