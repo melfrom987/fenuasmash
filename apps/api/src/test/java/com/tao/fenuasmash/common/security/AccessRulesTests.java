@@ -161,8 +161,8 @@ class AccessRulesTests {
 		for (String url : playerDataUrls()) {
 			expectUnauthorized(get(url));
 			expectForbidden(get(url).with(admin(jwtService)));
-			mvc.perform(get(url).with(organizer(jwtService))).andExpect(status().isNotFound());
-			mvc.perform(get(url).with(club(jwtService))).andExpect(status().isNotFound());
+			expectAllowed(get(url).with(organizer(jwtService)));
+			expectAllowed(get(url).with(club(jwtService)));
 		}
 	}
 
@@ -177,7 +177,7 @@ class AccessRulesTests {
 			}
 		}
 		for (MockHttpServletRequestBuilder write : registrationWrites()) {
-			mvc.perform(write.with(organizer(jwtService))).andExpect(status().isNotFound());
+			expectAllowed(write.with(organizer(jwtService)));
 		}
 	}
 
@@ -191,7 +191,14 @@ class AccessRulesTests {
 
 	@Test
 	void clubsArePublicToRead() throws Exception {
-		mvc.perform(get("/api/clubs")).andExpect(status().isNotFound());
+		mvc.perform(get("/api/clubs")).andExpect(status().isOk());
+	}
+
+	/** Let in by the access rules: the controller answers, or the route does not exist yet. */
+	private void expectAllowed(MockHttpServletRequestBuilder request) throws Exception {
+		mvc.perform(request).andExpect((result) -> assertThat(result.getResponse().getStatus())
+			.as(result.getRequest().getMethod() + " " + result.getRequest().getRequestURI())
+			.isNotIn(401, 403));
 	}
 
 	private void expectUnauthorized(MockHttpServletRequestBuilder request) throws Exception {

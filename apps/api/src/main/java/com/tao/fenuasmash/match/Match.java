@@ -37,6 +37,10 @@ class Match {
 
 	private Integer round;
 
+	/** Position in its round for a knockout match, from 1 at the top; null otherwise. */
+	@Column(name = "bracket_position", updatable = false)
+	private Integer bracketPosition;
+
 	@Column(name = "side_a_id")
 	private UUID sideA;
 
@@ -76,7 +80,13 @@ class Match {
 	}
 
 	Match(UUID tournamentId, UUID eventId, Integer round, UUID sideA, UUID sideB, Instant now) {
+		this(tournamentId, eventId, round, null, sideA, sideB, now);
+	}
+
+	Match(UUID tournamentId, UUID eventId, Integer round, Integer bracketPosition, UUID sideA, UUID sideB,
+			Instant now) {
 		this.id = UUID.randomUUID();
+		this.bracketPosition = bracketPosition;
 		this.tournamentId = tournamentId;
 		this.eventId = eventId;
 		this.round = round;
@@ -116,6 +126,28 @@ class Match {
 		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
 	}
 
+	/** The registration on {@code side}, or null while unknown. */
+	UUID sideOf(MatchSide side) {
+		return (side == MatchSide.A) ? sideA : sideB;
+	}
+
+	/**
+	 * Places a registration on a side, or empties it with null, for a match not started yet:
+	 * a match left with one side only goes back to {@code SCHEDULED}.
+	 */
+	void placeOn(MatchSide side, UUID registration, Instant now) {
+		if (side == MatchSide.A) {
+			this.sideA = registration;
+		}
+		else {
+			this.sideB = registration;
+		}
+		if (registration == null && status == MatchStatus.READY) {
+			this.status = MatchStatus.SCHEDULED;
+		}
+		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
+	}
+
 	boolean hasBothSides() {
 		return sideA != null && sideB != null;
 	}
@@ -134,6 +166,10 @@ class Match {
 
 	Integer getRound() {
 		return round;
+	}
+
+	Integer getBracketPosition() {
+		return bracketPosition;
 	}
 
 	UUID getSideA() {
