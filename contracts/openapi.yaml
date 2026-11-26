@@ -853,13 +853,12 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  # ---------------------------------------------------------------- Clubs (planned)
+  # ---------------------------------------------------------------- Clubs
   /clubs:
     get:
       tags: [Clubs]
       operationId: listClubs
       security: []
-      x-status: planned
       summary: List clubs, by name
       parameters:
         - name: q
@@ -878,7 +877,6 @@ paths:
       tags: [Clubs]
       operationId: createClub
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Create a club
       requestBody:
         required: true
@@ -905,7 +903,6 @@ paths:
       tags: [Clubs]
       operationId: getClub
       security: []
-      x-status: planned
       summary: Get a club
       responses:
         '200':
@@ -918,7 +915,6 @@ paths:
       tags: [Clubs]
       operationId: updateClub
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Update a club
       requestBody:
         required: true
@@ -985,13 +981,12 @@ paths:
         '204': { description: Removed (also when the club had no logo) }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  # ---------------------------------------------------------------- Players (planned)
+  # ---------------------------------------------------------------- Players
   /players:
     get:
       tags: [Players]
       operationId: listPlayers
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: Search players, paginated, by last name then first name
       parameters:
         - name: q
@@ -1018,7 +1013,6 @@ paths:
       tags: [Players]
       operationId: createPlayer
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Create a player
       requestBody:
         required: true
@@ -1047,7 +1041,6 @@ paths:
       tags: [Players]
       operationId: getPlayer
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: Get a player
       responses:
         '200':
@@ -1062,7 +1055,6 @@ paths:
       tags: [Players]
       operationId: updatePlayer
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Update a player profile
       requestBody:
         required: true
@@ -2409,7 +2401,7 @@ components:
           format: date-time
           description: null while the tablet is paired
 
-    # ------------------------------------------------------------ Clubs (planned)
+    # ------------------------------------------------------------ Clubs
     Club:
       type: object
       required: [id, name, city, address, email, phone, logoUrl]
@@ -2452,7 +2444,7 @@ components:
         email: { type: [string, 'null'], format: email, maxLength: 254 }
         phone: { type: [string, 'null'], maxLength: 30 }
 
-    # ------------------------------------------------------------ Players (planned)
+    # ------------------------------------------------------------ Players
     Player:
       type: object
       required:
