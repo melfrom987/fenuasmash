@@ -1,6 +1,7 @@
 import { authHandlers } from './auth';
 import { courtHandlers } from './courts';
 import { matchHandlers } from './matches';
+import { scheduleHandlers } from './schedule';
 import { tabletHandlers } from './tablets';
 import { organizationHandlers } from './organizations';
 import { tournamentHandlers } from './tournaments';
@@ -18,6 +19,7 @@ export const handlers = [
   ...courtHandlers,
   ...tabletHandlers,
   ...matchHandlers,
+  ...scheduleHandlers,
   ...eventHandlers,
   ...clubHandlers,
   ...playerHandlers,

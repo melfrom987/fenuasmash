@@ -6,12 +6,17 @@ import type {
   MatchStatus,
 } from '@/api/models';
 import { canMove, NEEDS_BOTH_SIDES, ON_COURT } from '@/features/matches/status';
+import { advance } from '../advance';
 import { db } from '../data';
 import { problem } from './utils';
 
 const byRoundThenCreation = (a: Match, b: Match) =>
   (a.round ?? Number.MAX_SAFE_INTEGER) - (b.round ?? Number.MAX_SAFE_INTEGER) ||
   a.createdAt.localeCompare(b.createdAt);
+
+const byPlannedStart = (a: Match, b: Match) =>
+  (a.plannedStartAt ?? '\uffff').localeCompare(b.plannedStartAt ?? '\uffff') ||
+  (a.number ?? 0) - (b.number ?? 0);
 
 const matchesOf = (tournamentId: string) =>
   db.matches.filter((m) => m.tournamentId === tournamentId).sort(byRoundThenCreation);
@@ -101,6 +106,7 @@ export const matchHandlers = [
     return HttpResponse.json(
       matchesOf(tournamentId)
         .filter((m) => m.status === 'READY')
+        .sort(byPlannedStart)
         .map((match) => ({ match, available: !sides(match).some((side) => busy.has(side)) })),
     );
   }),
@@ -189,6 +195,7 @@ export const matchHandlers = [
     if (status === 'READY' || status === 'SCHEDULED') match.courtId = null;
     if (status === 'IN_PROGRESS') match.startedAt ??= now;
     match.endedAt = ending.includes(status) ? now : null;
+    advance(match, db.matches, db.draws);
     return touch(match);
   }),
 ];

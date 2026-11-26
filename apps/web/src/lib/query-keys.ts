@@ -9,6 +9,7 @@ export const queryKeys = {
   courts: (tournamentId: string) => ['tournaments', tournamentId, 'courts'] as const,
   tablets: (tournamentId: string) => ['tournaments', tournamentId, 'tablets'] as const,
   matches: (tournamentId: string) => ['tournaments', tournamentId, 'matches'] as const,
+  schedule: (tournamentId: string) => ['tournaments', tournamentId, 'schedule'] as const,
   matchQueue: (tournamentId: string) => ['tournaments', tournamentId, 'match-queue'] as const,
   courtAssignments: (tournamentId: string) =>
     ['tournaments', tournamentId, 'court-assignments'] as const,

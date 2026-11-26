@@ -26,7 +26,14 @@ function SummaryText({ summary }: { summary: StepSummary }) {
         </>
       );
     case 'schedule':
-      return <>{t('tournamentDetail.summary.soon')}</>;
+      return summary.status && summary.status !== 'NOT_GENERATED' ? (
+        <>
+          {t(`schedule.statuses.${summary.status}`)} ·{' '}
+          {t('tournamentDetail.summary.matches', { count: summary.planned })}
+        </>
+      ) : (
+        <>{t('schedule.statuses.NOT_GENERATED')}</>
+      );
     case 'matchday':
       return summary.live > 0 ? (
         <>{t('tournamentDetail.summary.live', { count: summary.live })}</>

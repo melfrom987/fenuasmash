@@ -63,6 +63,9 @@ export const tournamentHandlers = [
 
     const now = new Date().toISOString();
     const tournament: Tournament = {
+      averageMatchMinutes: 25,
+      convocationLeadMinutes: 30,
+      publicVisibility: 'ON_PUBLISH',
       ...body,
       id: crypto.randomUUID(),
       createdAt: now,

@@ -3,18 +3,6 @@ export type IsoDate = string;
 export type Discipline = 'MS' | 'WS' | 'MD' | 'WD' | 'XD' | 'OD';
 export type CategoryType = 'OPEN' | 'AGE' | 'LEVEL';
 
-export type MatchStatus =
-  | 'SCHEDULED'
-  | 'READY'
-  | 'CALLED'
-  | 'WARMUP'
-  | 'IN_PROGRESS'
-  | 'FINISHED'
-  | 'CANCELLED'
-  | 'WALKOVER';
-export type AssignmentStatus = 'ASSIGNED' | 'RELEASED' | 'CANCELLED';
-export type DeviceStatus = 'ACTIVE' | 'REVOKED';
-
 export type Organization = {
   id: string;
   name: string;
@@ -36,7 +24,12 @@ export type Tournament = {
   scoring?: ScoringRules;
   disciplines?: Discipline[];
   forbiddenCombinations?: [Discipline, Discipline][];
+  averageMatchMinutes?: number;
+  convocationLeadMinutes?: number;
+  publicVisibility?: PublicVisibility;
 };
+
+export type PublicVisibility = 'ON_PUBLISH' | 'AT_START';
 
 export type Gender = 'MALE' | 'FEMALE';
 
@@ -91,6 +84,8 @@ export type Event = {
   categoryType: CategoryType;
   categoryLabel: string | null;
   plannedDate: IsoDate | null;
+  plannedEndDate?: IsoDate | null;
+  thirdPlaceMatch?: boolean;
   maxEntries: number | null;
   minBirthYear: number | null;
   maxBirthYear: number | null;
@@ -113,25 +108,6 @@ export type Court = {
   tournamentId: string;
   number: number;
   active: boolean;
-};
-
-export type MatchAssignment = {
-  id: string;
-  matchId: string;
-  courtId: string;
-  status: AssignmentStatus;
-  assignedAt: IsoDate;
-  releasedAt: IsoDate | null;
-};
-
-export type Device = {
-  id: string;
-  courtId: string;
-  label: string | null;
-  status: DeviceStatus;
-  pairedAt: IsoDate;
-  revokedAt: IsoDate | null;
-  lastSeenAt: IsoDate | null;
 };
 
 export type CompetitionType = 'INDIVIDUAL' | 'TEAM';
@@ -243,6 +219,15 @@ export type PairTabletResponse = {
   court: Court;
 };
 
+export type MatchStatus =
+  | 'SCHEDULED'
+  | 'READY'
+  | 'CALLED'
+  | 'WARMUP'
+  | 'IN_PROGRESS'
+  | 'FINISHED'
+  | 'CANCELLED'
+  | 'WALKOVER';
 export type MatchSide = 'A' | 'B';
 export type MatchOutcome = 'NORMAL' | 'RETIRED' | 'WALKOVER';
 export type Match = {
@@ -261,7 +246,19 @@ export type Match = {
   endedAt: IsoDate | null;
   createdAt: IsoDate;
   updatedAt: IsoDate;
+  number?: number | null;
+  phase?: MatchPhase | null;
+  pool?: string | null;
+  sourceA?: MatchSource | null;
+  sourceB?: MatchSource | null;
+  plannedStartAt?: IsoDate | null;
+  plannedCourtId?: string | null;
 };
+export type MatchPhase = 'POOL' | 'KNOCKOUT' | 'THIRD_PLACE';
+export type MatchSource =
+  | { kind: 'POOL_RANK'; pool: string; rank: number }
+  | { kind: 'WINNER'; matchId: string }
+  | { kind: 'LOSER'; matchId: string };
 export type QueuedMatch = { match: Match; available: boolean };
 export type CourtAssignment = { court: Court; match: Match | null };
 export type CreateMatchRequest = {
@@ -275,3 +272,36 @@ export type ChangeMatchStatusRequest = {
   winner?: MatchSide | null;
   outcome?: 'NORMAL' | 'RETIRED' | null;
 };
+
+export type ScheduleStatus = 'NOT_GENERATED' | 'DRAFT' | 'PUBLISHED';
+export type ScheduleWarning =
+  | { code: 'NO_SLOT'; eventId: string }
+  | { code: 'OUTSIDE_SLOT'; eventId: string; count: number }
+  | { code: 'REST_TOO_SHORT'; matchId: string }
+  | { code: 'ORDER'; matchId: string }
+  | { code: 'UNSCHEDULED'; count: number };
+export type ScheduleStage = 'KNOCKOUT' | 'QUARTER' | 'SEMI' | 'FINAL';
+export type ScheduleStageStart = { stage: ScheduleStage; at: IsoDate };
+export type ScheduleEventSetting = {
+  eventId: string;
+  offsetSlots: number;
+  startAt?: IsoDate | null;
+  stageStarts?: ScheduleStageStart[];
+};
+export type ScheduleEvent = ScheduleEventSetting & {
+  matchCount: number;
+  firstStartAt: IsoDate | null;
+  lastEndAt: IsoDate | null;
+};
+export type ScheduleGenerateRequest = { events?: ScheduleEventSetting[] };
+export type Schedule = {
+  tournamentId: string;
+  status: ScheduleStatus;
+  events: ScheduleEvent[];
+  generatedAt: IsoDate | null;
+  publishedAt: IsoDate | null;
+  firstStartAt: IsoDate | null;
+  lastEndAt: IsoDate | null;
+  warnings: ScheduleWarning[];
+};
+export type ScheduleMoveRequest = { matchId: string; plannedStartAt: IsoDate; courtId: string };

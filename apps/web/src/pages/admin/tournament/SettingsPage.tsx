@@ -7,6 +7,7 @@ import { CourtList } from '@/features/courts/components/CourtList';
 import { useErrorMessage } from '@/lib/use-error-message';
 import { useTournament } from '@/features/tournaments/api';
 import { RulesForm } from '@/features/tournaments/components/RulesForm';
+import { ScheduleSettingsForm } from '@/features/tournaments/components/ScheduleSettingsForm';
 
 export function SettingsPage() {
   const { t } = useTranslation();
@@ -26,6 +27,18 @@ export function SettingsPage() {
           <div className="rounded-lg bg-white p-6 shadow-sm">
             <RulesForm tournament={tournament.data} />
           </div>
+        )}
+      </section>
+      <section className="space-y-4">
+        <div>
+          <h2 className="font-display text-lg font-semibold">{t('schedule.title')}</h2>
+          <p className="text-sable-600 text-sm">{t('schedule.hint')}</p>
+        </div>
+        {tournament.data && (
+          <ScheduleSettingsForm
+            tournament={tournament.data}
+            activeCourts={(courts.data ?? []).filter((c) => c.active).length}
+          />
         )}
       </section>
       <section className="space-y-4">

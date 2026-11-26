@@ -15,6 +15,8 @@ export const eventFormSchema = z
     categoryType: z.enum(CATEGORY_TYPES),
     categoryLabel: z.string().trim().max(50, key('events.form.errors.categoryLabelTooLong')),
     plannedDate: z.string(),
+    plannedEndDate: z.string(),
+    thirdPlaceMatch: z.boolean(),
     maxEntries: z.union([z.number(), z.nan()]),
     minBirthYear: z.union([
       z
@@ -53,6 +55,13 @@ export const eventFormSchema = z
         message: key('events.form.errors.birthYearOrder'),
       });
     }
+    if (data.plannedEndDate && (!data.plannedDate || data.plannedEndDate <= data.plannedDate)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['plannedEndDate'],
+        message: key('events.form.errors.plannedEndAfterStart'),
+      });
+    }
     const max = data.maxEntries;
     if (!Number.isNaN(max) && (!Number.isInteger(max) || max < 2 || max > 256)) {
       ctx.addIssue({
@@ -71,6 +80,8 @@ export type EventInput = {
   categoryType: EventFormValues['categoryType'];
   categoryLabel: string | null;
   plannedDate: string | null;
+  plannedEndDate: string | null;
+  thirdPlaceMatch: boolean;
   maxEntries: number | null;
   minBirthYear: number | null;
   maxBirthYear: number | null;
@@ -83,6 +94,8 @@ export function toEventInput(values: EventFormValues): EventInput {
     categoryType: values.categoryType,
     categoryLabel: values.categoryType === 'OPEN' ? null : values.categoryLabel,
     plannedDate: values.plannedDate ? tahitiInputToIso(values.plannedDate) : null,
+    plannedEndDate: values.plannedEndDate ? tahitiInputToIso(values.plannedEndDate) : null,
+    thirdPlaceMatch: values.thirdPlaceMatch,
     maxEntries: Number.isNaN(values.maxEntries) ? null : values.maxEntries,
     minBirthYear:
       values.categoryType !== 'AGE' || Number.isNaN(values.minBirthYear)
@@ -102,6 +115,8 @@ export function toEventFormValues(event: Event): EventFormValues {
     categoryType: event.categoryType,
     categoryLabel: event.categoryLabel ?? '',
     plannedDate: event.plannedDate ? isoToTahitiInput(event.plannedDate) : '',
+    plannedEndDate: event.plannedEndDate ? isoToTahitiInput(event.plannedEndDate) : '',
+    thirdPlaceMatch: event.thirdPlaceMatch ?? false,
     maxEntries: event.maxEntries ?? Number.NaN,
     minBirthYear: event.minBirthYear ?? Number.NaN,
     maxBirthYear: event.maxBirthYear ?? Number.NaN,

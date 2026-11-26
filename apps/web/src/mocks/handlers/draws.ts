@@ -1,7 +1,9 @@
 import { delay, http, HttpResponse } from 'msw';
 import type { Draw, DrawSettings, DrawSlotRef } from '@/api/models';
 import { DrawSettingsError, makeDraw, toDrawEntries } from '@/features/draw/algorithm';
+import { generateEventMatches } from '@/features/schedule/generate';
 import { db } from '../data';
+import { nextNumber, stampMatches } from '../matches';
 import { problem } from './utils';
 
 const findEvent = (id: unknown) => db.events.find((e) => e.id === id);
@@ -99,6 +101,16 @@ export const drawHandlers = [
     if (!draw) return drawNotFound();
     draw.status = 'PUBLISHED';
     draw.publishedAt = new Date().toISOString();
+    const event = db.events.find((e) => e.id === draw.eventId);
+    if (event && !db.matches.some((m) => m.eventId === event.id && m.phase)) {
+      const generated = generateEventMatches(
+        event,
+        draw,
+        nextNumber(db.matches, event.tournamentId),
+        () => crypto.randomUUID(),
+      );
+      db.matches.push(...stampMatches(generated));
+    }
     return HttpResponse.json(draw);
   }),
 

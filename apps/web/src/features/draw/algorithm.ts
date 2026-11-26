@@ -14,6 +14,7 @@ export type Random = () => number;
 
 export const POOL_NAMES = 'ABCDEFGHIJKLMNOP';
 export const MIN_POOL_SIZE = 3;
+export const MIN_EVENT_ENTRIES = 3;
 export const MAX_POOL_SIZE = 8;
 
 export class DrawSettingsError extends Error {
@@ -253,7 +254,9 @@ export function makeDraw({
   seedCount: number | null;
   random?: Random;
 }): DrawPlan {
-  if (ranked.length < 2) throw new DrawSettingsError('NOT_ENOUGH_ENTRIES', 'At least 2 entries');
+  if (ranked.length < MIN_EVENT_ENTRIES) {
+    throw new DrawSettingsError('NOT_ENOUGH_ENTRIES', `At least ${MIN_EVENT_ENTRIES} entries`);
+  }
 
   if (format === 'SINGLE_ELIMINATION') {
     const seeds = Math.min(seedCount ?? defaultSeedCount(ranked.length), ranked.length);
