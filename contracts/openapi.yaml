@@ -853,13 +853,12 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  # ---------------------------------------------------------------- Clubs (planned)
+  # ---------------------------------------------------------------- Clubs
   /clubs:
     get:
       tags: [Clubs]
       operationId: listClubs
       security: []
-      x-status: planned
       summary: List clubs, by name
       parameters:
         - name: q
@@ -878,7 +877,6 @@ paths:
       tags: [Clubs]
       operationId: createClub
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Create a club
       requestBody:
         required: true
@@ -905,7 +903,6 @@ paths:
       tags: [Clubs]
       operationId: getClub
       security: []
-      x-status: planned
       summary: Get a club
       responses:
         '200':
@@ -918,7 +915,6 @@ paths:
       tags: [Clubs]
       operationId: updateClub
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Update a club
       requestBody:
         required: true
@@ -985,13 +981,12 @@ paths:
         '204': { description: Removed (also when the club had no logo) }
         '404': { $ref: '#/components/responses/NotFound' }
 
-  # ---------------------------------------------------------------- Players (planned)
+  # ---------------------------------------------------------------- Players
   /players:
     get:
       tags: [Players]
       operationId: listPlayers
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: Search players, paginated, by last name then first name
       parameters:
         - name: q
@@ -1018,7 +1013,6 @@ paths:
       tags: [Players]
       operationId: createPlayer
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Create a player
       requestBody:
         required: true
@@ -1047,7 +1041,6 @@ paths:
       tags: [Players]
       operationId: getPlayer
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: Get a player
       responses:
         '200':
@@ -1062,7 +1055,6 @@ paths:
       tags: [Players]
       operationId: updatePlayer
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Update a player profile
       requestBody:
         required: true
@@ -1081,7 +1073,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  # ---------------------------------------------------------------- Registrations (planned)
+  # ---------------------------------------------------------------- Registrations
   /tournaments/{tournamentId}/registrations:
     parameters:
       - $ref: '#/components/parameters/TournamentId'
@@ -1089,7 +1081,6 @@ paths:
       tags: [Registrations]
       operationId: listTournamentRegistrations
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: List the registrations of a tournament
       parameters:
         - name: eventId
@@ -1120,7 +1111,6 @@ paths:
       tags: [Registrations]
       operationId: listEventRegistrations
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: List the registrations of an event
       responses:
         '200':
@@ -1137,7 +1127,6 @@ paths:
       tags: [Registrations]
       operationId: createRegistration
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Register a player (and a partner for doubles) in an event
       description: |
         Entered by the organizer in the MVP, so a pair is confirmed at once.
@@ -1164,7 +1153,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           $ref: '#/components/responses/Conflict'
-          # ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL
+          # ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL, DRAW_PUBLISHED
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -1174,13 +1163,14 @@ paths:
     post:
       tags: [Registrations]
       operationId: transferRegistrations
-      x-status: planned
+      x-roles: [ORGANIZER]
       summary: Move registrations into this event
       description: |
         Moves registrations from another event of the same tournament and the same discipline
         (e.g. Minime U15 to Cadet U17, or Senior to Series 2). Each registration is checked
         against this event (gender, birth years, already registered, maximum entries) and moved
-        or rejected on its own. `registeredAt` and the status are kept.
+        or rejected on its own. `registeredAt` and the status are kept. Refused as a whole with
+        `DRAW_PUBLISHED` when the draw of this event is published.
       requestBody:
         required: true
         content:
@@ -1193,6 +1183,9 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/TransferResult' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED
 
   /events/{eventId}/eligible-players:
     parameters:
@@ -1201,7 +1194,6 @@ paths:
       tags: [Registrations]
       operationId: listEligiblePlayers
       x-roles: [ORGANIZER, CLUB]
-      x-status: planned
       summary: Players who can register in this event (or partner someone in it)
       description: |
         Used for the player and partner pickers: right gender for the discipline (for a
@@ -1234,7 +1226,6 @@ paths:
       tags: [Registrations]
       operationId: updateRegistration
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Set or change the partner, or confirm a pending pair
       description: |
         - `partnerId` set → the pair is `CONFIRMED` (organizer action).
@@ -1260,11 +1251,13 @@ paths:
       tags: [Registrations]
       operationId: deleteRegistration
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Withdraw a registration
       responses:
         '204': { description: Deleted }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # DRAW_PUBLISHED
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -1319,15 +1312,16 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  # ---------------------------------------------------------------- Draws (planned)
+  # ---------------------------------------------------------------- Draws
   /events/{eventId}/draw:
     parameters:
       - $ref: '#/components/parameters/EventId'
     get:
       tags: [Draws]
       operationId: getDraw
-      x-status: planned
+      x-roles: [ORGANIZER, CLUB]
       summary: Draw of an event (pools and/or knockout bracket)
+      description: Organizers and clubs only, like the registrations it shows (birth dates).
       responses:
         '200':
           description: The draw, draft or published
@@ -1338,21 +1332,27 @@ paths:
           $ref: '#/components/responses/NotFound'
           # EVENT_NOT_FOUND, DRAW_NOT_FOUND (no draw yet)
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Draws]
       operationId: createDraw
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Run (or run again) the draw of an event
       description: |
         Draws the `CONFIRMED` registrations of the event; the others are listed in
-        `excludedRegistrationIds`. Replaces the current draft. The settings are saved on the
-        event (`poolCount`, `qualifiersPerPool`). Missing settings use the event's values, then
-        the defaults:
+        `excludedRegistrationIds`. Replaces the current draft. Missing settings use the event's
+        values (`poolCount`, `qualifiersPerPool`), then the defaults:
         - `poolCount`: entries / 4, rounded, between 1 and 16. Pool sizes are derived: entries
           are split as evenly as possible (13 entries in 3 pools → 5, 4, 4), 3 to 8 per pool.
         - `qualifiersPerPool`: 2, less than the smallest pool.
         - `seedCount`: 2 up to a draw of 8, 4 up to 16, 8 up to 32, 16 beyond.
+        - `randomSeed`: a new random value.
+
+        The draw is reproducible: the same confirmed registrations, settings and `randomSeed`
+        always give the same draw. Send the `randomSeed` of a previous draw to replay it.
+
+        While the draw is a draft, any change to the registrations of the event (added, changed,
+        withdrawn or moved) deletes it: run it again.
 
         See "Pools and Draw" in `docs/competition-rules.md` for the placement rules.
       requestBody:
@@ -1379,7 +1379,6 @@ paths:
       tags: [Draws]
       operationId: deleteDraw
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Delete a draft draw
       responses:
         '204': { description: Deleted }
@@ -1397,7 +1396,6 @@ paths:
       tags: [Draws]
       operationId: swapDrawSlots
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Swap two slots of a draft draw
       description: |
         Swaps two entries between pools or within a pool, or two lines of the bracket (an
@@ -1430,12 +1428,15 @@ paths:
       tags: [Draws]
       operationId: publishDraw
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Publish the draw
       description: |
         Locks the draw and the registrations of the event: adding, changing, withdrawing or
-        moving a registration is then refused with `DRAW_PUBLISHED`. Matches are generated
-        from the published draw.
+        moving a registration is then refused with `DRAW_PUBLISHED`.
+
+        A single elimination gets every match of its bracket, `SCHEDULED` (see
+        `listEventMatches`): one per pair of first-round lines that are not a bye, then every
+        later round with the sides known so far. An entry facing a bye is placed straight into
+        the second round. The winners move on with #96; pools get their matches with #93.
       responses:
         '200':
           description: Published draw
@@ -2100,14 +2101,13 @@ components:
         minBirthYear:
           type: [integer, 'null']
           description: |
-            Planned. Oldest birth year allowed (youth categories: younger players may play up).
-            Only for AGE events.
-          x-status: planned
+            Oldest birth year allowed (youth categories: younger players may play up).
+            Only for AGE events (VALIDATION_FAILED otherwise); cleared when the event stops being one.
         maxBirthYear:
           type: [integer, 'null']
           description: |
-            Planned. Most recent birth year allowed (veterans). Only for AGE events.
-          x-status: planned
+            Most recent birth year allowed (veterans). Only for AGE events; not before
+            `minBirthYear`.
         poolCount: { type: [integer, 'null'], minimum: 1, maximum: 16 }
         poolSize:
           type: [integer, 'null']
@@ -2152,8 +2152,8 @@ components:
           x-status: planned
           description: Planned. The two semi-final losers play for third place
         maxEntries: { type: [integer, 'null'], minimum: 2, maximum: 256 }
-        minBirthYear: { type: [integer, 'null'], x-status: planned }
-        maxBirthYear: { type: [integer, 'null'], x-status: planned }
+        minBirthYear: { type: [integer, 'null'], minimum: 1900, maximum: 2100 }
+        maxBirthYear: { type: [integer, 'null'], minimum: 1900, maximum: 2100 }
         poolCount: { type: [integer, 'null'], minimum: 1 }
         poolSize: { type: [integer, 'null'], minimum: 3, maximum: 8 }
         qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
@@ -2180,8 +2180,8 @@ components:
           x-status: planned
           description: Planned. The two semi-final losers play for third place
         maxEntries: { type: [integer, 'null'], minimum: 2, maximum: 256 }
-        minBirthYear: { type: [integer, 'null'], x-status: planned }
-        maxBirthYear: { type: [integer, 'null'], x-status: planned }
+        minBirthYear: { type: [integer, 'null'], minimum: 1900, maximum: 2100 }
+        maxBirthYear: { type: [integer, 'null'], minimum: 1900, maximum: 2100 }
         poolCount: { type: [integer, 'null'], minimum: 1 }
         poolSize: { type: [integer, 'null'], minimum: 3, maximum: 8 }
         qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
@@ -2235,8 +2235,8 @@ components:
 
     Match:
       type: object
-      required: [id, tournamentId, eventId, round, sideA, sideB, courtId, status, winner,
-        outcome, stateVersion, startedAt, endedAt, createdAt, updatedAt]
+      required: [id, tournamentId, eventId, round, bracketPosition, sideA, sideB, courtId, status,
+        winner, outcome, stateVersion, startedAt, endedAt, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         tournamentId: { type: string, format: uuid }
@@ -2245,6 +2245,13 @@ components:
           type: [integer, 'null']
           minimum: 1
           description: Round in the draw, from 1; null when the match is not part of a draw
+        bracketPosition:
+          type: [integer, 'null']
+          minimum: 1
+          description: |
+            Position of a knockout match in its round, from 1 at the top of the bracket: the
+            winners of positions 2k-1 and 2k meet at position k of the next round (as sides A
+            and B). Null for a match out of a knockout bracket.
         sideA:
           type: [string, 'null']
           format: uuid
@@ -2409,7 +2416,7 @@ components:
           format: date-time
           description: null while the tablet is paired
 
-    # ------------------------------------------------------------ Clubs (planned)
+    # ------------------------------------------------------------ Clubs
     Club:
       type: object
       required: [id, name, city, address, email, phone, logoUrl]
@@ -2452,7 +2459,7 @@ components:
         email: { type: [string, 'null'], format: email, maxLength: 254 }
         phone: { type: [string, 'null'], maxLength: 30 }
 
-    # ------------------------------------------------------------ Players (planned)
+    # ------------------------------------------------------------ Players
     Player:
       type: object
       required:
@@ -2571,7 +2578,7 @@ components:
           $ref: '#/components/schemas/PlayerRankings'
           description: Replaces the three rankings; missing on creation = no ranking
 
-    # ------------------------------------------------------------ Registrations (planned)
+    # ------------------------------------------------------------ Registrations
     Registration:
       type: object
       required: [id, tournamentId, eventId, status, player, partner, registeredAt, createdAt]
@@ -2623,7 +2630,7 @@ components:
                 description: |
                   INCOMPATIBLE_EVENT, PLAYER_NOT_ELIGIBLE, PARTNER_NOT_ELIGIBLE,
                   ALREADY_REGISTERED, PARTNER_ALREADY_REGISTERED, EVENT_FULL,
-                  REGISTRATION_NOT_FOUND
+                  REGISTRATION_NOT_FOUND, DRAW_PUBLISHED (draw of its event published)
               message: { type: string }
 
     CreateRegistrationRequest:
@@ -2911,12 +2918,19 @@ components:
         - pools
         - bracket
         - excludedRegistrationIds
+        - randomSeed
         - createdAt
         - publishedAt
       properties:
         eventId: { type: string, format: uuid }
         status: { $ref: '#/components/schemas/DrawStatus' }
         seedCount: { type: integer, minimum: 0 }
+        randomSeed:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: Seed of the random draw, to replay it (see `createDraw`)
         pools:
           type: array
           description: Empty for single elimination
@@ -2940,6 +2954,12 @@ components:
         poolCount: { type: [integer, 'null'], minimum: 1, maximum: 16 }
         qualifiersPerPool: { type: [integer, 'null'], minimum: 1, maximum: 7 }
         seedCount: { type: [integer, 'null'], minimum: 0 }
+        randomSeed:
+          type: [integer, 'null']
+          format: int64
+          minimum: 0
+          maximum: 9007199254740991
+          description: Seed of the random draw (at most 2^53 - 1, read exactly in JavaScript); null = a new random value
 
     DrawSlotRef:
       oneOf:

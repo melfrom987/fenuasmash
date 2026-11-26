@@ -37,6 +37,10 @@ class Match {
 
 	private Integer round;
 
+	/** Position in its round for a knockout match, from 1 at the top; null otherwise. */
+	@Column(name = "bracket_position", updatable = false)
+	private Integer bracketPosition;
+
 	@Column(name = "side_a_id")
 	private UUID sideA;
 
@@ -76,7 +80,13 @@ class Match {
 	}
 
 	Match(UUID tournamentId, UUID eventId, Integer round, UUID sideA, UUID sideB, Instant now) {
+		this(tournamentId, eventId, round, null, sideA, sideB, now);
+	}
+
+	Match(UUID tournamentId, UUID eventId, Integer round, Integer bracketPosition, UUID sideA, UUID sideB,
+			Instant now) {
 		this.id = UUID.randomUUID();
+		this.bracketPosition = bracketPosition;
 		this.tournamentId = tournamentId;
 		this.eventId = eventId;
 		this.round = round;
@@ -134,6 +144,10 @@ class Match {
 
 	Integer getRound() {
 		return round;
+	}
+
+	Integer getBracketPosition() {
+		return bracketPosition;
 	}
 
 	UUID getSideA() {

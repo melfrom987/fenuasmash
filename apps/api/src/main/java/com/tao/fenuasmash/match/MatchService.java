@@ -125,6 +125,21 @@ public class MatchService {
 	}
 
 	/**
+	 * Creates the matches of the knockout bracket of an event, all {@code SCHEDULED}: those
+	 * with both sides are ready to be played once the organizer marks them {@code READY}.
+	 */
+	@Transactional
+	public List<MatchResponse> createKnockout(UUID eventId, List<KnockoutMatch> matches) {
+		EventResponse event = eventService.findById(eventId);
+		Instant now = Instant.now();
+		List<Match> created = matches.stream()
+			.map((match) -> new Match(event.tournamentId(), eventId, match.round(), match.position(), match.sideA(),
+					match.sideB(), now))
+			.toList();
+		return repository.saveAllAndFlush(created).stream().map(MatchResponse::from).toList();
+	}
+
+	/**
 	 * Calls a {@code READY} match to a court, or moves a {@code CALLED} match to
 	 * another court.
 	 */
