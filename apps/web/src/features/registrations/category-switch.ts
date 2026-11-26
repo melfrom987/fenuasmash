@@ -54,3 +54,6 @@ export function closestAgeEvent(
 
 export const suggestCategory = (registration: Registration, current: Event, events: Event[]) =>
   closestAgeEvent(playersOf(registration), current, events);
+
+export const eventsFor = (registration: Registration, current: Event, events: Event[]) =>
+  possibleEvents(playersOf(registration), current, events);

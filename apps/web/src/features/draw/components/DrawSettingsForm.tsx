@@ -7,6 +7,7 @@ import { inputClass, secondaryButtonClass } from '@/components/ui/styles';
 import {
   defaultSeedCount,
   MAX_POOL_SIZE,
+  MIN_EVENT_ENTRIES,
   MIN_POOL_SIZE,
   nextPowerOfTwo,
   POOL_NAMES,
@@ -48,16 +49,13 @@ export function DrawSettingsForm({
   const qualifiersPerPool = toNumber(qualifiers);
   const seedCount = toNumber(seeds);
   const usesPools = format !== 'SINGLE_ELIMINATION';
-  const enough = entryCount >= 2;
+  const enough = entryCount >= MIN_EVENT_ENTRIES;
 
   const sizes =
     usesPools && pools >= 1 && pools <= POOL_NAMES.length ? poolSizes(entryCount, pools) : [];
   const smallest = sizes.length > 0 ? Math.min(...sizes) : 0;
   const largest = sizes.length > 0 ? Math.max(...sizes) : 0;
-  const poolsValid =
-    sizes.length > 0 &&
-    largest <= MAX_POOL_SIZE &&
-    (pools === 1 ? smallest >= 2 : smallest >= MIN_POOL_SIZE);
+  const poolsValid = sizes.length > 0 && largest <= MAX_POOL_SIZE && smallest >= MIN_POOL_SIZE;
   const qualifiersValid = pools === 1 || (qualifiersPerPool >= 1 && qualifiersPerPool < smallest);
   const seedsValid = seedCount >= 0 && seedCount <= entryCount;
   const qualified = pools > 1 && qualifiersValid ? pools * qualifiersPerPool : 0;
