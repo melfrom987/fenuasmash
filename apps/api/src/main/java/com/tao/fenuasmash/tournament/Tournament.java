@@ -74,6 +74,26 @@ public class Tournament {
 	@BatchSize(size = 50)
 	private List<ForbiddenCombination> forbiddenCombinations = new ArrayList<>();
 
+	@Column(name = "average_match_minutes", nullable = false)
+	private int averageMatchMinutes = 25;
+
+	@Column(name = "convocation_lead_minutes", nullable = false)
+	private int convocationLeadMinutes = 30;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "public_visibility", nullable = false, length = 20)
+	private PublicVisibility publicVisibility = PublicVisibility.ON_PUBLISH;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "schedule_status", nullable = false, length = 20)
+	private ScheduleStatus scheduleStatus = ScheduleStatus.NOT_GENERATED;
+
+	@Column(name = "schedule_generated_at")
+	private Instant scheduleGeneratedAt;
+
+	@Column(name = "schedule_published_at")
+	private Instant schedulePublishedAt;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
@@ -117,6 +137,41 @@ public class Tournament {
 		this.forbiddenCombinations.clear();
 		rules.forbiddenCombinations()
 			.forEach(pair -> this.forbiddenCombinations.add(new ForbiddenCombination(pair.get(0), pair.get(1))));
+	}
+
+	void changeScheduleSettings(int averageMatchMinutes, int convocationLeadMinutes,
+			PublicVisibility publicVisibility) {
+		this.averageMatchMinutes = averageMatchMinutes;
+		this.convocationLeadMinutes = convocationLeadMinutes;
+		this.publicVisibility = publicVisibility;
+	}
+
+	/** The schedule was computed: it is a draft again, not published. */
+	void scheduleGenerated(Instant now) {
+		this.scheduleStatus = ScheduleStatus.DRAFT;
+		this.scheduleGeneratedAt = now.truncatedTo(ChronoUnit.MICROS);
+		this.schedulePublishedAt = null;
+	}
+
+	void schedulePublished(Instant now) {
+		this.scheduleStatus = ScheduleStatus.PUBLISHED;
+		this.schedulePublishedAt = now.truncatedTo(ChronoUnit.MICROS);
+	}
+
+	ScheduleState getScheduleState() {
+		return new ScheduleState(scheduleStatus, scheduleGeneratedAt, schedulePublishedAt);
+	}
+
+	public int getAverageMatchMinutes() {
+		return averageMatchMinutes;
+	}
+
+	public int getConvocationLeadMinutes() {
+		return convocationLeadMinutes;
+	}
+
+	public PublicVisibility getPublicVisibility() {
+		return publicVisibility;
 	}
 
 	boolean hasStarted(Instant now) {

@@ -59,9 +59,11 @@ public class EventService {
 				request.poolSize(), request.qualifiersPerPool());
 		BirthYearBounds birthYears = resolveBirthYears(request.categoryType(),
 				new BirthYearBounds(request.minBirthYear(), request.maxBirthYear()), true);
-		return EventResponse.from(repository.save(new Event(tournamentId, name, request.discipline(),
-				request.categoryType(), categoryLabel, request.plannedDate(), request.maxEntries(), birthYears,
-				structure)));
+		checkSlot(request.plannedDate(), request.plannedEndDate());
+		Event event = new Event(tournamentId, name, request.discipline(), request.categoryType(), categoryLabel,
+				request.plannedDate(), request.maxEntries(), birthYears, structure);
+		event.changePlannedEndDate(request.plannedEndDate());
+		return EventResponse.from(repository.save(event));
 	}
 
 	@Transactional
@@ -82,6 +84,8 @@ public class EventService {
 		PoolStructure structure = resolveStructure(tournament.drawFormat(), current, request.poolCount(),
 				request.poolSize(), request.qualifiersPerPool());
 		Instant plannedDate = request.plannedDateSent() ? request.plannedDate() : event.getPlannedDate();
+		Instant plannedEndDate = request.plannedEndDateSent() ? request.plannedEndDate() : event.getPlannedEndDate();
+		checkSlot(plannedDate, plannedEndDate);
 		Integer maxEntries = request.maxEntriesSent() ? request.maxEntries() : event.getMaxEntries();
 		BirthYearBounds currentYears = event.getBirthYears();
 		BirthYearBounds requestedYears = new BirthYearBounds(
@@ -90,7 +94,15 @@ public class EventService {
 		BirthYearBounds birthYears = resolveBirthYears(categoryType, requestedYears,
 				request.minBirthYearSent() || request.maxBirthYearSent());
 		event.update(name, discipline, categoryType, categoryLabel, plannedDate, maxEntries, birthYears, structure);
+		event.changePlannedEndDate(plannedEndDate);
 		return EventResponse.from(event);
+	}
+
+	/** The end of the slot of an event comes after its start. */
+	private static void checkSlot(Instant plannedDate, Instant plannedEndDate) {
+		if (plannedDate != null && plannedEndDate != null && !plannedEndDate.isAfter(plannedDate)) {
+			throw new InvalidRequestException("INVALID_DATE_RANGE", "plannedEndDate must be after plannedDate");
+		}
 	}
 
 	@Transactional

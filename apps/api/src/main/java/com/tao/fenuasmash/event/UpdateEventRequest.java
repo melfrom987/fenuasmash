@@ -30,6 +30,10 @@ public class UpdateEventRequest {
 
 	private boolean plannedDateSent;
 
+	private Instant plannedEndDate;
+
+	private boolean plannedEndDateSent;
+
 	@Min(2)
 	@Max(256)
 	private Integer maxEntries;
@@ -78,6 +82,11 @@ public class UpdateEventRequest {
 	public void setPlannedDate(Instant plannedDate) {
 		this.plannedDate = plannedDate;
 		this.plannedDateSent = true;
+	}
+
+	public void setPlannedEndDate(Instant plannedEndDate) {
+		this.plannedEndDate = plannedEndDate;
+		this.plannedEndDateSent = true;
 	}
 
 	public void setMaxEntries(Integer maxEntries) {
@@ -129,6 +138,14 @@ public class UpdateEventRequest {
 
 	boolean plannedDateSent() {
 		return plannedDateSent;
+	}
+
+	Instant plannedEndDate() {
+		return plannedEndDate;
+	}
+
+	boolean plannedEndDateSent() {
+		return plannedEndDateSent;
 	}
 
 	Integer maxEntries() {

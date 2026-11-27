@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.tao.fenuasmash.match.KnockoutMatch;
+import com.tao.fenuasmash.match.MatchSource;
 import com.tao.fenuasmash.match.MatchSide;
 
 /**
@@ -37,8 +38,16 @@ final class KnockoutPlanner {
 				: MatchSide.B);
 	}
 
-	/** A line of the first round: a bye, or an entry, known or not yet (a pool qualifier). */
-	record Line(UUID registration, boolean bye) {
+	/**
+	 * A line of the first round: a bye, or an entry, known or not yet (a pool qualifier).
+	 *
+	 * @param qualifier the pool rank the line waits for, or null
+	 */
+	record Line(UUID registration, boolean bye, MatchSource qualifier) {
+
+		Line(UUID registration, boolean bye) {
+			this(registration, bye, null);
+		}
 
 		static Line of(UUID registration) {
 			return (registration != null) ? new Line(registration, false) : new Line(null, true);
@@ -62,6 +71,7 @@ final class KnockoutPlanner {
 		int rounds = Integer.numberOfTrailingZeros(size);
 		// Sides of the second round already known, from the byes of the first one
 		UUID[] secondRound = new UUID[size / 2];
+		MatchSource[] secondRoundSources = new MatchSource[size / 2];
 		List<KnockoutMatch> matches = new ArrayList<>();
 		for (int position = 1; position <= size / 2; position++) {
 			Line a = lines.get(2 * position - 2);
@@ -70,10 +80,13 @@ final class KnockoutPlanner {
 				throw new IllegalArgumentException("Two byes face each other at position " + position);
 			}
 			if (!a.bye() && !b.bye()) {
-				matches.add(new KnockoutMatch(1, position, a.registration(), b.registration()));
+				matches.add(new KnockoutMatch(1, position, a.registration(), b.registration(), a.qualifier(),
+						b.qualifier()));
 			}
 			else {
-				secondRound[position - 1] = a.bye() ? b.registration() : a.registration();
+				Line through = a.bye() ? b : a;
+				secondRound[position - 1] = through.registration();
+				secondRoundSources[position - 1] = through.qualifier();
 			}
 		}
 		for (int round = 2; round <= rounds; round++) {
@@ -81,7 +94,9 @@ final class KnockoutPlanner {
 			for (int position = 1; position <= count; position++) {
 				UUID a = (round == 2) ? secondRound[2 * position - 2] : null;
 				UUID b = (round == 2) ? secondRound[2 * position - 1] : null;
-				matches.add(new KnockoutMatch(round, position, a, b));
+				MatchSource sourceA = (round == 2) ? secondRoundSources[2 * position - 2] : null;
+				MatchSource sourceB = (round == 2) ? secondRoundSources[2 * position - 1] : null;
+				matches.add(new KnockoutMatch(round, position, a, b, sourceA, sourceB));
 			}
 		}
 		return matches;

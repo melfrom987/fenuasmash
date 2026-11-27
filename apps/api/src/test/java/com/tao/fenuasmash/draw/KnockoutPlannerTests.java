@@ -13,6 +13,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
 import com.tao.fenuasmash.match.KnockoutMatch;
+import com.tao.fenuasmash.match.MatchSource;
 
 class KnockoutPlannerTests {
 
@@ -102,6 +103,33 @@ class KnockoutPlannerTests {
 		assertThatThrownBy(() -> KnockoutPlanner.plan(List.of(A, B, C))).isInstanceOf(IllegalArgumentException.class);
 		assertThatThrownBy(() -> KnockoutPlanner.plan(Arrays.asList(A, B, null, null)))
 			.isInstanceOf(IllegalArgumentException.class);
+	}
+
+
+	@Test
+	void tellsWhichPoolRankALineWaitsFor() {
+		// Pools then knockout: A1 faces a bye, C1 - B2 and A2 - C2 in round 1, B1 faces a bye
+		List<KnockoutPlanner.Line> lines = List.of(qualifier("A", 1), bye(), qualifier("C", 1), qualifier("B", 2),
+				qualifier("A", 2), qualifier("C", 2), bye(), qualifier("B", 1));
+
+		List<KnockoutMatch> matches = KnockoutPlanner.planLines(lines);
+
+		assertThat(matches).extracting(KnockoutMatch::round, KnockoutMatch::position, KnockoutMatch::sourceA,
+				KnockoutMatch::sourceB)
+			.containsExactly(
+					org.assertj.core.groups.Tuple.tuple(1, 2, MatchSource.poolRank("C", 1), MatchSource.poolRank("B", 2)),
+					org.assertj.core.groups.Tuple.tuple(1, 3, MatchSource.poolRank("A", 2), MatchSource.poolRank("C", 2)),
+					org.assertj.core.groups.Tuple.tuple(2, 1, MatchSource.poolRank("A", 1), null),
+					org.assertj.core.groups.Tuple.tuple(2, 2, null, MatchSource.poolRank("B", 1)),
+					org.assertj.core.groups.Tuple.tuple(3, 1, null, null));
+	}
+
+	private static KnockoutPlanner.Line qualifier(String pool, int rank) {
+		return new KnockoutPlanner.Line(null, false, MatchSource.poolRank(pool, rank));
+	}
+
+	private static KnockoutPlanner.Line bye() {
+		return new KnockoutPlanner.Line(null, true);
 	}
 
 }

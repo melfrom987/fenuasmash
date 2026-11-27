@@ -11,6 +11,9 @@ public record TournamentResponse(
 		Instant startsAt,
 		Instant endsAt,
 		int minimumRestMinutes,
+		int averageMatchMinutes,
+		int convocationLeadMinutes,
+		PublicVisibility publicVisibility,
 		CompetitionType competitionType,
 		DrawFormat drawFormat,
 		PlayMode playMode,
@@ -25,7 +28,8 @@ public record TournamentResponse(
 		TournamentRules rules = tournament.getRules();
 		return new TournamentResponse(tournament.getId(), tournament.getOrganizationId(), tournament.getName(),
 				tournament.getStartsAt(), tournament.getEndsAt(), tournament.getMinimumRestMinutes(),
-				rules.competitionType(), rules.drawFormat(), rules.playMode(), rules.scoring(), rules.relayStep(),
+				tournament.getAverageMatchMinutes(), tournament.getConvocationLeadMinutes(),
+				tournament.getPublicVisibility(), rules.competitionType(), rules.drawFormat(), rules.playMode(), rules.scoring(), rules.relayStep(),
 				rules.disciplines(), rules.forbiddenCombinations(), tournament.getCreatedAt(),
 				tournament.getUpdatedAt());
 	}

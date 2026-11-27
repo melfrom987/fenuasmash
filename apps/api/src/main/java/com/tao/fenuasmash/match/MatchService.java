@@ -1,6 +1,9 @@
 package com.tao.fenuasmash.match;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +82,69 @@ public class MatchService {
 		return matches.stream().map(MatchResponse::from).toList();
 	}
 
+	/** Calling order: planned start, then number; matches out of the schedule last. */
+	private static final Comparator<Match> SCHEDULE_ORDER = Comparator
+		.comparing(Match::getPlannedStartAt, Comparator.nullsLast(Comparator.naturalOrder()))
+		.thenComparing(Match::getNumber, Comparator.nullsLast(Comparator.naturalOrder()));
+
+	/** Matches the schedule places: not started yet. */
+	public static final Set<MatchStatus> PLANNABLE = Set.of(MatchStatus.SCHEDULED, MatchStatus.READY);
+
+	/**
+	 * Replaces the planned place of every match not started yet of the tournament: the ones in
+	 * {@code plan} get their place, the others leave the schedule. Matches on a court or over
+	 * keep theirs.
+	 */
+	@Transactional
+	public void replacePlan(UUID tournamentId, Map<UUID, PlannedSlot> plan) {
+		checkTournamentExists(tournamentId);
+		for (Match match : repository.findAllByTournamentAndStatusIn(tournamentId, PLANNABLE)) {
+			PlannedSlot slot = plan.get(match.getId());
+			match.planAt((slot != null) ? slot.startAt() : null, (slot != null) ? slot.courtId() : null);
+		}
+		repository.flush();
+	}
+
+	/**
+	 * Puts a match not started yet at a time on a court of the schedule. A match not started
+	 * yet already there takes the former place of the moved match.
+	 * @throws NotFoundException `MATCH_NOT_FOUND` for a match out of the tournament
+	 * @throws ConflictException `MATCH_ALREADY_STARTED` for a match on a court or over,
+	 * `COURT_INACTIVE`, or `SLOT_TAKEN` when a started match is at that place
+	 */
+	@Transactional
+	public void moveInSchedule(UUID tournamentId, UUID matchId, Instant startAt, UUID courtId) {
+		Match match = repository.findById(matchId)
+			.filter((found) -> found.getTournamentId().equals(tournamentId))
+			.orElseThrow(() -> new NotFoundException("Match", matchId));
+		if (!PLANNABLE.contains(match.getStatus())) {
+			throw new ConflictException("MATCH_ALREADY_STARTED",
+					"Match " + matchId + " is " + match.getStatus() + ": only a match not started yet is moved");
+		}
+		CourtResponse court = courtService.findById(courtId);
+		if (!court.tournamentId().equals(tournamentId)) {
+			throw new NotFoundException("Court", courtId);
+		}
+		courtService.ensureActive(courtId);
+		repository.lockTournament(tournamentId);
+		Instant start = startAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+		Optional<Match> there = repository.findAllByTournament(tournamentId)
+			.stream()
+			.filter((other) -> !other.getId().equals(matchId) && courtId.equals(other.getPlannedCourtId())
+					&& start.equals(other.getPlannedStartAt()))
+			.findFirst();
+		if (there.isPresent()) {
+			Match other = there.get();
+			if (!PLANNABLE.contains(other.getStatus())) {
+				throw new ConflictException("SLOT_TAKEN",
+						"Match " + other.getId() + " is already at that place and has started");
+			}
+			other.planAt(match.getPlannedStartAt(), match.getPlannedCourtId());
+		}
+		match.planAt(start, courtId);
+		repository.flush();
+	}
+
 	public MatchResponse findById(UUID id) {
 		return MatchResponse.from(getMatch(id));
 	}
@@ -95,6 +161,7 @@ public class MatchService {
 			.collect(Collectors.toCollection(HashSet::new));
 		return repository.findAllByTournamentAndStatusIn(tournamentId, Set.of(MatchStatus.READY))
 			.stream()
+			.sorted(SCHEDULE_ORDER)
 			.map(match -> new QueuedMatchResponse(MatchResponse.from(match),
 					!sidesOnCourt.contains(match.getSideA()) && !sidesOnCourt.contains(match.getSideB())))
 			.toList();
@@ -136,11 +203,45 @@ public class MatchService {
 	public List<MatchResponse> createKnockout(UUID eventId, List<KnockoutMatch> matches) {
 		EventResponse event = eventService.findById(eventId);
 		Instant now = Instant.now();
-		List<Match> created = matches.stream()
-			.map((match) -> new Match(event.tournamentId(), eventId, match.round(), match.position(), match.sideA(),
-					match.sideB(), now))
+		List<KnockoutMatch> ordered = matches.stream()
+			.sorted(Comparator.comparingInt(KnockoutMatch::round).thenComparingInt(KnockoutMatch::position))
 			.toList();
+		Map<String, Match> byPlace = new HashMap<>();
+		List<Match> created = new ArrayList<>();
+		int number = nextNumber(event.tournamentId());
+		for (KnockoutMatch planned : ordered) {
+			Match match = new Match(event.tournamentId(), eventId, planned.round(), planned.position(),
+					planned.sideA(), planned.sideB(), now);
+			match.numbered(number++);
+			match.comesFrom(sourceOf(planned.sideA(), planned.sourceA(), byPlace, planned, 2 * planned.position() - 1),
+					sourceOf(planned.sideB(), planned.sourceB(), byPlace, planned, 2 * planned.position()));
+			byPlace.put(planned.round() + ":" + planned.position(), match);
+			created.add(match);
+		}
 		return repository.saveAllAndFlush(created).stream().map(MatchResponse::from).toList();
+	}
+
+	/**
+	 * Where an unknown side of a knockout match comes from: the pool rank of the bracket line,
+	 * or else the winner of the match at {@code previousPosition} in the previous round.
+	 */
+	private static MatchSource sourceOf(UUID side, MatchSource poolRank, Map<String, Match> byPlace,
+			KnockoutMatch planned, int previousPosition) {
+		if (side != null) {
+			return null;
+		}
+		if (poolRank != null) {
+			return poolRank;
+		}
+		Match previous = byPlace.get((planned.round() - 1) + ":" + previousPosition);
+		return (previous != null) ? MatchSource.winnerOf(previous.getId()) : null;
+	}
+
+	/** The next match number of the tournament, once it is locked against another publication. */
+	private int nextNumber(UUID tournamentId) {
+		repository.lockTournament(tournamentId);
+		Integer max = repository.findMaxNumber(tournamentId);
+		return (max != null) ? max + 1 : 1;
 	}
 
 	/**
@@ -282,11 +383,18 @@ public class MatchService {
 	public List<MatchResponse> createPoolMatches(UUID eventId, List<PoolMatch> matches) {
 		EventResponse event = eventService.findById(eventId);
 		Instant now = Instant.now();
-		List<Match> created = matches.stream()
-			.map((match) -> new Match(event.tournamentId(), eventId, match.round(), null, match.sideA(), match.sideB(),
-					now)
-				.inPool(match.pool()))
-			.toList();
+		// Numbered pools round by round
+		List<PoolMatch> ordered = new ArrayList<>(matches);
+		ordered.sort(Comparator.comparingInt(PoolMatch::round).thenComparing(PoolMatch::pool));
+		int number = nextNumber(event.tournamentId());
+		List<Match> created = new ArrayList<>();
+		for (PoolMatch planned : ordered) {
+			Match match = new Match(event.tournamentId(), eventId, planned.round(), null, planned.sideA(),
+					planned.sideB(), now)
+				.inPool(planned.pool());
+			match.numbered(number++);
+			created.add(match);
+		}
 		return repository.saveAllAndFlush(created).stream().map(MatchResponse::from).toList();
 	}
 

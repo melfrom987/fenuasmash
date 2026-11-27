@@ -40,6 +40,9 @@ public class Event {
 	@Column(name = "planned_date")
 	private Instant plannedDate;
 
+	@Column(name = "planned_end_date")
+	private Instant plannedEndDate;
+
 	@Column(name = "max_entries")
 	private Integer maxEntries;
 
@@ -109,6 +112,15 @@ public class Event {
 
 	public Instant getPlannedDate() {
 		return plannedDate;
+	}
+
+	/** End of the planned slot of the event, or null. */
+	public Instant getPlannedEndDate() {
+		return plannedEndDate;
+	}
+
+	void changePlannedEndDate(Instant plannedEndDate) {
+		this.plannedEndDate = plannedEndDate != null ? plannedEndDate.truncatedTo(ChronoUnit.MICROS) : null;
 	}
 
 	public Integer getMaxEntries() {

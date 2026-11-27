@@ -83,6 +83,41 @@ class Match {
 	@Column(name = "score_winner")
 	private MatchSide scoreWinner;
 
+	/** Number in the tournament, for a match created from a draw. */
+	private Integer number;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "source_a_kind", length = 10)
+	private MatchSourceKind sourceAKind;
+
+	@Column(name = "source_a_pool", length = 2)
+	private String sourceAPool;
+
+	@Column(name = "source_a_rank")
+	private Integer sourceARank;
+
+	@Column(name = "source_a_match_id")
+	private UUID sourceAMatchId;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "source_b_kind", length = 10)
+	private MatchSourceKind sourceBKind;
+
+	@Column(name = "source_b_pool", length = 2)
+	private String sourceBPool;
+
+	@Column(name = "source_b_rank")
+	private Integer sourceBRank;
+
+	@Column(name = "source_b_match_id")
+	private UUID sourceBMatchId;
+
+	@Column(name = "planned_start_at")
+	private Instant plannedStartAt;
+
+	@Column(name = "planned_court_id")
+	private UUID plannedCourtId;
+
 	@Version
 	@Column(name = "state_version", nullable = false)
 	private int stateVersion;
@@ -147,6 +182,57 @@ class Match {
 		this.courtId = court;
 		this.status = MatchStatus.CALLED;
 		this.updatedAt = now.truncatedTo(ChronoUnit.MICROS);
+	}
+
+	void numbered(int number) {
+		this.number = number;
+	}
+
+	/** Where each side comes from while it is not known; null for a side known from the start. */
+	void comesFrom(MatchSource a, MatchSource b) {
+		this.sourceAKind = (a != null) ? a.kind() : null;
+		this.sourceAPool = (a != null) ? a.pool() : null;
+		this.sourceARank = (a != null) ? a.rank() : null;
+		this.sourceAMatchId = (a != null) ? a.matchId() : null;
+		this.sourceBKind = (b != null) ? b.kind() : null;
+		this.sourceBPool = (b != null) ? b.pool() : null;
+		this.sourceBRank = (b != null) ? b.rank() : null;
+		this.sourceBMatchId = (b != null) ? b.matchId() : null;
+	}
+
+	/** Places the match in the schedule, or takes it out of it with nulls. */
+	void planAt(Instant start, UUID court) {
+		this.plannedStartAt = (start != null) ? start.truncatedTo(ChronoUnit.MICROS) : null;
+		this.plannedCourtId = (start != null) ? court : null;
+	}
+
+	Integer getNumber() {
+		return number;
+	}
+
+	/** Pool or knockout for a match of a draw, null for a match created by hand. */
+	MatchPhase getPhase() {
+		if (pool != null) {
+			return MatchPhase.POOL;
+		}
+		return (bracketPosition != null) ? MatchPhase.KNOCKOUT : null;
+	}
+
+	/** Where side A comes from, kept once it is known (the schedule follows it). */
+	MatchSource getSourceA() {
+		return (sourceAKind != null) ? new MatchSource(sourceAKind, sourceAPool, sourceARank, sourceAMatchId) : null;
+	}
+
+	MatchSource getSourceB() {
+		return (sourceBKind != null) ? new MatchSource(sourceBKind, sourceBPool, sourceBRank, sourceBMatchId) : null;
+	}
+
+	Instant getPlannedStartAt() {
+		return plannedStartAt;
+	}
+
+	UUID getPlannedCourtId() {
+		return plannedCourtId;
 	}
 
 	/** The registration on {@code side}, or null while unknown. */
