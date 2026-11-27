@@ -126,7 +126,7 @@ class DrawAlgorithmTests {
 
 		@Test
 		void placesEveryEntrantOnce() {
-			for (int entrants = 2; entrants <= 40; entrants++) {
+			for (int entrants = DrawAlgorithm.MIN_ENTRIES; entrants <= 40; entrants++) {
 				DrawnBracket bracket = knockout(entrants, null, entrants).bracket();
 
 				assertThat(bracket.size()).isEqualTo(DrawAlgorithm.nextPowerOfTwo(entrants));
@@ -411,8 +411,10 @@ class DrawAlgorithmTests {
 	class Errors {
 
 		@Test
-		void needsTwoEntrants() {
+		void needsThreeEntrants() {
+			assertThat(codeOf(() -> knockout(2, null, 1))).isEqualTo("NOT_ENOUGH_ENTRIES");
 			assertThat(codeOf(() -> knockout(1, null, 1))).isEqualTo("NOT_ENOUGH_ENTRIES");
+			assertThat(knockout(3, null, 1).bracket().size()).isEqualTo(4);
 			assertThat(codeOf(() -> DrawAlgorithm.draw(DrawFormat.SINGLE_POOL, List.of(), DrawOptions.DEFAULTS, 1)))
 				.isEqualTo("NOT_ENOUGH_ENTRIES");
 		}

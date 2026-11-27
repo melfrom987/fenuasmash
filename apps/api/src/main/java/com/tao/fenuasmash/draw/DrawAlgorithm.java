@@ -30,6 +30,9 @@ final class DrawAlgorithm {
 
 	static final int MAX_QUALIFIERS_PER_POOL = MAX_POOL_SIZE - 1;
 
+	/** Fewest confirmed entries for a draw (`createDraw` in `contracts/openapi.yaml`). */
+	static final int MIN_ENTRIES = 3;
+
 	/** Largest random seed: 2^53 - 1, the largest integer a JavaScript client reads exactly. */
 	static final long MAX_RANDOM_SEED = (1L << 53) - 1;
 
@@ -53,7 +56,7 @@ final class DrawAlgorithm {
 	 * @param options the settings, a null value using the default
 	 * @param randomSeed the seed of the random draw, between 0 and {@link #MAX_RANDOM_SEED}
 	 * @return the pools and the bracket
-	 * @throws InvalidRequestException `NOT_ENOUGH_ENTRIES` with fewer than 2 entrants, or
+	 * @throws InvalidRequestException `NOT_ENOUGH_ENTRIES` with fewer than {@link #MIN_ENTRIES} entrants, or
 	 * `INVALID_DRAW_SETTINGS` when the settings do not fit the number of entrants
 	 */
 	static DrawPlan draw(DrawFormat format, List<DrawEntrant> entrants, DrawOptions options, long randomSeed) {
@@ -61,9 +64,9 @@ final class DrawAlgorithm {
 			throw invalidSettings("The random seed must be between 0 and " + MAX_RANDOM_SEED);
 		}
 		List<DrawEntrant> ranked = entrants.stream().sorted(DrawEntrant.RANKING).toList();
-		if (ranked.size() < 2) {
+		if (ranked.size() < MIN_ENTRIES) {
 			throw new InvalidRequestException("NOT_ENOUGH_ENTRIES",
-					"At least 2 confirmed entries are needed for a draw");
+					"At least " + MIN_ENTRIES + " confirmed entries are needed for a draw");
 		}
 		Random random = new Random(mix(randomSeed));
 		return switch (format) {

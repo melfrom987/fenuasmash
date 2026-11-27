@@ -59,10 +59,11 @@ class DrawControllerTests extends RegistrationTestSupport {
 		UUID event = createEvent("Double Mixte", "XD");
 		registered(event, teva, hina);
 		registered(event, manu, moana);
+		registered(event, toa(), insertPlayer("Vai", "Tane", "FEMALE", LocalDate.of(1993, 1, 1), 200));
 		UUID looking = registered(event, createdMan(), null);
 
 		draw(event, "{}").andExpect(status().isCreated())
-			.andExpect(jsonPath("$.bracket.size").value(2))
+			.andExpect(jsonPath("$.bracket.size").value(4))
 			.andExpect(jsonPath("$.excludedRegistrationIds", hasSize(1)))
 			.andExpect(jsonPath("$.excludedRegistrationIds[0]").value(looking.toString()));
 	}
@@ -87,7 +88,9 @@ class DrawControllerTests extends RegistrationTestSupport {
 	void refusesTooFewEntries() throws Exception {
 		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
+		draw(event, "{}").andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("NOT_ENOUGH_ENTRIES"));
 
+		registered(event, manu, null);
 		draw(event, "{}").andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("NOT_ENOUGH_ENTRIES"));
 		draw(event, "{\"randomSeed\": -1}").andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
@@ -108,12 +111,15 @@ class DrawControllerTests extends RegistrationTestSupport {
 		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
 		registered(event, manu, null);
+		registered(event, tama(), null);
 		draw(event, "{}").andExpect(status().isCreated());
 
+		// Seed 1 swaps with the bye facing it
 		swap(event, "{\"a\": {\"position\": 1}, \"b\": {\"position\": 2}}").andExpect(status().isOk())
+			.andExpect(jsonPath("$.bracket.slots[0].bye").value(true))
 			.andExpect(jsonPath("$.bracket.slots[1].entry.player.id").value(teva.toString()))
 			.andExpect(jsonPath("$.bracket.slots[1].entry.seed").value(1));
-		swap(event, "{\"a\": {\"position\": 1}, \"b\": {\"position\": 3}}").andExpect(status().isBadRequest())
+		swap(event, "{\"a\": {\"position\": 1}, \"b\": {\"position\": 5}}").andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("INVALID_SWAP"));
 		swap(event, "{\"a\": {\"position\": 1}, \"b\": {\"pool\": \"A\", \"index\": 0}}")
 			.andExpect(status().isBadRequest())
@@ -125,6 +131,7 @@ class DrawControllerTests extends RegistrationTestSupport {
 		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
 		registered(event, manu, null);
+		registered(event, toa(), null);
 		draw(event, "{}").andExpect(status().isCreated());
 
 		registered(event, tama(), null);
@@ -139,6 +146,7 @@ class DrawControllerTests extends RegistrationTestSupport {
 		UUID event = createEvent("Simple Homme", "MS");
 		UUID first = registered(event, teva, null);
 		registered(event, manu, null);
+		registered(event, insertPlayer("Hiro", "Tane", "MALE", LocalDate.of(1994, 1, 1), 200), null);
 		UUID other = createEvent("Simple Homme Série 2", "MS");
 		UUID elsewhere = registered(other, tama(), null);
 		UUID late = toa();
@@ -167,6 +175,7 @@ class DrawControllerTests extends RegistrationTestSupport {
 		UUID event = createEvent("Simple Homme", "MS");
 		registered(event, teva, null);
 		registered(event, manu, null);
+		registered(event, tama(), null);
 		draw(event, "{}").andExpect(status().isCreated());
 
 		mvc.perform(delete("/api/events/{id}/draw", event).with(organizer(jwtService)))
