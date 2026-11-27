@@ -1563,15 +1563,15 @@ paths:
           `changeMatchStatus`). The lines of pool qualifiers stay empty until their pool is
           over (see `getPoolStandings`).
 
-        Planned with the schedule (#217), see "Match generation" in `docs/competition-rules.md`:
-        - pools of 3, 4 and 5 in the fixed order of the rules, where the later rounds of pools
-          of 3 and 4 depend on results (`sourceA` / `sourceB`: winner or loser of a pool match);
-        - sides not known yet are `null` with a `sourceA` / `sourceB` (pool rank, winner or
-          loser of a match);
-        - third place match when `Event.thirdPlaceMatch` (`phase: THIRD_PLACE`, losers of the
-          semi-finals);
-        - `phase` (`POOL`, `KNOCKOUT`, `THIRD_PLACE`) and `number` (next numbers in the
-          tournament, in that order) on each match.
+        Each match gets a `phase` (`POOL` or `KNOCKOUT`) and a `number`: the next numbers in
+        the tournament, pools round by round, then the knockout rounds. A side not known yet is
+        `null`, with a `sourceA` / `sourceB`: the pool rank of its bracket line, or the winner of
+        the match of the previous round.
+
+        Planned (see "Match generation" in `docs/competition-rules.md`): pools of 3, 4 and 5 in
+        the fixed order of the rules, where the later rounds of pools of 3 and 4 depend on results;
+        third place match when `Event.thirdPlaceMatch` (`phase: THIRD_PLACE`, losers of the
+        semi-finals).
       responses:
         '200':
           description: Published draw
@@ -1628,14 +1628,13 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
-  # ---------------------------------------------------------------- Schedule (planned)
+  # ---------------------------------------------------------------- Schedule
   /tournaments/{tournamentId}/schedule:
     parameters:
       - $ref: '#/components/parameters/TournamentId'
     get:
       tags: [Schedule]
       operationId: getSchedule
-      x-status: planned
       summary: State and warnings of the schedule
       description: |
         The planned times and courts are on the matches (`plannedStartAt`, `plannedCourtId`,
@@ -1652,7 +1651,6 @@ paths:
       tags: [Schedule]
       operationId: generateSchedule
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Compute (or compute again) the schedule
       description: |
         Plans every `SCHEDULED` or `READY` match on the active courts, in slots of
@@ -1692,7 +1690,6 @@ paths:
       tags: [Schedule]
       operationId: moveScheduledMatch
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Move a match in the schedule
       description: |
         Puts the match at `plannedStartAt` on `courtId`. If another match not started yet is
@@ -1725,7 +1722,6 @@ paths:
       tags: [Schedule]
       operationId: publishSchedule
       x-roles: [ORGANIZER]
-      x-status: planned
       summary: Publish the schedule
       description: |
         Makes the planned times and call times public (depending on
@@ -2148,15 +2144,13 @@ components:
           minimum: 10
           maximum: 120
           default: 25
-          x-status: planned
-          description: Planned. Average length of a match, warm-up included; used by the schedule
+          description: Average length of a match, warm-up included; used by the schedule
         convocationLeadMinutes:
           type: integer
           minimum: 0
           maximum: 120
           default: 30
-          x-status: planned
-          description: Planned. Players are called this long before their first match
+          description: Players are called this long before their first match
         publicVisibility:
           $ref: '#/components/schemas/PublicVisibility'
         competitionType: { $ref: '#/components/schemas/CompetitionType' }
@@ -2229,15 +2223,13 @@ components:
           minimum: 10
           maximum: 120
           default: 25
-          x-status: planned
-          description: Planned. Average length of a match, warm-up included; used by the schedule
+          description: Average length of a match, warm-up included; used by the schedule
         convocationLeadMinutes:
           type: integer
           minimum: 0
           maximum: 120
           default: 30
-          x-status: planned
-          description: Planned. Players are called this long before their first match
+          description: Players are called this long before their first match
         publicVisibility:
           $ref: '#/components/schemas/PublicVisibility'
         competitionType: { $ref: '#/components/schemas/CompetitionType' }
@@ -2295,8 +2287,7 @@ components:
         plannedEndDate:
           type: [string, 'null']
           format: date-time
-          x-status: planned
-          description: Planned. End of the slot of the event; after `plannedDate`
+          description: End of the slot of the event; after `plannedDate`
         thirdPlaceMatch:
           type: boolean
           default: false
@@ -2353,8 +2344,7 @@ components:
         plannedEndDate:
           type: [string, 'null']
           format: date-time
-          x-status: planned
-          description: Planned. End of the slot of the event; after `plannedDate`
+          description: End of the slot of the event; after `plannedDate`
         thirdPlaceMatch:
           type: boolean
           default: false
@@ -2381,8 +2371,7 @@ components:
         plannedEndDate:
           type: [string, 'null']
           format: date-time
-          x-status: planned
-          description: Planned. End of the slot of the event; after `plannedDate`
+          description: End of the slot of the event; after `plannedDate`
         thirdPlaceMatch:
           type: boolean
           default: false
@@ -2509,35 +2498,29 @@ components:
         number:
           type: [integer, 'null']
           minimum: 1
-          x-status: planned
-          description: Planned. Match number in the tournament (shown to players and umpires)
+          description: Match number in the tournament (shown to players and umpires)
         phase:
           oneOf:
             - $ref: '#/components/schemas/MatchPhase'
             - type: 'null'
-          x-status: planned
-          description: Planned. Null for a match created by hand
+          description: Null for a match created by hand
         sourceA:
           oneOf:
             - $ref: '#/components/schemas/MatchSource'
             - type: 'null'
-          x-status: planned
-          description: Planned. Where side A comes from while it is not known
+          description: Where side A comes from while it is not known
         sourceB:
           oneOf:
             - $ref: '#/components/schemas/MatchSource'
             - type: 'null'
-          x-status: planned
         plannedStartAt:
           type: [string, 'null']
           format: date-time
-          x-status: planned
-          description: Planned. Start time in the schedule
+          description: Start time in the schedule
         plannedCourtId:
           type: [string, 'null']
           format: uuid
-          x-status: planned
-          description: Planned. Court in the schedule (the real court is `courtId`)
+          description: Court in the schedule (the real court is `courtId`)
 
     CreateMatchRequest:
       type: object
@@ -3387,13 +3370,12 @@ components:
       type: string
       enum: [ON_PUBLISH, AT_START]
       default: ON_PUBLISH
-      x-status: planned
       description: |
-        Planned. When the public pages show draws and schedule: `ON_PUBLISH` as soon as the
+        When the public pages show draws and schedule: `ON_PUBLISH` as soon as the
         organizer publishes them, `AT_START` only from the first day of the tournament (players
         still get their call time).
 
-    # ---------------------------------------------------------- Schedule (planned)
+    # ---------------------------------------------------------- Schedule
     MatchPhase:
       type: string
       enum: [POOL, KNOCKOUT, THIRD_PLACE]
