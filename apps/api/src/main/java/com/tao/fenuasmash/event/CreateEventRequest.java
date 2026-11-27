@@ -16,6 +16,7 @@ public record CreateEventRequest(
 		@NotNull CategoryType categoryType,
 		@Size(max = 50) String categoryLabel,
 		Instant plannedDate,
+		Instant plannedEndDate,
 		@Min(2) @Max(256) Integer maxEntries,
 		@Min(1900) @Max(2100) Integer minBirthYear,
 		@Min(1900) @Max(2100) Integer maxBirthYear,

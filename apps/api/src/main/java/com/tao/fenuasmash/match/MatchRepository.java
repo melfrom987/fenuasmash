@@ -25,6 +25,9 @@ interface MatchRepository extends JpaRepository<Match, UUID> {
 			+ "ORDER BY m.round ASC NULLS LAST, m.bracketPosition ASC NULLS LAST, m.createdAt, m.id")
 	List<Match> findAllByTournamentAndStatusIn(UUID tournamentId, Collection<MatchStatus> statuses);
 
+	@Query("SELECT MAX(m.number) FROM Match m WHERE m.tournamentId = :tournamentId")
+	Integer findMaxNumber(UUID tournamentId);
+
 	Optional<Match> findByEventIdAndRoundAndBracketPosition(UUID eventId, Integer round, Integer bracketPosition);
 
 	@Query("SELECT m.tournamentId FROM Match m WHERE m.id = :id")

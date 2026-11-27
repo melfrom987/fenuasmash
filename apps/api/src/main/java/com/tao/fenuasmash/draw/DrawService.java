@@ -22,6 +22,7 @@ import com.tao.fenuasmash.match.MatchResponse;
 import com.tao.fenuasmash.match.MatchService;
 import com.tao.fenuasmash.match.MatchSide;
 import com.tao.fenuasmash.match.MatchStatus;
+import com.tao.fenuasmash.match.MatchSource;
 import com.tao.fenuasmash.match.PoolMatch;
 import com.tao.fenuasmash.player.PlayerRankings;
 import com.tao.fenuasmash.player.PlayerSummary;
@@ -206,7 +207,9 @@ public class DrawService {
 	private static List<KnockoutPlanner.Line> lines(Draw draw) {
 		return draw.getBracket()
 			.stream()
-			.map((row) -> new KnockoutPlanner.Line(row.registrationId(), row.bye()))
+			.map((row) -> new KnockoutPlanner.Line(row.registrationId(), row.bye(),
+					(row.qualifierPool() != null) ? MatchSource.poolRank(row.qualifierPool(), row.qualifierRank())
+							: null))
 			.toList();
 	}
 

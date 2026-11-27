@@ -62,6 +62,9 @@ public class TournamentService {
 				Objects.requireNonNullElse(request.forbiddenCombinations(), List.of())));
 		Tournament tournament = repository.save(new Tournament(request.organizationId(), request.name().strip(),
 				request.startsAt(), request.endsAt(), request.minimumRestMinutes(), rules));
+		tournament.changeScheduleSettings(Objects.requireNonNullElse(request.averageMatchMinutes(), 25),
+				Objects.requireNonNullElse(request.convocationLeadMinutes(), 30),
+				Objects.requireNonNullElse(request.publicVisibility(), PublicVisibility.ON_PUBLISH));
 		courtInitializer.createInitialCourts(tournament.getId(), request.courtCount());
 		return TournamentResponse.from(tournament);
 	}
@@ -77,7 +80,31 @@ public class TournamentService {
 		checkDateRange(startsAt, endsAt);
 		TournamentRules rules = checkRules(mergeRules(tournament.getRules(), request));
 		tournament.update(name, startsAt, endsAt, minimumRestMinutes, rules);
+		tournament.changeScheduleSettings(
+				Objects.requireNonNullElse(request.averageMatchMinutes(), tournament.getAverageMatchMinutes()),
+				Objects.requireNonNullElse(request.convocationLeadMinutes(), tournament.getConvocationLeadMinutes()),
+				Objects.requireNonNullElse(request.publicVisibility(), tournament.getPublicVisibility()));
 		return TournamentResponse.from(tournament);
+	}
+
+	/** The state of the schedule of the tournament. */
+	public ScheduleState findScheduleState(UUID id) {
+		return getTournament(id).getScheduleState();
+	}
+
+	/** The schedule was computed: it is a draft, not published. */
+	@Transactional
+	public ScheduleState markScheduleGenerated(UUID id, Instant now) {
+		Tournament tournament = getTournament(id);
+		tournament.scheduleGenerated(now);
+		return tournament.getScheduleState();
+	}
+
+	@Transactional
+	public ScheduleState markSchedulePublished(UUID id, Instant now) {
+		Tournament tournament = getTournament(id);
+		tournament.schedulePublished(now);
+		return tournament.getScheduleState();
 	}
 
 	@Transactional

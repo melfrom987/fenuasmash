@@ -13,6 +13,7 @@ public record EventResponse(
 		CategoryType categoryType,
 		String categoryLabel,
 		Instant plannedDate,
+		Instant plannedEndDate,
 		Integer maxEntries,
 		Integer minBirthYear,
 		Integer maxBirthYear,
@@ -22,7 +23,8 @@ public record EventResponse(
 
 	static EventResponse from(Event event) {
 		return new EventResponse(event.getId(), event.getTournamentId(), event.getName(), event.getDiscipline(),
-				event.getCategoryType(), event.getCategoryLabel(), event.getPlannedDate(), event.getMaxEntries(),
+				event.getCategoryType(), event.getCategoryLabel(), event.getPlannedDate(), event.getPlannedEndDate(),
+				event.getMaxEntries(),
 				event.getBirthYears().min(), event.getBirthYears().max(), event.getPoolCount(), event.getPoolSize(), event.getQualifiersPerPool());
 	}
 
