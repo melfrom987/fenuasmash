@@ -5,6 +5,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { toDrawEntries } from '@/features/draw/algorithm';
 import { useCreateDraw, useDraw } from '@/features/draw/api';
 import { DrawSettingsForm } from '@/features/draw/components/DrawSettingsForm';
+import { UnderfilledPanel } from '@/features/draw/components/UnderfilledPanel';
 import { DrawView } from '@/features/draw/components/DrawView';
 import { useEvents } from '@/features/events/api';
 import { useTournamentRegistrations } from '@/features/registrations/api';
@@ -107,13 +108,27 @@ export function DrawsPage() {
             />
           )}
 
+          {!splitting &&
+            !hasSeries &&
+            confirmed < MIN_SERIES_ENTRIES &&
+            eventRegistrations.length > 0 &&
+            draw.data?.status !== 'PUBLISHED' && (
+              <UnderfilledPanel
+                tournamentId={tournamentId}
+                event={event}
+                events={events.data}
+                registrations={eventRegistrations}
+                allRegistrations={registrations.data ?? []}
+              />
+            )}
+
           {!splitting && draw.isPending && <p className="text-sable-600">{t('common.loading')}</p>}
           {!splitting && draw.isError && <ErrorMessage>{errorMessage(draw.error)}</ErrorMessage>}
 
           {!splitting &&
             draw.data !== undefined &&
             (draw.data === null || editing) &&
-            !(hasSeries && confirmed < 2) && (
+            !(hasSeries && confirmed < MIN_SERIES_ENTRIES) && (
               <DrawSettingsForm
                 key={event.id}
                 format={format}

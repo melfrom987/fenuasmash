@@ -1,6 +1,14 @@
-import type { Court, Draw, Organization, Tablet, Tournament, Event } from '@/api/models';
+import type {
+  Court,
+  Organization,
+  ScheduleEventSetting,
+  ScheduleStatus,
+  Tablet,
+  Tournament,
+  Event,
+} from '@/api/models';
 import { clubs, players } from './people';
-import { seedMatches } from './matches';
+import { seedPlay } from './matches';
 import { seedRegistrations } from './registrations';
 
 const now = '2026-10-28T00:00:00.000Z';
@@ -21,6 +29,9 @@ const tournaments: Tournament[] = [
     startsAt: '2026-11-14T18:00:00.000Z',
     endsAt: '2026-11-16T04:00:00.000Z',
     minimumRestMinutes: 20,
+    averageMatchMinutes: 25,
+    convocationLeadMinutes: 30,
+    publicVisibility: 'ON_PUBLISH',
     createdAt: now,
     updatedAt: now,
     competitionType: 'INDIVIDUAL',
@@ -37,6 +48,9 @@ const tournaments: Tournament[] = [
     startsAt: '2026-12-05T18:00:00.000Z',
     endsAt: '2026-12-07T04:00:00.000Z',
     minimumRestMinutes: 20,
+    averageMatchMinutes: 25,
+    convocationLeadMinutes: 30,
+    publicVisibility: 'ON_PUBLISH',
     createdAt: now,
     updatedAt: now,
     competitionType: 'INDIVIDUAL',
@@ -64,6 +78,8 @@ const events: Event[] = [
     categoryType: 'OPEN',
     categoryLabel: null,
     plannedDate: '2026-11-14T18:00:00.000Z',
+    plannedEndDate: null,
+    thirdPlaceMatch: false,
     maxEntries: 24,
     minBirthYear: null,
     maxBirthYear: null,
@@ -80,6 +96,8 @@ const events: Event[] = [
     categoryType: 'AGE',
     categoryLabel: 'Cadet U17',
     plannedDate: '2026-11-14T18:00:00.000Z',
+    plannedEndDate: null,
+    thirdPlaceMatch: false,
     maxEntries: null,
     minBirthYear: 2011,
     maxBirthYear: null,
@@ -96,6 +114,8 @@ const events: Event[] = [
     categoryType: 'OPEN',
     categoryLabel: null,
     plannedDate: '2026-11-16T00:00:00.000Z',
+    plannedEndDate: null,
+    thirdPlaceMatch: false,
     maxEntries: 16,
     minBirthYear: null,
     maxBirthYear: null,
@@ -107,8 +127,6 @@ const events: Event[] = [
 ];
 
 const registrations = seedRegistrations(events, players);
-
-const draws: Draw[] = [];
 
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
 
@@ -142,7 +160,14 @@ const tablets: Tablet[] = [
   },
 ];
 
-const matches = seedMatches(events, registrations, courts);
+const { draws, matches } = seedPlay(events, registrations, courts);
+const schedules: {
+  tournamentId: string;
+  status: ScheduleStatus;
+  generatedAt: string | null;
+  publishedAt: string | null;
+  eventSettings: ScheduleEventSetting[];
+}[] = [];
 
 export const db = {
   organizations,
@@ -155,4 +180,5 @@ export const db = {
   draws,
   tablets,
   matches,
+  schedules,
 };

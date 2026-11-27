@@ -283,6 +283,10 @@ Once registrations are closed, the organizer sets the structure of each event ba
 |---|---|---|---|
 | Series | Série 1 (5) | Série 2 (7) | Série 3 (9) |
 
+**Minimum entries**: an event needs at least 3 confirmed entries to be drawn. For a smaller event, the organizer either brings in every entry of another event they can play in (e.g. all the players of the category below into the category above), or sends its entries to other events (age, gender and discipline checked).
+
+**Distribution before the draws**: the organizer sees every event with its entries sorted by ranking and can move a player to the series or category above or below, or to any event they can play in, until the draw of that event is published.
+
 **Structure adapted to the number of entries**: the format comes from the tournament; the organizer sets the **number of pools** per event and the draw distributes the entries as evenly as possible (3 to 8 per pool, at most 16 pools). Only `CONFIRMED` registrations are drawn.
 
 | Planned | Actual entries | Switch to |
@@ -343,10 +347,51 @@ The schedule gives the order of matches and their planned time, from the publish
 
 **Capacity**: with *n* active courts and matches of *d* minutes, about *n × 60 / d* matches per hour (6 courts, 25 min → 14 matches per hour).
 
-**Rules for placing a match** (details to come with the schedule):
-1. The match is inside the slot of its event.
-2. Each player has finished the previous match and rested the minimum time.
-3. A knockout match comes after the matches it depends on (pool results, previous round).
+**Match generation** (when a draw is published):
+
+1. Pools (also a single pool): every entry plays every other entry of its pool, in rounds. Entries are numbered in the pool by ranking (1 = best). The order depends on the size of the pool:
+
+   | Pool | Round 1 | Round 2 | Round 3 | Round 4 | Round 5 |
+   |---|---|---|---|---|---|
+   | 3 | 2 – 3 | 1 – loser of round 1 | 1 – winner of round 1 | | |
+   | 4 | 1 – 3, 2 – 4 | winner (1 – 3) – loser (2 – 4), winner (2 – 4) – loser (1 – 3) | the two winners of round 1, the two losers of round 1 | | |
+   | 5 | 2 – 4, 3 – 5 | 1 – 3, 4 – 5 | 1 – 4, 2 – 5 | 1 – 5, 2 – 3 | 1 – 2, 3 – 4 |
+   | 6 and more | circle method | | | | |
+
+   In pools of 3 and 4, the sides of the later rounds depend on the results: they are filled when the previous match ends. In a pool of 5, entry 1 rests in round 1 and entry 5 rests in the last round (to check against the federation table).
+2. Knockout: one match per pair of bracket lines; a line facing a bye goes straight to the next round. Sides not known yet point to their source: "1st of pool A", "winner of #12", "loser of #13".
+3. Third place match when the event plays it: losers of the two semi-finals.
+4. Matches are numbered in the tournament: pools round by round, then the knockout rounds.
+
+**Placing matches** (computing the schedule):
+
+1. Time is cut into slots of the average match length, from the first event start. In each slot, every active court takes the first match that can be played, in this order: event slot start (with its shift), event order, pools before knockout, round, number.
+2. A match can be played when:
+   - its event slot has started;
+   - each player has finished their previous match and rested the minimum time;
+   - the matches it depends on (its pool for a pool rank, the source match for a winner or loser) are planned to end at least the rest time before.
+3. Matches already on a court or over keep their place; their players are busy in the first slot.
+4. The end of an event slot is a target, not a limit: matches past it are placed anyway and reported.
+
+| Warning | Meaning |
+|---|---|
+| No slot | The event has no planned start: its matches start with the tournament |
+| Outside slot | Some matches of the event start before or end after its slot |
+| Rest too short | A player of the match does not get the minimum rest |
+| Order | The match is placed before a match it depends on ends |
+| Unscheduled | Matches to play have no planned time (e.g. a draw published after the computation) |
+
+**Event order, shifts and stages**: everything computed is a proposal the organizer can change; nothing is blocked, problems are only reported.
+- Order: the first event gets the courts first (e.g. Series 2 before Series 1).
+- Start: an event can start at another time than its slot (e.g. the next day).
+- Shift: an event can move by whole rotations (+3 rotations = 3 × the average match length later).
+- Stages: later stages can be held back, e.g. semi-finals and final not before 9:00 the next day. Stages: whole knockout stage, quarters and later, semis and final, final; the third place match follows them.
+
+The whole event moves when the schedule is computed again; these settings are kept for the next computations. Each event has its own colour in the grid.
+
+**Adjusting and publishing**: the organizer moves a match by picking it then a cell; if a match not started is there, they swap. Warnings are shown, not blocking. Publishing makes the times and call times public (see public visibility); computing again sets the schedule back to draft. On match day, the queue of the control desk follows the schedule order.
+
+**Advancement**: when a match ends, its winner (and loser, for the third place match) fills the matches that wait for it. When every match of a pool is over, the pool ranking (wins, then draw order until scores are recorded) fills the "1st / 2nd of pool" sides. A match whose two sides are known becomes ready.
 
 ## Data Model
 

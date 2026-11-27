@@ -131,6 +131,8 @@ export function EventDraftsPanel({
           categoryType: draft.categoryType,
           categoryLabel: draft.categoryType === 'OPEN' ? null : draft.categoryLabel.trim(),
           plannedDate: null,
+          plannedEndDate: null,
+          thirdPlaceMatch: false,
           maxEntries: null,
           minBirthYear: bounds?.minBirthYear ?? null,
           maxBirthYear: bounds?.maxBirthYear ?? null,

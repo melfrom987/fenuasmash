@@ -11,6 +11,8 @@ type EventBody = Partial<
     | 'categoryType'
     | 'categoryLabel'
     | 'plannedDate'
+    | 'plannedEndDate'
+    | 'thirdPlaceMatch'
     | 'maxEntries'
     | 'minBirthYear'
     | 'maxBirthYear'
@@ -35,6 +37,14 @@ const nameTaken = (tournamentId: string, name: string, exceptId?: string) =>
       e.id !== exceptId &&
       e.name.toLowerCase() === name.toLowerCase(),
   );
+
+const invalidSlot = (start: string | null | undefined, end: string | null | undefined) =>
+  !!end && (!start || Date.parse(end) <= Date.parse(start));
+
+const slotError = () =>
+  error(400, 'VALIDATION_FAILED', 'Invalid request', [
+    { field: 'plannedEndDate', message: 'must be after plannedDate' },
+  ]);
 
 const missingCategoryLabel = (body: EventBody) =>
   body.categoryType !== undefined && body.categoryType !== 'OPEN' && !body.categoryLabel?.trim();
@@ -64,6 +74,7 @@ export const eventHandlers = [
         { field: 'categoryLabel', message: 'must not be blank' },
       ]);
     }
+    if (invalidSlot(body.plannedDate, body.plannedEndDate)) return slotError();
     if (nameTaken(tournamentId, name)) {
       return error(409, 'EVENT_NAME_ALREADY_EXISTS', 'Event name already exists');
     }
@@ -76,6 +87,8 @@ export const eventHandlers = [
       categoryType: body.categoryType ?? 'OPEN',
       categoryLabel: body.categoryType === 'OPEN' ? null : (body.categoryLabel ?? null),
       plannedDate: body.plannedDate ?? null,
+      plannedEndDate: body.plannedEndDate ?? null,
+      thirdPlaceMatch: body.thirdPlaceMatch ?? false,
       maxEntries: body.maxEntries ?? null,
       minBirthYear: body.categoryType === 'AGE' ? (body.minBirthYear ?? null) : null,
       maxBirthYear: body.categoryType === 'AGE' ? (body.maxBirthYear ?? null) : null,
@@ -106,6 +119,9 @@ export const eventHandlers = [
         { field: 'categoryLabel', message: 'must not be blank' },
       ]);
     }
+    const start = body.plannedDate === undefined ? event.plannedDate : body.plannedDate;
+    const end = body.plannedEndDate === undefined ? event.plannedEndDate : body.plannedEndDate;
+    if (invalidSlot(start, end)) return slotError();
     if (nameTaken(event.tournamentId, name, event.id)) {
       return error(409, 'EVENT_NAME_ALREADY_EXISTS', 'Event name already exists');
     }

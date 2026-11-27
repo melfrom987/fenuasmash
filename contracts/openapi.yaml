@@ -65,6 +65,7 @@ tags:
   - name: Registrations
   - name: Import
   - name: Draws
+  - name: Schedule
   - name: Scores
 
 paths:
@@ -551,8 +552,9 @@ paths:
       security: []
       summary: List the matches waiting for a court
       description: |
-        The `READY` matches, in the order they should be called: by round (matches without a
-        round last), then creation order. A match is `available` when none of its sides is
+        The `READY` matches, in the order they should be called: by planned start time
+        (`plannedStartAt`, schedule) then match number; without a schedule, by round (matches
+        without a round last), then creation order. A match is `available` when none of its sides is
         on a court: it can be assigned now.
       responses:
         '200':
@@ -1421,7 +1423,8 @@ paths:
       summary: Run (or run again) the draw of an event
       description: |
         Draws the `CONFIRMED` registrations of the event; the others are listed in
-        `excludedRegistrationIds`. Replaces the current draft. Missing settings use the event's
+        `excludedRegistrationIds`. At least 3 confirmed registrations are needed
+        (`NOT_ENOUGH_ENTRIES`). Replaces the current draft. Missing settings use the event's
         values (`poolCount`, `qualifiersPerPool`), then the defaults:
         - `poolCount`: entries / 4, rounded, between 1 and 16. Pool sizes are derived: entries
           are split as evenly as possible (13 entries in 3 pools → 5, 4, 4), 3 to 8 per pool.
@@ -1559,6 +1562,16 @@ paths:
           straight into the second round. The winners move on by themselves (see
           `changeMatchStatus`). The lines of pool qualifiers stay empty until their pool is
           over (see `getPoolStandings`).
+
+        Planned with the schedule (#217), see "Match generation" in `docs/competition-rules.md`:
+        - pools of 3, 4 and 5 in the fixed order of the rules, where the later rounds of pools
+          of 3 and 4 depend on results (`sourceA` / `sourceB`: winner or loser of a pool match);
+        - sides not known yet are `null` with a `sourceA` / `sourceB` (pool rank, winner or
+          loser of a match);
+        - third place match when `Event.thirdPlaceMatch` (`phase: THIRD_PLACE`, losers of the
+          semi-finals);
+        - `phase` (`POOL`, `KNOCKOUT`, `THIRD_PLACE`) and `number` (next numbers in the
+          tournament, in that order) on each match.
       responses:
         '200':
           description: Published draw
@@ -1589,7 +1602,7 @@ paths:
           birth year bounds of the source event, and `parentEventId` = the source event;
         - moves the listed registrations into it (status and `registeredAt` kept).
 
-        Rules: 2 to 8 series; labels filled and different; at least 2 entries per series; each
+        Rules: 2 to 8 series; labels filled and different; at least 3 entries per series; each
         registration is a `CONFIRMED` registration of the source event and appears once. The
         web app sends the entries in ranking order, but the backend does not re-sort them: the
         organizer decides. A series cannot be split again. The draft draw of the source event,
@@ -1612,6 +1625,121 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
           # DRAW_PUBLISHED, EVENT_NAME_ALREADY_EXISTS
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ---------------------------------------------------------------- Schedule (planned)
+  /tournaments/{tournamentId}/schedule:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    get:
+      tags: [Schedule]
+      operationId: getSchedule
+      x-status: planned
+      summary: State and warnings of the schedule
+      description: |
+        The planned times and courts are on the matches (`plannedStartAt`, `plannedCourtId`,
+        `GET /tournaments/{id}/matches`). Warnings are computed on each read.
+      responses:
+        '200':
+          description: Schedule
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Schedule' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Schedule]
+      operationId: generateSchedule
+      x-roles: [ORGANIZER]
+      x-status: planned
+      summary: Compute (or compute again) the schedule
+      description: |
+        Plans every `SCHEDULED` or `READY` match on the active courts, in slots of
+        `averageMatchMinutes`, and sets the schedule back to `DRAFT`. Matches already on a court
+        or over keep their times. See "Schedule" in `docs/competition-rules.md`.
+
+        `events` (optional) sets the event order, shifts and start times, and is kept for the
+        next computations: the first event gets the courts first; `startAt` replaces the event
+        start; `offsetSlots` moves it by that many slots (negative = earlier); `stageStarts`
+        holds later stages (e.g. semi-finals and final not before the next morning). Without
+        `events`, the saved settings are used.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ScheduleGenerateRequest' }
+      responses:
+        '200':
+          description: Draft schedule
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Schedule' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+          # VALIDATION_FAILED (unknown event, offset not between -100 and 100, bad date or stage)
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # NO_MATCHES_TO_SCHEDULE, NO_ACTIVE_COURT
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tournaments/{tournamentId}/schedule/move:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    post:
+      tags: [Schedule]
+      operationId: moveScheduledMatch
+      x-roles: [ORGANIZER]
+      x-status: planned
+      summary: Move a match in the schedule
+      description: |
+        Puts the match at `plannedStartAt` on `courtId`. If another match not started yet is
+        there, the two matches swap places. Allowed on a draft or published schedule; warnings
+        are returned, not blocking.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ScheduleMoveRequest' }
+      responses:
+        '200':
+          description: Updated schedule
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Schedule' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+          # MATCH_NOT_FOUND, COURT_NOT_FOUND
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # SCHEDULE_NOT_GENERATED, MATCH_ALREADY_STARTED, COURT_INACTIVE, SLOT_TAKEN
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /tournaments/{tournamentId}/schedule/publish:
+    parameters:
+      - $ref: '#/components/parameters/TournamentId'
+    post:
+      tags: [Schedule]
+      operationId: publishSchedule
+      x-roles: [ORGANIZER]
+      x-status: planned
+      summary: Publish the schedule
+      description: |
+        Makes the planned times and call times public (depending on
+        `Tournament.publicVisibility`). Computing the schedule again sets it back to `DRAFT`.
+      responses:
+        '200':
+          description: Published schedule
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Schedule' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          $ref: '#/components/responses/Conflict'
+          # SCHEDULE_NOT_GENERATED
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -1843,6 +1971,12 @@ components:
         - INVALID_DRAW_SETTINGS
         - INVALID_SWAP
         - INVALID_SERIES_SPLIT
+        # Schedule (planned)
+        - NO_MATCHES_TO_SCHEDULE
+        - NO_ACTIVE_COURT
+        - SCHEDULE_NOT_GENERATED
+        - MATCH_ALREADY_STARTED
+        - SLOT_TAKEN
         # Scores (planned)
         - INVALID_SCORE_EVENT
         - SEQUENCE_GAP
@@ -2372,6 +2506,38 @@ components:
           description: When the match became `FINISHED`, `CANCELLED` or `WALKOVER`
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+        number:
+          type: [integer, 'null']
+          minimum: 1
+          x-status: planned
+          description: Planned. Match number in the tournament (shown to players and umpires)
+        phase:
+          oneOf:
+            - $ref: '#/components/schemas/MatchPhase'
+            - type: 'null'
+          x-status: planned
+          description: Planned. Null for a match created by hand
+        sourceA:
+          oneOf:
+            - $ref: '#/components/schemas/MatchSource'
+            - type: 'null'
+          x-status: planned
+          description: Planned. Where side A comes from while it is not known
+        sourceB:
+          oneOf:
+            - $ref: '#/components/schemas/MatchSource'
+            - type: 'null'
+          x-status: planned
+        plannedStartAt:
+          type: [string, 'null']
+          format: date-time
+          x-status: planned
+          description: Planned. Start time in the schedule
+        plannedCourtId:
+          type: [string, 'null']
+          format: uuid
+          x-status: planned
+          description: Planned. Court in the schedule (the real court is `courtId`)
 
     CreateMatchRequest:
       type: object
@@ -3206,7 +3372,7 @@ components:
               label: { type: string, maxLength: 50, example: Série 1 }
               registrationIds:
                 type: array
-                minItems: 2
+                minItems: 3
                 items: { type: string, format: uuid }
 
     SeriesSplitResult:
@@ -3226,3 +3392,133 @@ components:
         Planned. When the public pages show draws and schedule: `ON_PUBLISH` as soon as the
         organizer publishes them, `AT_START` only from the first day of the tournament (players
         still get their call time).
+
+    # ---------------------------------------------------------- Schedule (planned)
+    MatchPhase:
+      type: string
+      enum: [POOL, KNOCKOUT, THIRD_PLACE]
+
+    MatchSource:
+      oneOf:
+        - type: object
+          required: [kind, pool, rank]
+          properties:
+            kind: { const: POOL_RANK }
+            pool: { type: string, example: A }
+            rank: { type: integer, minimum: 1 }
+        - type: object
+          required: [kind, matchId]
+          properties:
+            kind: { type: string, enum: [WINNER, LOSER] }
+            matchId: { type: string, format: uuid }
+      description: |
+        Where a side comes from while it is not known. When the source match ends (winner or
+        loser) or the pool is over (rank), the side is filled and a `SCHEDULED` match with
+        both sides becomes `READY`.
+
+    ScheduleStatus:
+      type: string
+      enum: [NOT_GENERATED, DRAFT, PUBLISHED]
+
+    ScheduleWarning:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          enum: [NO_SLOT, OUTSIDE_SLOT, REST_TOO_SHORT, ORDER, UNSCHEDULED]
+          description: |
+            - `NO_SLOT`: the event has no `plannedDate` (`eventId`)
+            - `OUTSIDE_SLOT`: `count` matches of the event start before or end after its slot
+            - `REST_TOO_SHORT`: a player of the match does not get `minimumRestMinutes`
+              (`matchId`)
+            - `ORDER`: the match is placed before a match it depends on ends (`matchId`)
+            - `UNSCHEDULED`: `count` matches to play have no planned time
+        eventId: { type: string, format: uuid }
+        matchId: { type: string, format: uuid }
+        count: { type: integer, minimum: 1 }
+
+    Schedule:
+      type: object
+      required:
+        - tournamentId
+        - status
+        - events
+        - generatedAt
+        - publishedAt
+        - firstStartAt
+        - lastEndAt
+        - warnings
+      properties:
+        tournamentId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/ScheduleStatus' }
+        events:
+          type: array
+          description: Events with matches, in schedule order
+          items: { $ref: '#/components/schemas/ScheduleEvent' }
+        generatedAt: { type: [string, 'null'], format: date-time }
+        publishedAt: { type: [string, 'null'], format: date-time }
+        firstStartAt: { type: [string, 'null'], format: date-time }
+        lastEndAt: { type: [string, 'null'], format: date-time }
+        warnings:
+          type: array
+          items: { $ref: '#/components/schemas/ScheduleWarning' }
+
+    ScheduleMoveRequest:
+      type: object
+      required: [matchId, plannedStartAt, courtId]
+      properties:
+        matchId: { type: string, format: uuid }
+        plannedStartAt: { type: string, format: date-time }
+        courtId: { type: string, format: uuid }
+
+    ScheduleEventSetting:
+      type: object
+      required: [eventId, offsetSlots]
+      properties:
+        eventId: { type: string, format: uuid }
+        offsetSlots:
+          type: integer
+          minimum: -100
+          maximum: 100
+          description: Shift of the earliest start of the event, in slots of `averageMatchMinutes`
+        startAt:
+          type: [string, 'null']
+          format: date-time
+          description: Earliest start of the event, replacing its `plannedDate` (e.g. the next day)
+        stageStarts:
+          type: array
+          description: Later stages of the event cannot start before these times
+          items: { $ref: '#/components/schemas/ScheduleStageStart' }
+
+    ScheduleEvent:
+      allOf:
+        - $ref: '#/components/schemas/ScheduleEventSetting'
+        - type: object
+          required: [matchCount, firstStartAt, lastEndAt]
+          properties:
+            matchCount: { type: integer, minimum: 0 }
+            firstStartAt: { type: [string, 'null'], format: date-time }
+            lastEndAt: { type: [string, 'null'], format: date-time }
+
+    ScheduleGenerateRequest:
+      type: object
+      properties:
+        events:
+          type: array
+          description: Event order (first = priority) and shifts
+          items: { $ref: '#/components/schemas/ScheduleEventSetting' }
+
+    ScheduleStage:
+      type: string
+      enum: [KNOCKOUT, QUARTER, SEMI, FINAL]
+      description: |
+        `KNOCKOUT`: every knockout match; `QUARTER`: quarter-finals and later; `SEMI`:
+        semi-finals and final; `FINAL`: final. The third place match follows every stage.
+
+    ScheduleStageStart:
+      type: object
+      required: [stage, at]
+      properties:
+        stage: { $ref: '#/components/schemas/ScheduleStage' }
+        at: { type: string, format: date-time }

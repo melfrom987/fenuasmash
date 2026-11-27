@@ -48,6 +48,8 @@ export function EventForm({
       categoryType: 'OPEN',
       categoryLabel: '',
       plannedDate: '',
+      plannedEndDate: '',
+      thirdPlaceMatch: false,
       maxEntries: Number.NaN,
       minBirthYear: Number.NaN,
       maxBirthYear: Number.NaN,
@@ -193,29 +195,40 @@ export function EventForm({
         <input className={inputClass} {...register('name')} />
       </Field>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field
-          label={t('events.form.plannedDate')}
-          error={errors.plannedDate?.message}
-          hint={t('events.form.plannedDateHint')}
-        >
-          <input type="datetime-local" className={inputClass} {...register('plannedDate')} />
-        </Field>
+      <Field
+        label={t('events.form.maxEntries')}
+        error={errors.maxEntries?.message}
+        hint={t('events.form.maxEntriesHint')}
+      >
+        <input
+          type="number"
+          min={2}
+          max={256}
+          className={`${inputClass} tabular-nums sm:w-40`}
+          {...register('maxEntries', { valueAsNumber: true })}
+        />
+      </Field>
 
-        <Field
-          label={t('events.form.maxEntries')}
-          error={errors.maxEntries?.message}
-          hint={t('events.form.maxEntriesHint')}
-        >
-          <input
-            type="number"
-            min={2}
-            max={256}
-            className={`${inputClass} tabular-nums`}
-            {...register('maxEntries', { valueAsNumber: true })}
-          />
-        </Field>
-      </div>
+      <fieldset className="space-y-3">
+        <legend className="text-sable-800 text-sm font-medium">{t('events.form.slot')}</legend>
+        <p className="text-sable-600 text-xs">{t('events.form.slotHint')}</p>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('events.form.plannedDate')} error={errors.plannedDate?.message}>
+            <input type="datetime-local" className={inputClass} {...register('plannedDate')} />
+          </Field>
+          <Field label={t('events.form.plannedEndDate')} error={errors.plannedEndDate?.message}>
+            <input type="datetime-local" className={inputClass} {...register('plannedEndDate')} />
+          </Field>
+        </div>
+      </fieldset>
+
+      <label className="flex items-start gap-2 text-sm">
+        <input type="checkbox" className="mt-1" {...register('thirdPlaceMatch')} />
+        <span>
+          <span className="font-medium">{t('events.form.thirdPlaceMatch')}</span>
+          <span className="text-sable-600 block">{t('events.form.thirdPlaceMatchHint')}</span>
+        </span>
+      </label>
 
       <Button type="submit" disabled={isSubmitting}>
         {isSubmitting

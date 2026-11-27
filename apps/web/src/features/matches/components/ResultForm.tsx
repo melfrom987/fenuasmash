@@ -47,7 +47,7 @@ export function ResultForm({
             checked={winner === side}
             onChange={() => setWinner(side)}
           />
-          {labels.entry(side === 'A' ? match.sideA : match.sideB) ?? t('matches.unknownSide')}
+          {labels.side(match, side)?.name ?? t('matches.unknownSide')}
         </label>
       ))}
       {!walkover && (

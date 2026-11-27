@@ -97,7 +97,8 @@ export function CourtCard({
         >
           <span className="block font-medium">{t('matches.callNext')}</span>
           <span className="text-sable-600 block truncate text-xs">
-            {labels.entry(nextMatch.sideA)} {t('matches.versus')} {labels.entry(nextMatch.sideB)}
+            {labels.side(nextMatch, 'A')?.name} {t('matches.versus')}{' '}
+            {labels.side(nextMatch, 'B')?.name}
           </span>
         </button>
       )}

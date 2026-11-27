@@ -35,6 +35,15 @@ export function formatRelative(iso: string, language: string, now = Date.now()) 
 
 export const formatDate = (iso: string) => dateFormatter.format(new Date(iso));
 export const formatDateTime = (iso: string) => dateTimeFormatter.format(new Date(iso));
+const dayTimeFormatter = new Intl.DateTimeFormat('fr-FR', {
+  timeZone: TIME_ZONE,
+  weekday: 'short',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+export const formatDayTime = (iso: string) => dayTimeFormatter.format(new Date(iso));
 export const formatTime = (iso: string) => timeFormatter.format(new Date(iso));
 export const tahitiInputToIso = (value: string) => new Date(`${value}:00-10:00`).toISOString();
 

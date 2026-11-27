@@ -55,6 +55,8 @@ export const seriesHandlers = [
       categoryType: 'LEVEL',
       categoryLabel: s.label.trim(),
       plannedDate: source.plannedDate,
+      plannedEndDate: source.plannedEndDate ?? null,
+      thirdPlaceMatch: source.thirdPlaceMatch ?? false,
       maxEntries: null,
       minBirthYear: source.minBirthYear,
       maxBirthYear: source.maxBirthYear,

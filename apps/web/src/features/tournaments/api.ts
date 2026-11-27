@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Tournament } from '@/api/models';
+import type { PublicVisibility, Tournament } from '@/api/models';
 import { api } from '@/lib/api-client';
 import { queryKeys } from '@/lib/query-keys';
 import type { RulesInput } from './rules';
@@ -12,6 +12,12 @@ export type CreateTournamentInput = {
   minimumRestMinutes: number;
   courtCount: number;
 } & RulesInput;
+
+export type UpdateTournamentInput = Partial<CreateTournamentInput> & {
+  averageMatchMinutes?: number;
+  convocationLeadMinutes?: number;
+  publicVisibility?: PublicVisibility;
+};
 
 export function useTournaments() {
   return useQuery({
@@ -40,7 +46,7 @@ export function useCreateTournament() {
 export function useUpdateTournament(tournamentId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (input: Partial<CreateTournamentInput>) =>
+    mutationFn: (input: UpdateTournamentInput) =>
       api<Tournament>(`/tournaments/${tournamentId}`, {
         method: 'PATCH',
         body: JSON.stringify(input),
